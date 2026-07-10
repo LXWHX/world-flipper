@@ -114,6 +114,132 @@
         </div>
       </sc-if>
 
+      <!-- ===== UNITS SCREEN (character roster, horizontal scroll) ===== -->
+      <sc-if value="{{ isUnits }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Characters" style="position: absolute; inset: 0; display: flex; flex-direction: column;">
+          <!-- Section banner -->
+          <div style="flex: none; position: relative; margin: 14px 0 0 -6px; width: 82%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12); display: flex; align-items: center; gap: 12px; z-index: 2;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; flex: none; background: {{ sectionColor }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="1" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="2" y="4" width="4" height="2" fill="#FFFFFF"></rect><rect x="3" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
+            </div>
+            <div>
+              <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">Characters</div>
+              <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ unitsStatusText }}</div>
+            </div>
+          </div>
+
+          <!-- Horizontal-scrolling roster -->
+          <div id="units-scroll" onScroll="{{ handleRosterScroll }}" style="flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 24px 24px; padding: 16px 12px; display: flex; align-items: center;">
+            <sc-if value="{{ rosterLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">Loading roster…</div>
+            </sc-if>
+            <sc-if value="{{ rosterError }}" hint-placeholder-val="{{ false }}">
+              <div style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 0 20px; color: #C0455C; font-size: 12px; font-weight: 700;">
+                <div>Couldn't load roster.json</div>
+                <div style="font-size: 10.5px; font-weight: 600; color: #8A93A5;">{{ rosterError }}</div>
+                <div style="font-size: 10.5px; font-weight: 600; color: #8A93A5;">Serve this page over http(s) (e.g. `npx serve` or `python -m http.server`) — opening it as a local file:// URL blocks the fetch.</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ showRosterGrid }}" hint-placeholder-val="{{ true }}">
+              <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 108px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
+                <sc-for list="{{ visibleRoster }}" as="c" hint-placeholder-count="24">
+                  <div onClick="{{ c.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
+                    <div style="position: relative; width: 82px; height: 78px; flex: none;">
+                      <div style="position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 76px; height: 30px; background: #FFFFFF; border-radius: 50% / 60% 60% 40% 40%; box-shadow: 0 3px 0 rgba(62,68,80,0.15), inset 0 -3px 0 rgba(0,0,0,0.06); display: flex; align-items: flex-end; justify-content: center; gap: 1px; padding-bottom: 4px;">
+                        <sc-for list="{{ c.starSlots }}" as="s" hint-placeholder-count="5">
+                          <span style="font-size: 8px; line-height: 1; color: {{ s.color }};">★</span>
+                        </sc-for>
+                      </div>
+                      <img src="{{ c.thumbUrl }}" alt="{{ c.enName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
+                    </div>
+                    <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.enName }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== CHARACTER DETAIL SCREEN ===== -->
+      <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Character Detail" style="position: absolute; inset: 0; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 30%, #EAF6FD 0%, #CBE8F6 70%, #BEE1F2 100%); overflow: hidden;">
+
+          <!-- Full art -->
+          <div style="position: absolute; inset: 0;">
+            <img src="{{ fullShotUrl }}" alt="{{ detailEnName }}" style="width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+          </div>
+
+          <!-- Back button -->
+          <button onClick="{{ backFromDetail }}" style="position: absolute; left: 14px; top: 14px; z-index: 8; width: 40px; height: 40px; border: none; border-radius: 50%; cursor: pointer; background: #FFFFFF; box-shadow: 0 3px 0 rgba(62,68,80,0.2); display: flex; align-items: center; justify-content: center; font-family: inherit;" style-active="transform: translateY(2px);">
+            <svg width="16" height="16" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="4" y="1" width="2" height="1" fill="#3E4450"></rect><rect x="3" y="2" width="2" height="1" fill="#3E4450"></rect><rect x="2" y="3" width="2" height="1" fill="#3E4450"></rect><rect x="1" y="3" width="6" height="1" fill="#3E4450"></rect><rect x="2" y="4" width="2" height="1" fill="#3E4450"></rect><rect x="3" y="5" width="2" height="1" fill="#3E4450"></rect><rect x="4" y="6" width="2" height="1" fill="#3E4450"></rect></svg>
+          </button>
+
+          <!-- Awakening toggle (double arrow) -->
+          <button onClick="{{ toggleArt }}" style="position: absolute; right: 14px; top: 14px; z-index: 8; width: 44px; height: 44px; border: none; border-radius: 50%; cursor: pointer; background: #FFFFFF; box-shadow: 0 3px 0 rgba(62,68,80,0.2); display: flex; align-items: center; justify-content: center; font-family: inherit;" style-hover="filter: brightness(1.05);" style-active="transform: translateY(2px) rotate(120deg);">
+            <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;">
+              <rect x="6" y="1" width="3" height="1" fill="#3E4450"></rect><rect x="8" y="1" width="1" height="2" fill="#3E4450"></rect><rect x="5" y="2" width="1" height="1" fill="#3E4450"></rect><rect x="2" y="3" width="5" height="1" fill="#3E4450"></rect>
+              <rect x="1" y="8" width="3" height="1" fill="#3E4450"></rect><rect x="1" y="7" width="1" height="2" fill="#3E4450"></rect><rect x="4" y="7" width="1" height="1" fill="#3E4450"></rect><rect x="3" y="6" width="5" height="1" fill="#3E4450"></rect>
+            </svg>
+          </button>
+          <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
+
+          <!-- Draggable bottom sheet -->
+          <div onPointerDown="{{ sheetPointerDown }}" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: 316px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(30,60,90,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; touch-action: none; cursor: grab;">
+            <div style="display: flex; justify-content: center; padding: 8px 0 4px;">
+              <div style="width: 40px; height: 5px; border-radius: 999px; background: #E3E9F0;"></div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; padding: 2px 18px 10px;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 16px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnName }}</div>
+                <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ detailJpName }}</div>
+              </div>
+              <div style="display: flex; gap: 1px;">
+                <sc-for list="{{ detailStarSlots }}" as="s" hint-placeholder-count="5">
+                  <span style="font-size: 12px; line-height: 1; color: {{ s.color }};">★</span>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- Stage with 3 pixel platforms, each playing its own animation -->
+            <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
+              <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 10px;">
+                <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
+                  <img src="{{ platformUrl0 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
+                  <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+                </div>
+                <div style="position: relative; width: 54px; display: flex; flex-direction: column; align-items: center;">
+                  <img src="{{ platformUrl1 }}" alt="{{ detailEnName }}" style="height: 84px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.25));">
+                  <svg width="54" height="22" viewBox="0 0 54 22" style="shape-rendering: crispedges;"><rect x="4" y="7" width="46" height="7" fill="#C9CFDA"></rect><rect x="0" y="12" width="54" height="7" fill="#A8B0C0"></rect><rect x="7" y="4" width="40" height="4" fill="#DCE1E9"></rect></svg>
+                </div>
+                <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
+                  <img src="{{ platformUrl2 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
+                  <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Skill / Special trigger buttons -->
+            <div style="display: flex; justify-content: center; gap: 10px; padding: 12px 18px 0;">
+              <button onClick="{{ showSkill }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ skillBtnColor }}; background: {{ skillBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">Skill</button>
+              <sc-if value="{{ hasSpecial }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">Special</button>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- Skill / Special overlay -->
+          <sc-if value="{{ overlayOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+              <div style="position: absolute; left: 50%; top: 50%; width: 260px; height: 260px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%);"></div>
+              <img src="{{ overlayUrl }}" alt="{{ overlayLabel }}" style="position: relative; height: 240px; image-rendering: pixelated; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.3));">
+              <div style="position: relative; margin-top: -8px; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #FFFFFF; background: #F0526E; border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15);">{{ overlayLabel }}</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
       <!-- ===== SECTION SCREENS (nav shell placeholders) ===== -->
       <sc-if value="{{ isSection }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto;">
@@ -196,8 +322,25 @@
   &quot;accent&quot;: { &quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#FFA726&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;#FFA726&quot;, &quot;#F0526E&quot;, &quot;#3FA6DD&quot;, &quot;#35C8B4&quot;], &quot;section&quot;: &quot;Theme&quot; },
   &quot;showCounters&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Top bar&quot; }
 }">
+// Points at the Cloudflare R2 public bucket URL (or custom domain) once assets are uploaded there.
+// Falls back to the local folder for development on this machine.
+const ASSET_BASE = location.protocol === 'file:' || location.hostname === 'localhost'
+  ? 'Character Assets'
+  : 'https://pub-e1f9dd7473954e4b9b7d20b302cddb4a.r2.dev';
+const ROSTER_BATCH = 60;
+const STAR_ON = '#FFD35C';
+const STAR_OFF = '#D8DEE8';
+const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
+const SHEET_EXPANDED_Y = 0;
+const SHEET_MID_Y = 120;
+const SHEET_COLLAPSED_Y = 210;
+
 class Component extends DCLogic {
-  state = { tab: 'home', menuOpen: false };
+  state = {
+    tab: 'home', menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
+    selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
+    sheetY: SHEET_MID_Y, sheetDragging: false
+  };
 
   sections = {
     art:   { label: 'Art Gallery',  desc: 'Key visuals, character art & pixel sprites', color: '#F0526E' },
@@ -207,7 +350,98 @@ class Component extends DCLogic {
     arms:  { label: 'Armaments',    desc: 'Weapons & equipment',                        color: '#35C8B4' }
   };
 
-  go(tab) { this.setState({ tab: tab, menuOpen: false }); }
+  componentDidMount() {
+    fetch(ASSET_BASE + '/roster.json')
+      .then(r => {
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' fetching roster.json');
+        return r.json();
+      })
+      .then(data => {
+        const roster = (data.characters || [])
+          .filter(c => c.thumb)
+          .map(c => ({
+            devName: c.devName,
+            enName: c.enName || c.devName,
+            jpName: c.jpName || '',
+            rarity: c.rarity,
+            thumbUrl: ASSET_BASE + '/' + c.thumb,
+            starSlots: Array.from({ length: 5 }, (_, i) => ({ color: i < c.rarity ? STAR_ON : STAR_OFF }))
+          }));
+        this.setState({ roster, rosterLoading: false });
+      })
+      .catch(err => {
+        console.error('[units] failed to load roster.json', err);
+        this.setState({ rosterLoading: false, rosterError: String(err && err.message || err) });
+      });
+  }
+
+  go(tab) {
+    if (this.state.tab === 'detail' && tab !== 'detail') this.clearAnimTimers();
+    this.setState({ tab: tab, menuOpen: false });
+  }
+
+  handleRosterScroll(e) {
+    const el = e.currentTarget;
+    if (el.scrollLeft + el.clientWidth < el.scrollWidth - 500) return;
+    this.setState(s => ({ visibleCount: Math.min(s.roster.length, s.visibleCount + ROSTER_BATCH) }));
+  }
+
+  goDetail(c) {
+    this.clearAnimTimers();
+    const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
+    this.setState({
+      tab: 'detail', menuOpen: false,
+      selectedChar: { devName: c.devName, enName: c.enName, jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl },
+      artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y
+    });
+    const probe = new Image();
+    probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
+    probe.onerror = () => {};
+    probe.src = folderUrl + '/special.gif';
+  }
+
+  backFromDetail() {
+    this.clearAnimTimers();
+    this.setState({ tab: 'units', selectedChar: null });
+  }
+
+  toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
+
+  clearAnimTimers() { this.setState({ overlayOpen: false, overlayGif: null }); }
+
+  showSkill() {
+    this.setState(s => s.overlayOpen && s.overlayGif === 'skill_ready'
+      ? { overlayOpen: false, overlayGif: null }
+      : { overlayOpen: true, overlayGif: 'skill_ready' });
+  }
+
+  showSpecial() {
+    this.setState(s => s.overlayOpen && s.overlayGif === 'special'
+      ? { overlayOpen: false, overlayGif: null }
+      : { overlayOpen: true, overlayGif: 'special' });
+  }
+
+  sheetPointerDown(e) {
+    e.preventDefault();
+    const startClientY = e.clientY;
+    const startSheetY = this.state.sheetY;
+    const onMove = (ev) => {
+      const delta = ev.clientY - startClientY;
+      const ny = Math.max(SHEET_EXPANDED_Y, Math.min(SHEET_COLLAPSED_Y, startSheetY + delta));
+      this.setState({ sheetY: ny, sheetDragging: true });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      const points = [SHEET_EXPANDED_Y, SHEET_MID_Y, SHEET_COLLAPSED_Y];
+      const cur = this.state.sheetY;
+      let nearest = points[0], best = Infinity;
+      points.forEach(p => { const d = Math.abs(p - cur); if (d < best) { best = d; nearest = p; } });
+      this.setState({ sheetY: nearest, sheetDragging: false });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
 
   renderVals() {
     const tab = this.state.tab;
@@ -215,15 +449,60 @@ class Component extends DCLogic {
     const sec = this.sections[tab];
     const menuOrder = ['art', 'units', 'story', 'music', 'arms'];
 
+    const roster = this.state.roster;
+    const visibleRoster = roster.slice(0, this.state.visibleCount).map(c => ({
+      ...c,
+      onSelect: () => this.goDetail(c)
+    }));
+    const unitsStatusText = this.state.rosterLoading
+      ? 'Loading roster…'
+      : this.state.rosterError
+        ? 'Failed to load roster'
+        : visibleRoster.length + ' / ' + roster.length + ' units shown';
+
+    const selectedChar = this.state.selectedChar;
+    const sheetY = this.state.sheetY;
+
     const vals = {
       isHome: tab === 'home',
-      isSection: !!sec,
+      isUnits: tab === 'units',
+      isDetail: tab === 'detail',
+      isSection: !!sec && tab !== 'units' && tab !== 'detail',
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,
       sectionLabel: sec ? sec.label : '',
       sectionDesc: sec ? sec.desc : '',
       sectionColor: sec ? sec.color : '#3E4450',
       sectionSlotId: 'section-preview-' + tab,
+      rosterLoading: this.state.rosterLoading,
+      rosterError: this.state.rosterError,
+      showRosterGrid: !this.state.rosterLoading && !this.state.rosterError,
+      visibleRoster: visibleRoster,
+      unitsStatusText: unitsStatusText,
+      handleRosterScroll: (e) => this.handleRosterScroll(e),
+      detailEnName: selectedChar ? selectedChar.enName : '',
+      detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
+      detailStarSlots: selectedChar ? selectedChar.starSlots : [],
+      fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
+      platformUrl0: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[0]) : '',
+      platformUrl1: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[1]) : '',
+      platformUrl2: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[2]) : '',
+      hasSpecial: this.state.hasSpecial,
+      overlayOpen: this.state.overlayOpen,
+      overlayUrl: (selectedChar && this.state.overlayGif) ? (selectedChar.folderUrl + '/' + this.state.overlayGif + '.gif') : '',
+      overlayLabel: this.state.overlayGif === 'special' ? 'SPECIAL' : 'SKILL',
+      artToggleLabel: this.state.artIndex === 0 ? 'Base' : 'Awakened',
+      sheetTransform: 'translateY(' + sheetY + 'px)',
+      sheetTransition: this.state.sheetDragging ? 'none' : 'transform 0.25s ease',
+      skillBtnBg: (this.state.overlayOpen && this.state.overlayGif === 'skill_ready') ? accent : '#F0F3F7',
+      skillBtnColor: (this.state.overlayOpen && this.state.overlayGif === 'skill_ready') ? '#FFFFFF' : '#3E4450',
+      specialBtnBg: (this.state.overlayOpen && this.state.overlayGif === 'special') ? accent : '#F0F3F7',
+      specialBtnColor: (this.state.overlayOpen && this.state.overlayGif === 'special') ? '#FFFFFF' : '#3E4450',
+      toggleArt: () => this.toggleArt(),
+      showSkill: () => this.showSkill(),
+      showSpecial: () => this.showSpecial(),
+      backFromDetail: () => this.backFromDetail(),
+      sheetPointerDown: (e) => this.sheetPointerDown(e),
       goHome: () => this.go('home'),
       goArt: () => this.go('art'),
       goUnits: () => this.go('units'),
@@ -241,7 +520,7 @@ class Component extends DCLogic {
 
     ['Home', 'Art', 'Units', 'Story', 'Music', 'Menu'].forEach(name => {
       const id = name.toLowerCase();
-      const active = id === 'menu' ? this.state.menuOpen : tab === id;
+      const active = id === 'menu' ? this.state.menuOpen : (id === 'units' ? (tab === 'units' || tab === 'detail') : tab === id);
       vals['tabBg' + name] = active ? accent : 'transparent';
       vals['tabCol' + name] = active ? '#FFFFFF' : '#8A93A5';
     });

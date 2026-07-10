@@ -1,0 +1,11 @@
+{
+  "name": "world-flipper-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "upload:assets": "node scripts/upload-to-r2.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
