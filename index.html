@@ -2,27 +2,27 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
   <script src="image-slot.js"></script>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; }
+    html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
     body { font-family: 'M PLUS Rounded 1c', sans-serif; background: #8FCCE8; }
     @keyframes wfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes wfPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
   </style>
 </helmet>
 
-<div style="width: 100%; height: 100vh; display: flex; justify-content: center; align-items: stretch; background: repeating-conic-gradient(#84C4E2 0% 25%, #8FCCE8 0% 50%) 0 0 / 28px 28px;">
-  <div style="width: min(430px, 100%); height: 100%; display: flex; flex-direction: column; background: linear-gradient(180deg, #D8F1FB 0%, #B4E3F5 55%, #C9ECF8 100%); box-shadow: 0 0 40px rgba(30, 80, 110, 0.35); position: relative; overflow: hidden;">
+<div style="width: 100%; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; background: repeating-conic-gradient(#84C4E2 0% 25%, #8FCCE8 0% 50%) 0 0 / 28px 28px;">
+  <div style="width: 430px; height: 860px; flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: linear-gradient(180deg, #D8F1FB 0%, #B4E3F5 55%, #C9ECF8 100%); box-shadow: 0 0 40px rgba(30, 80, 110, 0.35); position: relative; overflow: hidden;">
 
     <!-- ===== Top status bar ===== -->
     <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #3E4450; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); z-index: 30;">
@@ -335,11 +335,24 @@ const SHEET_EXPANDED_Y = 0;
 const SHEET_MID_Y = 120;
 const SHEET_COLLAPSED_Y = 210;
 
+// The whole app is authored against a fixed 430x860 reference canvas (matches the
+// $preview size above) — fixed-pixel buttons, clip-path shapes and the roster grid all
+// assume that canvas. Rather than reflowing each element per device, the canvas is
+// scaled uniformly to fit whatever viewport it's actually shown in (see cardScaleTransform
+// below), the same way a fixed-resolution game screen fits itself to the window.
+const DESIGN_W = 430;
+const DESIGN_H = 860;
+function computeScale() {
+  const vw = (window.visualViewport ? window.visualViewport.width : window.innerWidth) || DESIGN_W;
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) || DESIGN_H;
+  return Math.min(vw / DESIGN_W, vh / DESIGN_H, 1);
+}
+
 class Component extends DCLogic {
   state = {
     tab: 'home', menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
-    sheetY: SHEET_MID_Y, sheetDragging: false
+    sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale()
   };
 
   sections = {
@@ -373,6 +386,16 @@ class Component extends DCLogic {
         console.error('[units] failed to load roster.json', err);
         this.setState({ rosterLoading: false, rosterError: String(err && err.message || err) });
       });
+
+    const onResize = () => this.updateScale();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', onResize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+  }
+
+  updateScale() {
+    const s = computeScale();
+    if (Math.abs(s - this.state.scale) > 0.001) this.setState({ scale: s });
   }
 
   go(tab) {
@@ -425,8 +448,9 @@ class Component extends DCLogic {
     e.preventDefault();
     const startClientY = e.clientY;
     const startSheetY = this.state.sheetY;
+    const scale = this.state.scale || 1;
     const onMove = (ev) => {
-      const delta = ev.clientY - startClientY;
+      const delta = (ev.clientY - startClientY) / scale;
       const ny = Math.max(SHEET_EXPANDED_Y, Math.min(SHEET_COLLAPSED_Y, startSheetY + delta));
       this.setState({ sheetY: ny, sheetDragging: true });
     };
@@ -464,6 +488,7 @@ class Component extends DCLogic {
     const sheetY = this.state.sheetY;
 
     const vals = {
+      cardScaleTransform: 'scale(' + this.state.scale + ')',
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',
