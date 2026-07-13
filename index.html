@@ -227,6 +227,15 @@
                 <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">Special</button>
               </sc-if>
             </div>
+
+            <!-- Character theme music -->
+            <sc-if value="{{ hasMusic }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; justify-content: center; gap: 8px; padding: 8px 18px 0; overflow-x: auto;">
+                <sc-for list="{{ musicTracks }}" as="mt" hint-placeholder-count="1">
+                  <button onClick="{{ mt.onClick }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ mt.color }}; background: {{ mt.bg }}; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ mt.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
           </div>
 
           <!-- Skill / Special overlay -->
@@ -352,8 +361,11 @@ class Component extends DCLogic {
   state = {
     tab: 'home', menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
-    sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale()
+    sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale(),
+    musicIndex: 0, musicPlaying: false
   };
+
+  audio = new Audio();
 
   sections = {
     art:   { label: 'Art Gallery',  desc: 'Key visuals, character art & pixel sprites', color: '#F0526E' },
@@ -392,6 +404,7 @@ class Component extends DCLogic {
             jpName: c.jpName || '',
             rarity: c.rarity,
             thumbUrl: ASSET_BASE + '/' + c.thumb,
+            music: c.music || [],
             starSlots: Array.from({ length: 5 }, (_, i) => ({ color: i < c.rarity ? STAR_ON : STAR_OFF }))
           }));
         this.setState({ roster, rosterLoading: false });
@@ -405,6 +418,8 @@ class Component extends DCLogic {
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+
+    this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false }));
   }
 
   updateScale() {
@@ -413,7 +428,7 @@ class Component extends DCLogic {
   }
 
   go(tab) {
-    if (this.state.tab === 'detail' && tab !== 'detail') this.clearAnimTimers();
+    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopMusic(); }
     this.setState({ tab: tab, menuOpen: false });
     if (tab === 'units') this.restoreUnitsScroll();
   }
@@ -427,22 +442,59 @@ class Component extends DCLogic {
 
   goDetail(c) {
     this.clearAnimTimers();
+    this.stopMusic();
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
     this.setState({
       tab: 'detail', menuOpen: false,
-      selectedChar: { devName: c.devName, enName: c.enName, jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl },
-      artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y
+      selectedChar: { devName: c.devName, enName: c.enName, jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [] },
+      artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
+      musicIndex: 0, musicPlaying: false
     });
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
     probe.onerror = () => {};
     probe.src = folderUrl + '/special.gif';
+
+    // Preload both base and awakened full shots up front so the awaken toggle is
+    // instant instead of popping in a blank/loading image on first switch.
+    new Image().src = folderUrl + '/full_shot_1440_1920_0.png';
+    new Image().src = folderUrl + '/full_shot_1440_1920_1.png';
   }
 
   backFromDetail() {
     this.clearAnimTimers();
+    this.stopMusic();
     this.setState({ tab: 'units', selectedChar: null });
     this.restoreUnitsScroll();
+  }
+
+  trackLabel(fileName, trackNumber) {
+    // Suffixes like "_hw23"/"_smr21" are internal event codes, not meaningful to
+    // players, so tracks are just numbered — except "arrange", which is worth calling out.
+    if (/arrange/i.test(fileName)) return 'Arrange';
+    return trackNumber === 1 ? 'Theme' : 'Theme ' + trackNumber;
+  }
+
+  toggleMusicTrack(index) {
+    const selectedChar = this.state.selectedChar;
+    if (!selectedChar || !selectedChar.music.length) return;
+    const sameTrack = index === this.state.musicIndex;
+    if (sameTrack && this.state.musicPlaying) {
+      this.audio.pause();
+      this.setState({ musicPlaying: false });
+      return;
+    }
+    if (!sameTrack) {
+      this.audio.src = selectedChar.folderUrl + '/music/' + selectedChar.music[index];
+    }
+    this.audio.play().catch(() => {});
+    this.setState({ musicIndex: index, musicPlaying: true });
+  }
+
+  stopMusic() {
+    this.audio.pause();
+    this.audio.currentTime = 0;
+    this.audio.removeAttribute('src');
   }
 
   toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
@@ -530,6 +582,16 @@ class Component extends DCLogic {
       platformUrl1: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[1]) : '',
       platformUrl2: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[2]) : '',
       hasSpecial: this.state.hasSpecial,
+      hasMusic: !!(selectedChar && selectedChar.music.length),
+      musicTracks: selectedChar ? selectedChar.music.map((fileName, i) => {
+        const playing = this.state.musicPlaying && this.state.musicIndex === i;
+        return {
+          label: (playing ? '⏸ ' : '▶ ') + this.trackLabel(fileName, i + 1),
+          bg: playing ? accent : '#F0F3F7',
+          color: playing ? '#FFFFFF' : '#3E4450',
+          onClick: () => this.toggleMusicTrack(i)
+        };
+      }) : [],
       overlayOpen: this.state.overlayOpen,
       overlayUrl: (selectedChar && this.state.overlayGif) ? (selectedChar.folderUrl + '/' + this.state.overlayGif + '.gif') : '',
       overlayLabel: this.state.overlayGif === 'special' ? 'SPECIAL' : 'SKILL',
