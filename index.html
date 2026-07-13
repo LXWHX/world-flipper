@@ -28,7 +28,7 @@
     <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #3E4450; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); z-index: 30;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <svg width="18" height="18" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFD35C"></rect><rect x="1" y="2" width="6" height="2" fill="#FFB03A"></rect><rect x="2" y="4" width="4" height="2" fill="#F0526E"></rect><rect x="3" y="6" width="2" height="2" fill="#C83A56"></rect></svg>
-        <div style="color: #FFFFFF; font-weight: 900; font-size: 13px; letter-spacing: 1px;">WORLD FLIPPER <span style="color: #7ED8F2;">MUSEUM</span></div>
+        <div style="color: #FFFFFF; font-weight: 900; font-size: 13px; letter-spacing: 1px;">WORLD FLIPPER <span style="color: #7ED8F2;">{{ brandMuseumLabel }}</span></div>
       </div>
       <div style="flex: 1;"></div>
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
@@ -43,6 +43,7 @@
           </div>
         </div>
       </sc-if>
+      <button onClick="{{ toggleLang }}" style="border: none; cursor: pointer; background: #2E333D; color: #FFFFFF; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 10px; font-family: inherit;">{{ langToggleLabel }}</button>
     </div>
 
     <!-- ===== Screen area ===== -->
@@ -61,25 +62,25 @@
           <!-- Diagonal title slash -->
           <div style="position: relative; z-index: 5; margin: 14px 0 0 -6px; width: 78%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12);">
             <div style="font-size: 22px; font-weight: 900; color: #3E4450; line-height: 1.05; letter-spacing: 0.5px;">WORLD FLIPPER</div>
-            <div style="font-size: 13px; font-weight: 800; color: #F0526E; letter-spacing: 4px;">MUSEUM &amp; ARCHIVE</div>
+            <div style="font-size: 13px; font-weight: 800; color: #F0526E; letter-spacing: 4px;">{{ heroSubtitle }}</div>
           </div>
 
           <!-- Right-side quick buttons (slanted tag: semicircle icon + rectangle) -->
           <div style="position: absolute; right: 0; top: 71%; z-index: 5; display: flex; flex-direction: column; gap: 18px; align-items: flex-end;">
             <button onClick="{{ toggleMenu }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
               <svg width="17" height="17" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="1" y="1" width="6" height="1" fill="#3E4450"></rect><rect x="1" y="3" width="6" height="1" fill="#3E4450"></rect><rect x="1" y="5" width="4" height="1" fill="#3E4450"></rect></svg>
-              <span style="font-size: 11px; font-weight: 800; color: #3E4450;">News</span>
+              <span style="font-size: 11px; font-weight: 800; color: #3E4450;">{{ navNewsLabel }}</span>
             </button>
             <button onClick="{{ toggleMenu }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
               <svg width="17" height="17" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="1" y="2" width="6" height="4" fill="#3E4450"></rect><rect x="2" y="3" width="4" height="1" fill="#FFFFFF"></rect></svg>
-              <span style="font-size: 11px; font-weight: 800; color: #3E4450;">About</span>
+              <span style="font-size: 11px; font-weight: 800; color: #3E4450;">{{ navAboutLabel }}</span>
             </button>
           </div>
 
           <!-- Left-side big tag (mirrored) -->
           <div style="position: absolute; left: 0; top: 71%; z-index: 5; display: flex; flex-direction: column; align-items: flex-start;">
             <button onClick="{{ goStory }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 0 38px 38px 0; height: 76px; padding: 0 18px 0 30px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 9px; transform: rotate(15deg) translateX(-16px); transform-origin: left center;" style-hover="transform: rotate(15deg) translateX(-8px);">
-              <span style="font-size: 17px; font-weight: 900; color: #3E4450;">Story</span>
+              <span style="font-size: 17px; font-weight: 900; color: #3E4450;">{{ navStoryLabel }}</span>
               <svg width="30" height="30" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="6" height="8" fill="#3E4450"></rect><rect x="3" y="3" width="4" height="1" fill="#FFFFFF"></rect><rect x="3" y="5" width="4" height="1" fill="#FFFFFF"></rect></svg>
             </button>
           </div>
@@ -97,17 +98,17 @@
             <button onClick="{{ goArt }}" style="flex: 1; max-width: 132px; width: 132px; height: 60px; border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding-top: 10px; font-family: inherit; font-weight: 800; font-size: 14px; box-shadow: inset 0 -4px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4); margin-bottom: -4px; clip-path: path('M 16 60 L 116 60 Q 132 60 132 44 L 132 27 Q 132 14 119 15.7 L 15 1.9 Q 0 0 0 15 L 0 44 Q 0 60 16 60 Z');" style-hover="filter: brightness(1.07);" style-active="transform: translateY(2px);">
               <span style="display: flex; align-items: center; gap: 6px;">
                 <svg width="15" height="15" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="1" y="1" width="6" height="6" fill="#FFFFFF"></rect><rect x="2" y="4" width="2" height="2" fill="#4ECB4E"></rect><rect x="4" y="2" width="2" height="2" fill="#FFD35C"></rect></svg>
-                Gallery
+                {{ navGalleryLabel }}
               </span>
             </button>
             <button onClick="{{ goUnits }}" style="width: 120px; height: 120px; flex: none; border: none; cursor: pointer; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #FF7A8E 0%, #F0526E 55%, #D63B58 100%); box-shadow: 0 0 0 6px #FFFFFF, 0 6px 0 6px #C9CFDA, inset 0 3px 0 rgba(255,255,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; animation: wfPulse 3s ease-in-out infinite;" style-hover="filter: brightness(1.08);" style-active="transform: scale(0.95);">
               <svg width="34" height="34" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="2" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="1" y="4" width="8" height="2" fill="#FFE1E7"></rect><rect x="2" y="6" width="2" height="2" fill="#FFFFFF"></rect><rect x="6" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
-              <span style="color: #FFFFFF; font-weight: 900; font-size: 16px; letter-spacing: 0.5px;">Characters</span>
+              <span style="color: #FFFFFF; font-weight: 900; font-size: 16px; letter-spacing: 0.5px;">{{ navCharactersLabel }}</span>
             </button>
             <button onClick="{{ goMusic }}" style="flex: 1; max-width: 132px; width: 132px; height: 60px; border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding-top: 10px; font-family: inherit; font-weight: 800; font-size: 14px; box-shadow: inset 0 -4px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4); margin-bottom: -4px; clip-path: path('M 16 60 L 116 60 Q 132 60 132 44 L 132 15 Q 132 0 117 1.9 L 13 15.7 Q 0 14 0 27 L 0 44 Q 0 60 16 60 Z');" style-hover="filter: brightness(1.07);" style-active="transform: translateY(2px);">
               <span style="display: flex; align-items: center; gap: 6px;">
                 <svg width="15" height="15" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="4" y="0" width="2" height="5" fill="#FFFFFF"></rect><rect x="2" y="5" width="3" height="2" fill="#FFFFFF"></rect></svg>
-                Music
+                {{ navMusicLabel }}
               </span>
             </button>
           </div>
@@ -123,7 +124,7 @@
               <svg width="20" height="20" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="1" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="2" y="4" width="4" height="2" fill="#FFFFFF"></rect><rect x="3" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
             </div>
             <div>
-              <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">Characters</div>
+              <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">{{ unitsScreenTitle }}</div>
               <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ unitsStatusText }}</div>
             </div>
           </div>
@@ -131,13 +132,13 @@
           <!-- Horizontal-scrolling roster -->
           <div id="units-scroll" onScroll="{{ handleRosterScroll }}" style="flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 24px 24px; padding: 16px 12px; display: flex; align-items: center;">
             <sc-if value="{{ rosterLoading }}" hint-placeholder-val="{{ false }}">
-              <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">Loading roster…</div>
+              <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ loadingRosterText }}</div>
             </sc-if>
             <sc-if value="{{ rosterError }}" hint-placeholder-val="{{ false }}">
               <div style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 0 20px; color: #C0455C; font-size: 12px; font-weight: 700;">
-                <div>Couldn't load roster.json</div>
+                <div>{{ rosterErrorTitle }}</div>
                 <div style="font-size: 10.5px; font-weight: 600; color: #8A93A5;">{{ rosterError }}</div>
-                <div style="font-size: 10.5px; font-weight: 600; color: #8A93A5;">Serve this page over http(s) (e.g. `npx serve` or `python -m http.server`) — opening it as a local file:// URL blocks the fetch.</div>
+                <div style="font-size: 10.5px; font-weight: 600; color: #8A93A5;">{{ rosterErrorHint }}</div>
               </div>
             </sc-if>
             <sc-if value="{{ showRosterGrid }}" hint-placeholder-val="{{ true }}">
@@ -222,9 +223,9 @@
 
             <!-- Skill / Special trigger buttons -->
             <div style="display: flex; justify-content: center; gap: 10px; padding: 12px 18px 0;">
-              <button onClick="{{ showSkill }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ skillBtnColor }}; background: {{ skillBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">Skill</button>
+              <button onClick="{{ showSkill }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ skillBtnColor }}; background: {{ skillBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ skillBtnLabel }}</button>
               <sc-if value="{{ hasSpecial }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">Special</button>
+                <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ specialBtnLabel }}</button>
               </sc-if>
             </div>
 
@@ -268,10 +269,10 @@
             <div style="animation: wfFloat 3s ease-in-out infinite;">
               <svg width="56" height="56" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="0" width="2" height="2" fill="{{ sectionColor }}"></rect><rect x="2" y="2" width="6" height="2" fill="{{ sectionColor }}"></rect><rect x="1" y="4" width="8" height="2" fill="{{ sectionColor }}" opacity="0.55"></rect><rect x="2" y="6" width="2" height="2" fill="{{ sectionColor }}"></rect><rect x="6" y="6" width="2" height="2" fill="{{ sectionColor }}"></rect></svg>
             </div>
-            <div style="font-size: 17px; font-weight: 900; color: #3E4450;">Under Construction</div>
-            <div style="font-size: 12.5px; font-weight: 700; color: #8A93A5; max-width: 260px;">This wing of the museum opens soon. Content for {{ sectionLabel }} will live here.</div>
-            <image-slot id="{{ sectionSlotId }}" shape="rounded" radius="14" placeholder="Drop a preview image for this section" style="width: 100%; height: 150px;"></image-slot>
-            <button onClick="{{ goHome }}" style="border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; border-radius: 999px; padding: 10px 26px; font-family: inherit; font-weight: 800; font-size: 13px; box-shadow: 0 3px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 #2A80B5;">Back to Home</button>
+            <div style="font-size: 17px; font-weight: 900; color: #3E4450;">{{ underConstructionTitle }}</div>
+            <div style="font-size: 12.5px; font-weight: 700; color: #8A93A5; max-width: 260px;">{{ sectionBody }}</div>
+            <image-slot id="{{ sectionSlotId }}" shape="rounded" radius="14" placeholder="{{ imageSlotPlaceholder }}" style="width: 100%; height: 150px;"></image-slot>
+            <button onClick="{{ goHome }}" style="border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; border-radius: 999px; padding: 10px 26px; font-family: inherit; font-weight: 800; font-size: 13px; box-shadow: 0 3px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 #2A80B5;">{{ backToHomeLabel }}</button>
           </div>
         </div>
       </sc-if>
@@ -300,27 +301,27 @@
     <div style="flex: none; z-index: 50; background: #FFFFFF; border-top: 2px solid #E3E9F0; display: flex; align-items: stretch; padding: 6px 6px calc(6px + env(safe-area-inset-bottom));">
       <button onClick="{{ goHome }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgHome }}; color: {{ tabColHome }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="1" width="2" height="2" fill="currentColor"></rect><rect x="2" y="3" width="6" height="2" fill="currentColor"></rect><rect x="2" y="5" width="6" height="4" fill="currentColor"></rect><rect x="4" y="7" width="2" height="2" fill="#B4E3F5"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Home</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabHomeLabel }}</span>
       </button>
       <button onClick="{{ goArt }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgArt }}; color: {{ tabColArt }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="1" width="8" height="8" fill="currentColor"></rect><rect x="2" y="5" width="3" height="3" fill="#8BE86E"></rect><rect x="5" y="2" width="3" height="3" fill="#FFD35C"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Art</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabArtLabel }}</span>
       </button>
       <button onClick="{{ goUnits }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgUnits }}; color: {{ tabColUnits }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="3" y="1" width="4" height="4" fill="currentColor"></rect><rect x="2" y="6" width="6" height="3" fill="currentColor"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Units</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabUnitsLabel }}</span>
       </button>
       <button onClick="{{ goStory }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgStory }}; color: {{ tabColStory }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="6" height="8" fill="currentColor"></rect><rect x="3" y="3" width="4" height="1" fill="#B4E3F5"></rect><rect x="3" y="5" width="4" height="1" fill="#B4E3F5"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Story</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabStoryLabel }}</span>
       </button>
       <button onClick="{{ goMusic }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgMusic }}; color: {{ tabColMusic }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="5" y="1" width="2" height="6" fill="currentColor"></rect><rect x="3" y="6" width="3" height="3" fill="currentColor"></rect><rect x="7" y="1" width="2" height="2" fill="currentColor"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Music</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabMusicLabel }}</span>
       </button>
       <button onClick="{{ toggleMenu }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgMenu }}; color: {{ tabColMenu }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="2" width="6" height="1" fill="currentColor"></rect><rect x="2" y="4" width="6" height="1" fill="currentColor"></rect><rect x="2" y="6" width="6" height="1" fill="currentColor"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">Menu</span>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabMenuLabel }}</span>
       </button>
     </div>
   </div>
@@ -343,6 +344,61 @@ const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
 const SHEET_EXPANDED_Y = 0;
 const SHEET_MID_Y = 120;
 const SHEET_COLLAPSED_Y = 210;
+const LANG_STORAGE_KEY = 'wf_lang';
+
+// UI-chrome copy only (not character/content data) — see CLAUDE.md for why
+// character-facing fields like enName/jpName stay separate, unlocalized fields.
+const STRINGS = {
+  brandMuseum: { en: 'MUSEUM', zh: '博物馆' },
+  heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
+  navNews: { en: 'News', zh: '资讯' },
+  navAbout: { en: 'About', zh: '关于' },
+  navStory: { en: 'Story', zh: '剧情' },
+  navGallery: { en: 'Gallery', zh: '画廊' },
+  navCharacters: { en: 'Characters', zh: '角色' },
+  navMusic: { en: 'Music', zh: '音乐' },
+  tabHome: { en: 'Home', zh: '首页' },
+  tabArt: { en: 'Art', zh: '画廊' },
+  tabUnits: { en: 'Units', zh: '角色' },
+  tabStory: { en: 'Story', zh: '剧情' },
+  tabMusic: { en: 'Music', zh: '音乐' },
+  tabMenu: { en: 'Menu', zh: '菜单' },
+  unitsScreenTitle: { en: 'Characters', zh: '角色' },
+  loadingRoster: { en: 'Loading roster…', zh: '角色加载中…' },
+  failedToLoadRoster: { en: 'Failed to load roster', zh: '角色加载失败' },
+  unitsShownSuffix: { en: ' units shown', zh: ' 个角色' },
+  rosterErrorTitle: { en: "Couldn't load roster.json", zh: '无法加载角色数据' },
+  rosterErrorHint: {
+    en: 'Serve this page over http(s) (e.g. `npx serve` or `python -m http.server`) — opening it as a local file:// URL blocks the fetch.',
+    zh: '请通过 http(s) 提供此页面（例如 `npx serve` 或 `python -m http.server`）——以本地 file:// 方式打开会导致请求被阻止。'
+  },
+  skillBtn: { en: 'Skill', zh: '技能' },
+  specialBtn: { en: 'Special', zh: '必杀' },
+  underConstruction: { en: 'Under Construction', zh: '建设中' },
+  underConstructionBody: {
+    en: 'This wing of the museum opens soon. Content for {label} will live here.',
+    zh: '敬请期待，「{label}」相关内容即将上线。'
+  },
+  imageSlotPlaceholder: { en: 'Drop a preview image for this section', zh: '为该版块添加预览图片' },
+  backToHome: { en: 'Back to Home', zh: '返回首页' },
+  overlaySkill: { en: 'SKILL', zh: '技能' },
+  overlaySpecial: { en: 'SPECIAL', zh: '必杀' },
+  artBase: { en: 'Base', zh: '普通' },
+  artAwakened: { en: 'Awakened', zh: '觉醒' },
+  trackTheme: { en: 'Theme', zh: '主题曲' },
+  trackArrange: { en: 'Arrange', zh: '编曲' },
+  langToggle: { en: '中文', zh: 'EN' },
+  sectionArtLabel: { en: 'Art Gallery', zh: '画廊' },
+  sectionArtDesc: { en: 'Key visuals, character art & pixel sprites', zh: '主视觉图、角色立绘与像素动画' },
+  sectionUnitsLabel: { en: 'Characters', zh: '角色' },
+  sectionUnitsDesc: { en: 'Unit profiles & episodes', zh: '角色资料与剧情' },
+  sectionStoryLabel: { en: 'Story Archive', zh: '剧情档案' },
+  sectionStoryDesc: { en: 'Main story & event episodes', zh: '主线剧情与活动剧情' },
+  sectionMusicLabel: { en: 'Music Room', zh: '音乐室' },
+  sectionMusicDesc: { en: 'BGM & soundtrack collection', zh: '游戏原声音乐收藏' },
+  sectionArmsLabel: { en: 'Armaments', zh: '武器装备' },
+  sectionArmsDesc: { en: 'Weapons & equipment', zh: '武器与装备' }
+};
 
 // The whole app is authored against a fixed 430x860 reference canvas (matches the
 // $preview size above) — fixed-pixel buttons, clip-path shapes and the roster grid all
@@ -359,7 +415,7 @@ function computeScale() {
 
 class Component extends DCLogic {
   state = {
-    tab: 'home', menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
+    tab: 'home', lang: this.loadLang(), menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
     sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale(),
     musicIndex: 0, musicPlaying: false
@@ -367,13 +423,35 @@ class Component extends DCLogic {
 
   audio = new Audio();
 
-  sections = {
-    art:   { label: 'Art Gallery',  desc: 'Key visuals, character art & pixel sprites', color: '#F0526E' },
-    units: { label: 'Characters',   desc: 'Unit profiles & episodes',                   color: '#FFA726' },
-    story: { label: 'Story Archive',desc: 'Main story & event episodes',                color: '#3FA6DD' },
-    music: { label: 'Music Room',   desc: 'BGM & soundtrack collection',                color: '#A66FE0' },
-    arms:  { label: 'Armaments',    desc: 'Weapons & equipment',                        color: '#35C8B4' }
-  };
+  loadLang() {
+    try {
+      const saved = localStorage.getItem(LANG_STORAGE_KEY);
+      if (saved === 'en' || saved === 'zh') return saved;
+    } catch (e) {}
+    return 'en';
+  }
+
+  t(key) {
+    const entry = STRINGS[key];
+    if (!entry) return key;
+    return entry[this.state.lang] || entry.en;
+  }
+
+  toggleLang() {
+    const lang = this.state.lang === 'en' ? 'zh' : 'en';
+    try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
+    this.setState({ lang });
+  }
+
+  get sections() {
+    return {
+      art:   { label: this.t('sectionArtLabel'),   desc: this.t('sectionArtDesc'),   color: '#F0526E' },
+      units: { label: this.t('sectionUnitsLabel'), desc: this.t('sectionUnitsDesc'), color: '#FFA726' },
+      story: { label: this.t('sectionStoryLabel'), desc: this.t('sectionStoryDesc'), color: '#3FA6DD' },
+      music: { label: this.t('sectionMusicLabel'), desc: this.t('sectionMusicDesc'), color: '#A66FE0' },
+      arms:  { label: this.t('sectionArmsLabel'),  desc: this.t('sectionArmsDesc'),  color: '#35C8B4' }
+    };
+  }
 
   // sc-if unmounts its children when the condition goes false, so the units-scroll
   // element (and its scrollLeft) is destroyed every time we leave the tab. Track the
@@ -471,8 +549,8 @@ class Component extends DCLogic {
   trackLabel(fileName, trackNumber) {
     // Suffixes like "_hw23"/"_smr21" are internal event codes, not meaningful to
     // players, so tracks are just numbered — except "arrange", which is worth calling out.
-    if (/arrange/i.test(fileName)) return 'Arrange';
-    return trackNumber === 1 ? 'Theme' : 'Theme ' + trackNumber;
+    if (/arrange/i.test(fileName)) return this.t('trackArrange');
+    return trackNumber === 1 ? this.t('trackTheme') : this.t('trackTheme') + ' ' + trackNumber;
   }
 
   toggleMusicTrack(index) {
@@ -548,10 +626,10 @@ class Component extends DCLogic {
       onSelect: () => this.goDetail(c)
     }));
     const unitsStatusText = this.state.rosterLoading
-      ? 'Loading roster…'
+      ? this.t('loadingRoster')
       : this.state.rosterError
-        ? 'Failed to load roster'
-        : visibleRoster.length + ' / ' + roster.length + ' units shown';
+        ? this.t('failedToLoadRoster')
+        : visibleRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix');
 
     const selectedChar = this.state.selectedChar;
     const sheetY = this.state.sheetY;
@@ -564,6 +642,32 @@ class Component extends DCLogic {
       isSection: !!sec && tab !== 'units' && tab !== 'detail',
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,
+      langToggleLabel: this.t('langToggle'),
+      toggleLang: () => this.toggleLang(),
+      brandMuseumLabel: this.t('brandMuseum'),
+      heroSubtitle: this.t('heroSubtitle'),
+      navNewsLabel: this.t('navNews'),
+      navAboutLabel: this.t('navAbout'),
+      navStoryLabel: this.t('navStory'),
+      navGalleryLabel: this.t('navGallery'),
+      navCharactersLabel: this.t('navCharacters'),
+      navMusicLabel: this.t('navMusic'),
+      unitsScreenTitle: this.t('unitsScreenTitle'),
+      loadingRosterText: this.t('loadingRoster'),
+      rosterErrorTitle: this.t('rosterErrorTitle'),
+      rosterErrorHint: this.t('rosterErrorHint'),
+      skillBtnLabel: this.t('skillBtn'),
+      specialBtnLabel: this.t('specialBtn'),
+      underConstructionTitle: this.t('underConstruction'),
+      sectionBody: sec ? this.t('underConstructionBody').replace('{label}', sec.label) : '',
+      imageSlotPlaceholder: this.t('imageSlotPlaceholder'),
+      backToHomeLabel: this.t('backToHome'),
+      tabHomeLabel: this.t('tabHome'),
+      tabArtLabel: this.t('tabArt'),
+      tabUnitsLabel: this.t('tabUnits'),
+      tabStoryLabel: this.t('tabStory'),
+      tabMusicLabel: this.t('tabMusic'),
+      tabMenuLabel: this.t('tabMenu'),
       sectionLabel: sec ? sec.label : '',
       sectionDesc: sec ? sec.desc : '',
       sectionColor: sec ? sec.color : '#3E4450',
@@ -594,8 +698,8 @@ class Component extends DCLogic {
       }) : [],
       overlayOpen: this.state.overlayOpen,
       overlayUrl: (selectedChar && this.state.overlayGif) ? (selectedChar.folderUrl + '/' + this.state.overlayGif + '.gif') : '',
-      overlayLabel: this.state.overlayGif === 'special' ? 'SPECIAL' : 'SKILL',
-      artToggleLabel: this.state.artIndex === 0 ? 'Base' : 'Awakened',
+      overlayLabel: this.state.overlayGif === 'special' ? this.t('overlaySpecial') : this.t('overlaySkill'),
+      artToggleLabel: this.state.artIndex === 0 ? this.t('artBase') : this.t('artAwakened'),
       sheetTransform: 'translateY(' + sheetY + 'px)',
       sheetTransition: this.state.sheetDragging ? 'none' : 'transform 0.25s ease',
       skillBtnBg: (this.state.overlayOpen && this.state.overlayGif === 'skill_ready') ? accent : '#F0F3F7',
