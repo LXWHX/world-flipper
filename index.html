@@ -231,7 +231,7 @@
 
           <!-- Skill / Special overlay -->
           <sc-if value="{{ overlayOpen }}" hint-placeholder-val="{{ false }}">
-            <div style="position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 7; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
+            <div style="position: absolute; left: 50%; top: 22%; transform: translateX(-50%); z-index: 20; display: flex; flex-direction: column; align-items: center; pointer-events: none;">
               <div style="position: absolute; left: 50%; top: 50%; width: 260px; height: 260px; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%);"></div>
               <img src="{{ overlayUrl }}" alt="{{ overlayLabel }}" style="position: relative; height: 240px; image-rendering: pixelated; filter: drop-shadow(0 6px 6px rgba(0,0,0,0.3));">
               <div style="position: relative; margin-top: -8px; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #FFFFFF; background: #F0526E; border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15);">{{ overlayLabel }}</div>
@@ -363,6 +363,20 @@ class Component extends DCLogic {
     arms:  { label: 'Armaments',    desc: 'Weapons & equipment',                        color: '#35C8B4' }
   };
 
+  // sc-if unmounts its children when the condition goes false, so the units-scroll
+  // element (and its scrollLeft) is destroyed every time we leave the tab. Track the
+  // position ourselves and re-apply it once the element remounts.
+  unitsScrollLeft = 0;
+
+  restoreUnitsScroll() {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById('units-scroll');
+        if (el) el.scrollLeft = this.unitsScrollLeft;
+      });
+    });
+  }
+
   componentDidMount() {
     fetch(ASSET_BASE + '/roster.json')
       .then(r => {
@@ -401,10 +415,12 @@ class Component extends DCLogic {
   go(tab) {
     if (this.state.tab === 'detail' && tab !== 'detail') this.clearAnimTimers();
     this.setState({ tab: tab, menuOpen: false });
+    if (tab === 'units') this.restoreUnitsScroll();
   }
 
   handleRosterScroll(e) {
     const el = e.currentTarget;
+    this.unitsScrollLeft = el.scrollLeft;
     if (el.scrollLeft + el.clientWidth < el.scrollWidth - 500) return;
     this.setState(s => ({ visibleCount: Math.min(s.roster.length, s.visibleCount + ROSTER_BATCH) }));
   }
@@ -426,6 +442,7 @@ class Component extends DCLogic {
   backFromDetail() {
     this.clearAnimTimers();
     this.setState({ tab: 'units', selectedChar: null });
+    this.restoreUnitsScroll();
   }
 
   toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
