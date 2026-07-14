@@ -151,14 +151,14 @@
                           <span style="font-size: 8px; line-height: 1; color: {{ s.color }};">★</span>
                         </sc-for>
                       </div>
-                      <img src="{{ c.thumbUrl }}" alt="{{ c.enName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
+                      <img src="{{ c.thumbUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
                       <sc-if value="{{ c.hasMusic }}" hint-placeholder-val="{{ false }}">
                         <div style="position: absolute; right: 2px; bottom: 6px; z-index: 3; width: 15px; height: 15px; border-radius: 50%; background: #FFA726; box-shadow: 0 1px 0 rgba(62,68,80,0.25); display: flex; align-items: center; justify-content: center;">
                           <svg width="8" height="8" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="1" height="5" fill="#FFFFFF"></rect><rect x="4" y="0" width="3" height="1" fill="#FFFFFF"></rect><rect x="4" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="0" y="5" width="3" height="3" fill="#FFFFFF"></rect><rect x="5" y="4" width="3" height="3" fill="#FFFFFF"></rect></svg>
                         </div>
                       </sc-if>
                     </div>
-                    <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.enName }}</div>
+                    <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ c.displayName }}</div>
                   </div>
                 </sc-for>
               </div>
@@ -190,58 +190,133 @@
           </button>
           <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
 
-          <!-- Draggable bottom sheet -->
-          <div onPointerDown="{{ sheetPointerDown }}" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: 316px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(30,60,90,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; touch-action: none; cursor: grab;">
-            <div style="display: flex; justify-content: center; padding: 8px 0 4px;">
-              <div style="width: 40px; height: 5px; border-radius: 999px; background: #E3E9F0;"></div>
-            </div>
-
-            <div style="display: flex; align-items: center; gap: 10px; padding: 2px 18px 10px;">
-              <div style="flex: 1; min-width: 0;">
-                <div style="font-size: 16px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnName }}</div>
-                <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ detailJpName }}</div>
+          <!-- Draggable bottom sheet: fixed drag-handle strip on top, scrollable info card below -->
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: {{ sheetHeight }}px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(30,60,90,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; display: flex; flex-direction: column; overflow: hidden;">
+            <div onPointerDown="{{ sheetPointerDown }}" style="flex: none; touch-action: none; cursor: grab;">
+              <div style="display: flex; justify-content: center; padding: 8px 0 4px;">
+                <div style="width: 40px; height: 5px; border-radius: 999px; background: #E3E9F0;"></div>
               </div>
-              <div style="display: flex; gap: 1px;">
-                <sc-for list="{{ detailStarSlots }}" as="s" hint-placeholder-count="5">
-                  <span style="font-size: 12px; line-height: 1; color: {{ s.color }};">★</span>
-                </sc-for>
-              </div>
-            </div>
 
-            <!-- Stage with 3 pixel platforms, each playing its own animation -->
-            <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
-              <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 22px;">
-                <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
-                  <img src="{{ platformUrl0 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
-                  <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 2px 18px 10px;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 16px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnName }}</div>
+                  <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ detailJpName }}</div>
                 </div>
-                <div style="position: relative; width: 54px; display: flex; flex-direction: column; align-items: center;">
-                  <img src="{{ platformUrl1 }}" alt="{{ detailEnName }}" style="height: 84px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.25));">
-                  <svg width="54" height="22" viewBox="0 0 54 22" style="shape-rendering: crispedges;"><rect x="4" y="7" width="46" height="7" fill="#C9CFDA"></rect><rect x="0" y="12" width="54" height="7" fill="#A8B0C0"></rect><rect x="7" y="4" width="40" height="4" fill="#DCE1E9"></rect></svg>
-                </div>
-                <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
-                  <img src="{{ platformUrl2 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
-                  <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+                <div style="display: flex; gap: 1px;">
+                  <sc-for list="{{ detailStarSlots }}" as="s" hint-placeholder-count="5">
+                    <span style="font-size: 12px; line-height: 1; color: {{ s.color }};">★</span>
+                  </sc-for>
                 </div>
               </div>
             </div>
 
-            <!-- Skill / Special trigger buttons -->
-            <div style="display: flex; justify-content: center; gap: 10px; padding: 12px 18px 0;">
-              <button onClick="{{ showSkill }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ skillBtnColor }}; background: {{ skillBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ skillBtnLabel }}</button>
-              <sc-if value="{{ hasSpecial }}" hint-placeholder-val="{{ false }}">
-                <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ specialBtnLabel }}</button>
+            <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+              <!-- Stage with 3 pixel platforms, each playing its own animation -->
+              <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
+                <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 22px;">
+                  <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
+                    <img src="{{ platformUrl0 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
+                    <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+                  </div>
+                  <div style="position: relative; width: 54px; display: flex; flex-direction: column; align-items: center;">
+                    <img src="{{ platformUrl1 }}" alt="{{ detailEnName }}" style="height: 84px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 4px 3px rgba(0,0,0,0.25));">
+                    <svg width="54" height="22" viewBox="0 0 54 22" style="shape-rendering: crispedges;"><rect x="4" y="7" width="46" height="7" fill="#C9CFDA"></rect><rect x="0" y="12" width="54" height="7" fill="#A8B0C0"></rect><rect x="7" y="4" width="40" height="4" fill="#DCE1E9"></rect></svg>
+                  </div>
+                  <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
+                    <img src="{{ platformUrl2 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
+                    <svg width="46" height="18" viewBox="0 0 46 18" style="shape-rendering: crispedges; opacity: 0.85;"><rect x="4" y="6" width="38" height="6" fill="#C9CFDA"></rect><rect x="0" y="10" width="46" height="6" fill="#B7BECC"></rect><rect x="6" y="4" width="34" height="3" fill="#DCE1E9"></rect></svg>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Skill / Special trigger buttons -->
+              <div style="display: flex; justify-content: center; gap: 10px; padding: 12px 18px 0;">
+                <button onClick="{{ showSkill }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ skillBtnColor }}; background: {{ skillBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ skillBtnLabel }}</button>
+                <sc-if value="{{ hasSpecial }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ showSpecial }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: {{ specialBtnColor }}; background: {{ specialBtnBg }}; border-radius: 999px; padding: 9px 20px; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">{{ specialBtnLabel }}</button>
+                </sc-if>
+              </div>
+
+              <!-- Character theme music -->
+              <sc-if value="{{ hasMusic }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; justify-content: center; gap: 8px; padding: 8px 18px 0; overflow-x: auto;">
+                  <sc-for list="{{ musicTracks }}" as="mt" hint-placeholder-count="1">
+                    <button onClick="{{ mt.onClick }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ mt.color }}; background: {{ mt.bg }}; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ mt.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <!-- Wiki text data (bilibili biligame wiki, Chinese-only for now), inline below the GIF previews -->
+              <sc-if value="{{ hasWikiData }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 18px;">
+                  <sc-if value="{{ hasWikiInfoRows }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionInfoLabel }}</div>
+                      <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;">
+                        <sc-for list="{{ wikiInfoRows }}" as="row" hint-placeholder-count="4">
+                          <div style="font-size: 12px; font-weight: 700; color: #8A93A5;">{{ row.label }}</div>
+                          <div style="font-size: 12.5px; font-weight: 700; color: #3E4450;">{{ row.value }}</div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasWikiSkills }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionSkillsLabel }}</div>
+                      <sc-for list="{{ wikiSkillGroups }}" as="sg" hint-placeholder-count="2">
+                        <div style="margin-bottom: 10px;">
+                          <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; margin-bottom: 4px;">{{ sg.caption }}</div>
+                          <sc-for list="{{ sg.entries }}" as="se" hint-placeholder-count="1">
+                            <div style="margin-bottom: 6px;">
+                              <div style="font-size: 12px; font-weight: 800; color: #F0526E;">{{ se.name }}</div>
+                              <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.5;">{{ se.text }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasWikiStory }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionStoryLabel }}</div>
+                      <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.5; margin-bottom: 8px;">{{ wikiStoryIntro }}</div>
+                      <sc-for list="{{ wikiStories }}" as="st" hint-placeholder-count="1">
+                        <div style="margin-bottom: 8px;">
+                          <div style="font-size: 12px; font-weight: 800; color: #3E4450;">{{ st.title }}</div>
+                          <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.5;">{{ st.text }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasWikiReview }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionReviewLabel }}</div>
+                      <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.5;">{{ wikiReview }}</div>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ hasVoiceTracks }}" hint-placeholder-val="{{ false }}">
+                    <div>
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionVoiceLabel }}</div>
+                      <sc-for list="{{ voiceTracks }}" as="vt" hint-placeholder-count="3">
+                        <div onClick="{{ vt.onClick }}" style="display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid #F4F6F9; cursor: pointer;">
+                          <div style="flex: none; width: 26px; height: 26px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; font-size: 11px;">{{ vt.icon }}</div>
+                          <div style="flex: 1; min-width: 0;">
+                            <div style="font-size: 10.5px; font-weight: 800; color: #8A93A5;">{{ vt.context }}</div>
+                            <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.4;">{{ vt.text }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding-top: 4px;">{{ wikiSource }}</div>
+                </div>
               </sc-if>
             </div>
-
-            <!-- Character theme music -->
-            <sc-if value="{{ hasMusic }}" hint-placeholder-val="{{ false }}">
-              <div style="display: flex; justify-content: center; gap: 8px; padding: 8px 18px 0; overflow-x: auto;">
-                <sc-for list="{{ musicTracks }}" as="mt" hint-placeholder-count="1">
-                  <button onClick="{{ mt.onClick }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ mt.color }}; background: {{ mt.bg }}; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ mt.label }}</button>
-                </sc-for>
-              </div>
-            </sc-if>
           </div>
 
           <!-- Skill / Special overlay -->
@@ -252,6 +327,7 @@
               <div style="position: relative; margin-top: -8px; font-size: 11px; font-weight: 900; letter-spacing: 1px; color: #FFFFFF; background: #F0526E; border-radius: 999px; padding: 3px 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15);">{{ overlayLabel }}</div>
             </div>
           </sc-if>
+
         </div>
       </sc-if>
 
@@ -346,9 +422,13 @@ const ROSTER_BATCH = 60;
 const STAR_ON = '#FFD35C';
 const STAR_OFF = '#D8DEE8';
 const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
+// The sheet now also hosts the wiki text data inline (scrollable), so it's much taller than the
+// old "peek" card — tall enough to show most of a character's info at the expanded snap point,
+// with an internal scroll area for whatever doesn't fit (skills/story/voice can run long).
+const SHEET_HEIGHT = 620;
 const SHEET_EXPANDED_Y = 0;
-const SHEET_MID_Y = 120;
-const SHEET_COLLAPSED_Y = 210;
+const SHEET_MID_Y = 390;
+const SHEET_COLLAPSED_Y = 560;
 const LANG_STORAGE_KEY = 'wf_lang';
 
 // UI-chrome copy only (not character/content data) — see CLAUDE.md for why
@@ -402,7 +482,20 @@ const STRINGS = {
   sectionMusicLabel: { en: 'Music Room', zh: '音乐室' },
   sectionMusicDesc: { en: 'BGM & soundtrack collection', zh: '游戏原声音乐收藏' },
   sectionArmsLabel: { en: 'Armaments', zh: '武器装备' },
-  sectionArmsDesc: { en: 'Weapons & equipment', zh: '武器与装备' }
+  sectionArmsDesc: { en: 'Weapons & equipment', zh: '武器与装备' },
+  wikiSectionInfo: { en: 'Profile', zh: '基本信息' },
+  wikiSectionSkills: { en: 'Skills', zh: '技能' },
+  wikiSectionStory: { en: 'Character Story', zh: '角色故事' },
+  wikiSectionReview: { en: 'Evaluation', zh: '评价' },
+  wikiSectionVoice: { en: 'Voice Lines', zh: '语音' },
+  wikiFieldNickname: { en: 'Nickname', zh: '昵称' },
+  wikiFieldType: { en: 'Type', zh: '类型' },
+  wikiFieldRole: { en: 'Role', zh: '职责' },
+  wikiFieldGender: { en: 'Gender', zh: '性别' },
+  wikiFieldRace: { en: 'Race', zh: '种族' },
+  wikiFieldCv: { en: 'CV', zh: 'CV' },
+  wikiFieldAcquisition: { en: 'Acquisition', zh: '获取方式' },
+  wikiSource: { en: 'Source: bilibili biligame Wiki (Chinese)', zh: '资料来源：哔哩哔哩百科（中文 wiki）' }
 };
 
 // The whole app is authored against a fixed 430x860 reference canvas (matches the
@@ -423,10 +516,12 @@ class Component extends DCLogic {
     tab: 'home', lang: this.loadLang(), menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
     sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale(),
-    musicIndex: 0, musicPlaying: false
+    musicIndex: 0, musicPlaying: false,
+    wikiData: null, voiceIndex: 0, voicePlaying: false
   };
 
   audio = new Audio();
+  voiceAudio = new Audio();
 
   loadLang() {
     try {
@@ -484,6 +579,7 @@ class Component extends DCLogic {
           .map(c => ({
             devName: c.devName,
             enName: c.enName || c.devName,
+            zhName: c.zhName || '',
             jpName: c.jpName || '',
             rarity: c.rarity,
             thumbUrl: ASSET_BASE + '/' + c.thumb,
@@ -503,6 +599,7 @@ class Component extends DCLogic {
     if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
 
     this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false }));
+    this.voiceAudio.addEventListener('ended', () => this.setState({ voicePlaying: false }));
   }
 
   updateScale() {
@@ -511,7 +608,7 @@ class Component extends DCLogic {
   }
 
   go(tab) {
-    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopMusic(); }
+    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopMusic(); this.stopVoice(); }
     this.setState({ tab: tab, menuOpen: false });
     if (tab === 'units') this.restoreUnitsScroll();
   }
@@ -526,12 +623,14 @@ class Component extends DCLogic {
   goDetail(c) {
     this.clearAnimTimers();
     this.stopMusic();
+    this.stopVoice();
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
     this.setState({
       tab: 'detail', menuOpen: false,
-      selectedChar: { devName: c.devName, enName: c.enName, jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [] },
+      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [] },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
-      musicIndex: 0, musicPlaying: false
+      musicIndex: 0, musicPlaying: false,
+      wikiData: null, voiceIndex: 0, voicePlaying: false
     });
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
@@ -542,11 +641,22 @@ class Component extends DCLogic {
     // instant instead of popping in a blank/loading image on first switch.
     new Image().src = folderUrl + '/full_shot_1440_1920_0.png';
     new Image().src = folderUrl + '/full_shot_1440_1920_1.png';
+
+    // Wiki text data (基本信息/技能/故事/评价/语音) is a separate, optional per-character
+    // file — fetched lazily here rather than folded into roster.json, since most of the
+    // 377 roster entries don't have it yet and it can be a few KB of prose per character.
+    fetch(folderUrl + '/wiki_zh.json')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ wikiData: data });
+      });
   }
 
   backFromDetail() {
     this.clearAnimTimers();
     this.stopMusic();
+    this.stopVoice();
     this.setState({ tab: 'units', selectedChar: null });
     this.restoreUnitsScroll();
   }
@@ -578,6 +688,29 @@ class Component extends DCLogic {
     this.audio.pause();
     this.audio.currentTime = 0;
     this.audio.removeAttribute('src');
+  }
+
+  toggleVoiceTrack(index) {
+    const wikiData = this.state.wikiData;
+    const selectedChar = this.state.selectedChar;
+    if (!wikiData || !selectedChar || !wikiData.voice.length) return;
+    const sameTrack = index === this.state.voiceIndex;
+    if (sameTrack && this.state.voicePlaying) {
+      this.voiceAudio.pause();
+      this.setState({ voicePlaying: false });
+      return;
+    }
+    if (!sameTrack) {
+      this.voiceAudio.src = selectedChar.folderUrl + '/voice/' + wikiData.voice[index].file;
+    }
+    this.voiceAudio.play().catch(() => {});
+    this.setState({ voiceIndex: index, voicePlaying: true });
+  }
+
+  stopVoice() {
+    this.voiceAudio.pause();
+    this.voiceAudio.currentTime = 0;
+    this.voiceAudio.removeAttribute('src');
   }
 
   toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
@@ -628,6 +761,7 @@ class Component extends DCLogic {
     const roster = this.state.roster;
     const visibleRoster = roster.slice(0, this.state.visibleCount).map(c => ({
       ...c,
+      displayName: (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName,
       hasMusic: !!(c.music && c.music.length),
       onSelect: () => this.goDetail(c)
     }));
@@ -639,6 +773,37 @@ class Component extends DCLogic {
 
     const selectedChar = this.state.selectedChar;
     const sheetY = this.state.sheetY;
+
+    const wikiData = this.state.wikiData;
+    const WIKI_FIELD_LABELS = {
+      nickname: this.t('wikiFieldNickname'),
+      type: this.t('wikiFieldType'),
+      role: this.t('wikiFieldRole'),
+      gender: this.t('wikiFieldGender'),
+      race: this.t('wikiFieldRace'),
+      cv: this.t('wikiFieldCv'),
+      acquisition: this.t('wikiFieldAcquisition')
+    };
+    const wikiInfoRows = wikiData
+      ? Object.keys(WIKI_FIELD_LABELS)
+        .filter(key => wikiData.basicInfo[key])
+        .map(key => ({ label: WIKI_FIELD_LABELS[key], value: wikiData.basicInfo[key] }))
+      : [];
+    const wikiSkillGroups = wikiData
+      ? wikiData.skills.map(g => ({ caption: g.caption, entries: g.entries.map(e => ({ name: e.name, text: e.text })) }))
+      : [];
+    const voiceTracks = (wikiData && selectedChar)
+      ? wikiData.voice.map((line, i) => {
+        const playing = this.state.voicePlaying && this.state.voiceIndex === i;
+        return {
+          context: line.context,
+          text: line.text,
+          playing: playing,
+          icon: playing ? '⏸' : '▶',
+          onClick: () => this.toggleVoiceTrack(i)
+        };
+      })
+      : [];
 
     const vals = {
       cardScaleTransform: 'scale(' + this.state.scale + ')',
@@ -684,7 +849,7 @@ class Component extends DCLogic {
       visibleRoster: visibleRoster,
       unitsStatusText: unitsStatusText,
       handleRosterScroll: (e) => this.handleRosterScroll(e),
-      detailEnName: selectedChar ? selectedChar.enName : '',
+      detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
       detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
       detailStarSlots: selectedChar ? selectedChar.starSlots : [],
       fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
@@ -702,10 +867,29 @@ class Component extends DCLogic {
           onClick: () => this.toggleMusicTrack(i)
         };
       }) : [],
+      wikiSource: this.t('wikiSource'),
+      hasWikiData: !!(wikiData && (wikiData.skills.length || wikiData.story.stories.length || wikiData.review || wikiData.voice.length || Object.keys(wikiData.basicInfo).length)),
+      wikiSectionInfoLabel: this.t('wikiSectionInfo'),
+      wikiSectionSkillsLabel: this.t('wikiSectionSkills'),
+      wikiSectionStoryLabel: this.t('wikiSectionStory'),
+      wikiSectionReviewLabel: this.t('wikiSectionReview'),
+      wikiSectionVoiceLabel: this.t('wikiSectionVoice'),
+      wikiInfoRows: wikiInfoRows,
+      hasWikiInfoRows: wikiInfoRows.length > 0,
+      wikiSkillGroups: wikiSkillGroups,
+      hasWikiSkills: wikiSkillGroups.length > 0,
+      wikiStoryIntro: wikiData && wikiData.story ? wikiData.story.intro : '',
+      wikiStories: wikiData && wikiData.story ? wikiData.story.stories : [],
+      hasWikiStory: !!(wikiData && wikiData.story && (wikiData.story.intro || wikiData.story.stories.length)),
+      wikiReview: wikiData ? wikiData.review : '',
+      hasWikiReview: !!(wikiData && wikiData.review),
+      voiceTracks: voiceTracks,
+      hasVoiceTracks: voiceTracks.length > 0,
       overlayOpen: this.state.overlayOpen,
       overlayUrl: (selectedChar && this.state.overlayGif) ? (selectedChar.folderUrl + '/' + this.state.overlayGif + '.gif') : '',
       overlayLabel: this.state.overlayGif === 'special' ? this.t('overlaySpecial') : this.t('overlaySkill'),
       artToggleLabel: this.state.artIndex === 0 ? this.t('artBase') : this.t('artAwakened'),
+      sheetHeight: SHEET_HEIGHT,
       sheetTransform: 'translateY(' + sheetY + 'px)',
       sheetTransition: this.state.sheetDragging ? 'none' : 'transform 0.25s ease',
       skillBtnBg: (this.state.overlayOpen && this.state.overlayGif === 'skill_ready') ? accent : '#F0F3F7',

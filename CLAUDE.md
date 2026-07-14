@@ -8,6 +8,22 @@ A single-page fan site ("World Flipper Museum & Archive") for browsing the mobil
 characters, art, story, and music. There is no build step, no bundler, and no test suite — it's static
 HTML/JS served as-is (works directly via `file://` for local dev).
 
+## Wiki data pipeline (bilibili biligame Chinese wiki)
+
+`Character Assets/rarityN/<devName>/wiki_zh.json` (+ sibling `voice/*.mp3`) holds text data
+(basic info, skills, story, evaluation, voice lines) scraped from `wiki.biligame.com`. Dev-only,
+three-step pipeline: `npm run scrape:wiki-zh` (`scripts/scrape-wiki-zh.mjs` + shared parsing in
+`scripts/lib/wiki-common.mjs`) crawls the wiki into `scripts/.wiki-scrape-cache/` (gitignored,
+resumable); `npm run match:wiki-zh` (`scripts/match-wiki-to-roster.mjs`) matches pages to
+`roster.json` by `jpName`, downloads voice mp3s, writes `wiki_zh.json`, and stamps
+`hasWiki`/`voiceCount`/`zhName` (from the wiki's `basicInfo.chineseName`) on `roster.json`
+(unmatched/ambiguous cases go to `Character Assets/_unmatched_wiki_report.md`); `index.html`'s
+`goDetail(c)` lazily fetches `wiki_zh.json` per character (not folded into the eager `roster.json`
+load) and renders it inline in the character detail sheet, below the Skill/Special GIF-preview
+buttons (see "Character detail bottom sheet" below), reusing the music-player pattern for voice
+playback. A future English wiki source can follow the same shape, matched by `enName` into a
+parallel `wiki_en.json`.
+
 ## Commands
 
 - `npm run upload:assets` — uploads `Character Assets/` to the Cloudflare R2 bucket (`wf-assets`) via
@@ -61,6 +77,19 @@ optional `special.gif` asset and drives GIF/PNG art switching, a draggable botto
 (`sheetPointerDown`, snapping between `SHEET_EXPANDED_Y`/`MID`/`COLLAPSED`), and skill/special overlay
 toggles.
 
+#### Character detail bottom sheet
+
+The sheet (`SHEET_HEIGHT` = 620px) is split into two parts: a fixed, non-scrolling top strip (drag
+handle + name/star row) that carries the `onPointerDown="{{ sheetPointerDown }}"` drag behavior, and
+a `flex: 1; overflow-y: auto` body below it holding everything else — the platform GIF stage,
+Skill/Special preview buttons, theme music pills, and (inline, no separate button/modal) the wiki
+data sections (profile/skills/story/evaluation/voice), gated individually by `hasWikiInfoRows` /
+`hasWikiSkills` / `hasWikiStory` / `hasWikiReview` / `hasVoiceTracks`. Splitting the drag handle from
+the scrollable body matters: `touch-action: none` only applies to the handle strip, so native touch
+scrolling still works inside the body. Dragging still snaps between three `sheetY` offsets
+(`SHEET_EXPANDED_Y` / `MID` / `COLLAPSED`), but at any snap point the body's own scroll — not the
+drag gesture — is what reveals content past the visible height.
+
 ### UI localization (`STRINGS` table)
 
 The site's UI chrome (nav labels, tab bar, buttons, status/error text, section titles) is bilingual
@@ -73,10 +102,12 @@ The site's UI chrome (nav labels, tab bar, buttons, status/error text, section t
   so any new UI copy must be added as a `STRINGS` entry + a `renderVals()` binding, not typed directly into markup.
 - `this.sections` (per-tab label/desc/color) is a getter, not a static field, so it re-resolves through `t()`
   on every render as the language changes.
-- Character-facing *content* (names, and any future skill/quote data) is intentionally **not** yet part of this
-  table — `roster.json` only has `enName`/`jpName` today. If/when a `zhName` or per-language skill/quote fields
-  are added (see `Character Assets/roster.json` below), follow the same flat suffix convention rather than
-  nesting, to stay consistent with the existing `enName`/`jpName` fields.
+- Character-facing *content* mostly stays outside this table — it's per-character data, not UI chrome.
+  The one exception so far is the display name: `roster.json` entries with wiki data carry a `zhName`
+  (see below), and both the Units grid and the detail screen pick `zhName` over `enName` when
+  `state.lang === 'zh'` (falling back to `enName` for the ~9 characters with no wiki match). Any future
+  per-language content field (skill/quote text, etc.) should follow the same flat suffix convention
+  rather than nesting, to stay consistent with the existing `enName`/`jpName`/`zhName` fields.
 
 ### Asset loading: local vs. R2
 
@@ -91,8 +122,10 @@ new asset type added under `Character Assets/` needs to be added to `upload-to-r
 too, or it will silently never reach production.
 
 `Character Assets/roster.json` is the character index driving the Units tab: each entry has `devName`,
-`enName`, `jpName`, `rarity`, `attribute`, `thumb`, and an optional `music` array (mp3 filenames, only
-present for the ~150 characters with matched BGM). Per-character folders (`rarityN/<devName>/`) hold the
+`enName`, `jpName`, `rarity`, `attribute`, `thumb`, an optional `music` array (mp3 filenames, only
+present for the ~150 characters with matched BGM), and — for the ~368 characters matched by the wiki
+pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. Per-character
+folders (`rarityN/<devName>/`) hold the
 actual art/GIFs (`neutral.gif`, `full_shot_1440_1920_{0,1}.png`, `walk_front.gif`, `kachidoki.gif`,
 `walk_back.gif`, optional `special.gif`, `skill_ready.gif`) plus an optional `music/` subfolder holding
 those mp3s. The detail view plays them via a persistent `this.audio = new Audio()` instance

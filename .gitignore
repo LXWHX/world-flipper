@@ -2,3 +2,5 @@ Character Assets/
 WF OST/
 node_modules/
 scripts/.r2-upload-manifest.json
+scripts/.wiki-scrape-cache/
+scripts/.wiki-scrape-manifest.json

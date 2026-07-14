@@ -104,7 +104,9 @@ async function main() {
 
   const files = buildFileList();
   const done = loadManifest();
-  const pending = files.filter((f) => !done.has(f.key));
+  // roster.json is small and changes often (character/music data edits) without its filename
+  // ever changing, so the path-keyed manifest would otherwise skip real content changes forever.
+  const pending = files.filter((f) => f.key === 'roster.json' || !done.has(f.key));
 
   console.log(`${files.length} files total, ${pending.length} pending (${done.size} already uploaded).`);
 
