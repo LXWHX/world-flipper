@@ -190,6 +190,23 @@
           </button>
           <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
 
+          <!-- Sheet panel switcher: floats above the sheet's top edge, tracks its drag transform,
+               but isn't part of the sheet's own flex layout/scroll area. -->
+          <div style="position: absolute; left: 0; right: 0; bottom: {{ sheetHeight }}px; z-index: 10; display: flex; justify-content: flex-end; gap: 7px; padding: 0 14px 8px; transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; pointer-events: none;">
+            <button onClick="{{ showProfilePanelBtn }}" style="pointer-events: auto; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ profilePanelBtnBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+              <img src="icons/small-profile.png" alt="{{ panelProfileLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated; opacity: {{ profilePanelIconOpacity }};">
+            </button>
+            <button onClick="{{ showVoicePanelBtn }}" style="pointer-events: auto; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ voicePanelBtnBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+              <img src="icons/small-speaker.png" alt="{{ panelVoiceLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated; opacity: {{ voicePanelIconOpacity }};">
+            </button>
+            <button onClick="{{ showStoryPanelBtn }}" style="pointer-events: auto; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ storyPanelBtnBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+              <img src="icons/small-story-book.png" alt="{{ panelStoryLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated; opacity: {{ storyPanelIconOpacity }};">
+            </button>
+            <button onClick="{{ showRelatedPanelBtn }}" style="pointer-events: auto; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ relatedPanelBtnBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+              <img src="icons/small-book.png" alt="{{ panelRelatedLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated; opacity: {{ relatedPanelIconOpacity }};">
+            </button>
+          </div>
+
           <!-- Draggable bottom sheet: fixed drag-handle strip on top, scrollable info card below -->
           <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: {{ sheetHeight }}px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(30,60,90,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; display: flex; flex-direction: column; overflow: hidden;">
             <div onPointerDown="{{ sheetPointerDown }}" style="flex: none; touch-action: none; cursor: grab;">
@@ -211,6 +228,7 @@
             </div>
 
             <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+              <sc-if value="{{ showProfilePanel }}" hint-placeholder-val="{{ true }}">
               <!-- Stage with 3 pixel platforms, each playing its own animation -->
               <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
                 <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 22px;">
@@ -298,6 +316,14 @@
                     </div>
                   </sc-if>
 
+                  <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding-top: 4px;">{{ wikiSource }}</div>
+                </div>
+              </sc-if>
+              </sc-if>
+
+              <!-- Voice lines panel, toggled via the microphone button above the drag handle -->
+              <sc-if value="{{ showVoicePanel }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 16px 18px 24px;">
                   <sc-if value="{{ hasVoiceTracks }}" hint-placeholder-val="{{ false }}">
                     <div>
                       <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionVoiceLabel }}</div>
@@ -312,8 +338,9 @@
                       </sc-for>
                     </div>
                   </sc-if>
-
-                  <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding-top: 4px;">{{ wikiSource }}</div>
+                  <sc-if value="{{ hasNoVoiceTracks }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ wikiNoVoiceText }}</div>
+                  </sc-if>
                 </div>
               </sc-if>
             </div>
@@ -495,7 +522,12 @@ const STRINGS = {
   wikiFieldRace: { en: 'Race', zh: '种族' },
   wikiFieldCv: { en: 'CV', zh: 'CV' },
   wikiFieldAcquisition: { en: 'Acquisition', zh: '获取方式' },
-  wikiSource: { en: 'Source: bilibili biligame Wiki (Chinese)', zh: '资料来源：哔哩哔哩百科（中文 wiki）' }
+  wikiSource: { en: 'Source: bilibili biligame Wiki (Chinese)', zh: '资料来源：哔哩哔哩百科（中文 wiki）' },
+  wikiNoVoice: { en: 'No voice lines available yet.', zh: '暂无语音数据。' },
+  panelProfile: { en: 'Profile', zh: '主界面' },
+  panelVoice: { en: 'Voice Lines', zh: '台词' },
+  panelStory: { en: 'Character Story', zh: '角色剧情' },
+  panelRelated: { en: 'Related & Keywords', zh: '关联角色' }
 };
 
 // The whole app is authored against a fixed 430x860 reference canvas (matches the
@@ -517,7 +549,7 @@ class Component extends DCLogic {
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
     sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale(),
     musicIndex: 0, musicPlaying: false,
-    wikiData: null, voiceIndex: 0, voicePlaying: false
+    wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile'
   };
 
   audio = new Audio();
@@ -630,7 +662,7 @@ class Component extends DCLogic {
       selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [] },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
-      wikiData: null, voiceIndex: 0, voicePlaying: false
+      wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile'
     });
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
@@ -714,6 +746,8 @@ class Component extends DCLogic {
   }
 
   toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
+
+  setSheetPanel(panel) { this.setState({ sheetPanel: panel }); }
 
   clearAnimTimers() { this.setState({ overlayOpen: false, overlayGif: null }); }
 
@@ -885,6 +919,26 @@ class Component extends DCLogic {
       hasWikiReview: !!(wikiData && wikiData.review),
       voiceTracks: voiceTracks,
       hasVoiceTracks: voiceTracks.length > 0,
+      hasNoVoiceTracks: voiceTracks.length === 0,
+      wikiNoVoiceText: this.t('wikiNoVoice'),
+      showProfilePanel: this.state.sheetPanel === 'profile',
+      showVoicePanel: this.state.sheetPanel === 'voice',
+      profilePanelBtnBg: this.state.sheetPanel === 'profile' ? accent : '#F0F3F7',
+      voicePanelBtnBg: this.state.sheetPanel === 'voice' ? accent : '#F0F3F7',
+      storyPanelBtnBg: '#F0F3F7',
+      relatedPanelBtnBg: '#F0F3F7',
+      profilePanelIconOpacity: 1,
+      voicePanelIconOpacity: 1,
+      storyPanelIconOpacity: 0.45,
+      relatedPanelIconOpacity: 0.45,
+      panelProfileLabel: this.t('panelProfile'),
+      panelVoiceLabel: this.t('panelVoice'),
+      panelStoryLabel: this.t('panelStory'),
+      panelRelatedLabel: this.t('panelRelated'),
+      showProfilePanelBtn: () => this.setSheetPanel('profile'),
+      showVoicePanelBtn: () => this.setSheetPanel('voice'),
+      showStoryPanelBtn: () => {},
+      showRelatedPanelBtn: () => {},
       overlayOpen: this.state.overlayOpen,
       overlayUrl: (selectedChar && this.state.overlayGif) ? (selectedChar.folderUrl + '/' + this.state.overlayGif + '.gif') : '',
       overlayLabel: this.state.overlayGif === 'special' ? this.t('overlaySpecial') : this.t('overlaySkill'),

@@ -82,13 +82,25 @@ toggles.
 The sheet (`SHEET_HEIGHT` = 620px) is split into two parts: a fixed, non-scrolling top strip (drag
 handle + name/star row) that carries the `onPointerDown="{{ sheetPointerDown }}"` drag behavior, and
 a `flex: 1; overflow-y: auto` body below it holding everything else — the platform GIF stage,
-Skill/Special preview buttons, theme music pills, and (inline, no separate button/modal) the wiki
-data sections (profile/skills/story/evaluation/voice), gated individually by `hasWikiInfoRows` /
-`hasWikiSkills` / `hasWikiStory` / `hasWikiReview` / `hasVoiceTracks`. Splitting the drag handle from
-the scrollable body matters: `touch-action: none` only applies to the handle strip, so native touch
-scrolling still works inside the body. Dragging still snaps between three `sheetY` offsets
-(`SHEET_EXPANDED_Y` / `MID` / `COLLAPSED`), but at any snap point the body's own scroll — not the
-drag gesture — is what reveals content past the visible height.
+Skill/Special preview buttons, theme music pills, and the wiki data sections (profile/skills/
+story/evaluation), gated individually by `hasWikiInfoRows` / `hasWikiSkills` / `hasWikiStory` /
+`hasWikiReview`. Splitting the drag handle from the scrollable body matters: `touch-action: none`
+only applies to the handle strip, so native touch scrolling still works inside the body. Dragging
+still snaps between three `sheetY` offsets (`SHEET_EXPANDED_Y` / `MID` / `COLLAPSED`), but at any
+snap point the body's own scroll — not the drag gesture — is what reveals content past the visible
+height.
+
+**Panel switcher row.** A row of four round icon buttons (`icons/small-{profile,speaker,story-book,
+book}.png`) floats above the sheet's top-right corner as a sibling of the sheet `<div>` (not nested
+inside it), sharing the sheet's `sheetTransform`/`sheetTransition` so it visually tracks the sheet
+while dragging without being part of its flex layout or scroll area. `state.sheetPanel`
+(`'profile' | 'voice'`, via `setSheetPanel()`) toggles which body content renders: `showProfilePanel`
+gates the stage/skill-buttons/music/wiki-info-skills-story-evaluation content (the small-profile
+icon), and `showVoicePanel` gates a separate voice-lines list — moved out of the wiki block into its
+own panel — with an empty-state fallback (`hasNoVoiceTracks`) when a character has no `wiki_zh.json`
+voice data (the small-speaker icon). The story-book and book icons are wired to no-op handlers and
+rendered at reduced opacity — reserved for a future character-story panel and a future
+related-characters/keywords panel, following the same `sheetPanel` + gated-render pattern.
 
 ### UI localization (`STRINGS` table)
 
