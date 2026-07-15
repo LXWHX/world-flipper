@@ -147,7 +147,8 @@ renders — one `sc-if`-gated block per panel:
 
 - **profile** (small-profile) — `showProfilePanel`: the stage, Skill/Special buttons plus the
   `extraActionButtons` pills for miaowm5's extra pixel actions, theme music pills, the expression
-  viewer (`hasEmotions`, two stacked 570x690 layers with prev/next), and the wiki text sections
+  viewer (`hasEmotions`, stacked 570x690 layers with prev/next — see "Emotion layers" below), and
+  the wiki text sections
   (gated individually by `hasWikiInfoRows` / `hasWikiSkills` / `hasWikiStory` / `hasWikiReview`).
   The encyclopedia `info` blocks render under the character-story intro, so `hasWikiStory` also
   accounts for them — a character with no bilibili story can still have info.
@@ -163,6 +164,32 @@ renders — one `sc-if`-gated block per panel:
 
 Emotion art only renders for the character being viewed and only for expressions the pipeline
 exported, so story dialogue from other speakers falls back to a plain name plate.
+
+#### Emotion layers (faces vs. overlays)
+
+The game composites an expression as a **comma-separated layer stack**: `story_zh.json`'s `emotion`
+is e.g. `"normal,sweat"` — the `normal` face, then the `sweat` overlay on top, both over the shared
+`base_N.png` body. Roughly 7% of dialogue lines carry an overlay, so anything resolving `emotion` as
+a single name silently loses their art; `renderVals()`'s `resolveEmotionStack()` splits on the comma
+and draws every front in order (`sd.emotionFronts`).
+
+Overlay sprites are partial art (a blush, a sweat drop, glasses, an earring) with no features of
+their own, so `isEmotionOverlay()` splits `emotions[]` into two groups: faces feed the prev/next
+cycler, overlays render as the "Add-ons" toggle chips (`state.emotionOverlays`) that stack onto the
+current face. **The classification is derived from the game's own data, not from the sprite art** —
+every token seen in a trailing position across all `story_zh.json` files is an overlay, and they all
+share the roots in `EMOTION_OVERLAY_ROOTS`. Two traps if you touch this:
+
+- Sprite size does *not* identify an overlay. `shame` is a blush for every character, but for many
+  it covers as much of the canvas as their face art does, so a coverage heuristic misclassifies it.
+- The root rule over-reaches: `tear_b`/`tear_c` are whole faces despite the `tear` root, so
+  `EMOTION_FACE_NAMES` pins them back. Check trailing-token usage before adding a root.
+
+Overlays are offered only when they share the current face's `base`, since mirrored art ships each
+one twice (`shame` on base_0, `shame_right` on base_1). Toggles are therefore keyed on the
+un-mirrored name (`emotionOverlayKey()`) so flipping to the mirrored face keeps the accessory on;
+distinct variants (`effect_rose` vs `effect_kirakira`, `shame` vs `shame_joy`) stay separate keys,
+and where a root has several variants the chips fall back to raw names to stay distinguishable.
 
 ### UI localization (`STRINGS` table)
 
