@@ -1,6 +1,12 @@
 Character Assets/
 WF OST/
 node_modules/
+# Third-party reference only, not part of the site: worldflipper.miaowm5.com's deployed
+# bundle, kept locally to look up its CDN map and data column indices when working on the
+# miaowm5 pipeline (see CLAUDE.md). Safe to delete and re-download.
+miaowm5_index.js
 scripts/.r2-upload-manifest.json
 scripts/.wiki-scrape-cache/
 scripts/.wiki-scrape-manifest.json
+scripts/.miaowm5-cache/
+scripts/.miaowm5-manifest.json

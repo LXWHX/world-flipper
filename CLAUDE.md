@@ -24,6 +24,54 @@ buttons (see "Character detail bottom sheet" below), reusing the music-player pa
 playback. A future English wiki source can follow the same shape, matched by `enName` into a
 parallel `wiki_en.json`.
 
+## miaowm5 data pipeline (worldflipper.miaowm5.com)
+
+Second data source, layered on top of the bilibili data. worldflipper.miaowm5.com is an open-source
+Svelte SPA (github.com/miaowm5/wf-encyclopedia) that serves all its data as structured JSON from
+public CDNs, keyed by the game's internal `devName` — the same key `roster.json` uses, so matching is
+exact and needs no fuzzy `jpName` logic. There is **no HTML scraping**: `scripts/fetch-miaowm5.mjs`
+fetches the same JSON the site does and decodes it with ports of the site's own parsing logic
+(`scripts/lib/miaowm5-common.mjs`). When changing a decoder, check it against the upstream source
+rather than reverse-engineering the raw columns.
+
+`npm run fetch:miaowm5` (flags: `--force`, `--limit=N`, `--only=devName,...`) is dev-only and
+resumable: every HTTP response is disk-cached under `scripts/.miaowm5-cache/` (gitignored) keyed by
+URL path, and per-character progress lands in `scripts/.miaowm5-manifest.json`. A cold full run takes
+~60 min (it decodes ~180 atlas pages and encodes ~1400 GIFs) and needs ~1.2GB of cache on disk; a
+no-op re-run takes seconds, because every step checks for its output file before decoding anything.
+
+**Three ID spaces — the main trap.** `devName` is the roster/folder key (and the key for
+`character.json`/`pixel.json`); `gameId` keys `character_text`/`character_quest` and is what
+`encyclopedia[5]` points at; `storyId` (= `character.json`'s `[8]`) keys `story_character` and the
+pixel atlases. `storyId` usually equals `devName`, but not always — never assume.
+
+**Owned-keys contract.** The pipeline owns exactly `info`, `related`, `emotions`, `pixelActions`,
+`storyCount`, `miaowm5Meta` and `voice[].textJp` inside `wiki_zh.json`, and never touches the
+bilibili-owned keys. It merges into the existing file (creating a minimal skeleton with empty
+bilibili fields for the ~6 roster characters the bilibili pipeline never matched, so the front-end
+needs no special-casing), and deletes any key whose value comes out empty. All writes go through
+`writeIfChanged`/`writeJsonIfChanged`, so a re-run is byte-stable and produces zero diff — keep it
+that way. That's also why `story_zh.json`'s `generatedAt` is preserved unless the payload actually
+changes, and why nothing carries a per-run `fetchedAt`: a fresh timestamp every run would rewrite
+~370 files and force a full R2 re-upload.
+
+What it produces per character, beyond the `wiki_zh.json` keys:
+- `story_zh.json` — full dialogue for every character episode (speaker, name-plate colour, emotion,
+  text). Much bigger than the other files, so `index.html` only fetches it when the story panel is
+  opened (`loadStory()`), not in `goDetail()`.
+- `emotion/*.png` — expression art as two 570x690 layers (`base_N.png` body + `<i>_<name>.png` face)
+  that the front-end stacks, rather than one flattened composite per expression.
+- missing pixel `*.gif` — the site already ships 5 actions + `special`; miaowm5's pixel timeline
+  usually also has `into_coffin`/`ghost_raise`/`ghost_neutral`/`revive` (and a few characters have
+  many more). `pixelActions` lists what the folder actually holds, so the UI never links a missing
+  file. Existing GIFs are left alone: they were exported from an older revision of the upstream
+  pixel data, so regenerating them would change timings for no benefit.
+
+Because any rewritten file must be re-uploaded, the script drops that file's key from
+`scripts/.r2-upload-manifest.json` (which `upload-to-r2.mjs` uses to skip already-uploaded paths)
+instead of teaching that script about content hashes. `Character Assets/_miaowm5_report.md` lists
+roster characters absent from miaowm5's data.
+
 ## Commands
 
 - `npm run upload:assets` — uploads `Character Assets/` to the Cloudflare R2 bucket (`wf-assets`) via
@@ -94,13 +142,27 @@ height.
 book}.png`) floats above the sheet's top-right corner as a sibling of the sheet `<div>` (not nested
 inside it), sharing the sheet's `sheetTransform`/`sheetTransition` so it visually tracks the sheet
 while dragging without being part of its flex layout or scroll area. `state.sheetPanel`
-(`'profile' | 'voice'`, via `setSheetPanel()`) toggles which body content renders: `showProfilePanel`
-gates the stage/skill-buttons/music/wiki-info-skills-story-evaluation content (the small-profile
-icon), and `showVoicePanel` gates a separate voice-lines list — moved out of the wiki block into its
-own panel — with an empty-state fallback (`hasNoVoiceTracks`) when a character has no `wiki_zh.json`
-voice data (the small-speaker icon). The story-book and book icons are wired to no-op handlers and
-rendered at reduced opacity — reserved for a future character-story panel and a future
-related-characters/keywords panel, following the same `sheetPanel` + gated-render pattern.
+(`'profile' | 'voice' | 'story' | 'related'`, via `setSheetPanel()`) toggles which body content
+renders — one `sc-if`-gated block per panel:
+
+- **profile** (small-profile) — `showProfilePanel`: the stage, Skill/Special buttons plus the
+  `extraActionButtons` pills for miaowm5's extra pixel actions, theme music pills, the expression
+  viewer (`hasEmotions`, two stacked 570x690 layers with prev/next), and the wiki text sections
+  (gated individually by `hasWikiInfoRows` / `hasWikiSkills` / `hasWikiStory` / `hasWikiReview`).
+  The encyclopedia `info` blocks render under the character-story intro, so `hasWikiStory` also
+  accounts for them — a character with no bilibili story can still have info.
+- **voice** (small-speaker) — `showVoicePanel`: the voice-line list, with each battle line's
+  Japanese `textJp` as grey sub-text, and an empty-state fallback (`hasNoVoiceTracks`).
+- **story** (small-story-book) — `showStoryPanel`: episode list → full dialogue, with
+  `storyIndex` deciding which (`showStoryList` / `showStoryDetail` / `showStoryEmpty`). This is the
+  only panel that lazy-fetches (`loadStory()`, once per character, guarded against the user
+  navigating away mid-flight).
+- **related** (small-book) — `showRelatedPanel`: related-character chips (clicking one calls
+  `goDetail` via the `rosterByDev` map; entries with no roster match get a placeholder tile) and
+  keyword cards.
+
+Emotion art only renders for the character being viewed and only for expressions the pipeline
+exported, so story dialogue from other speakers falls back to a plain name plate.
 
 ### UI localization (`STRINGS` table)
 
@@ -139,7 +201,10 @@ present for the ~150 characters with matched BGM), and — for the ~368 characte
 pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. Per-character
 folders (`rarityN/<devName>/`) hold the
 actual art/GIFs (`neutral.gif`, `full_shot_1440_1920_{0,1}.png`, `walk_front.gif`, `kachidoki.gif`,
-`walk_back.gif`, optional `special.gif`, `skill_ready.gif`) plus an optional `music/` subfolder holding
-those mp3s. The detail view plays them via a persistent `this.audio = new Audio()` instance
+`walk_back.gif`, optional `special.gif`, `skill_ready.gif`, plus any extra pixel actions generated by
+the miaowm5 pipeline such as `into_coffin.gif`/`ghost_raise.gif`/`ghost_neutral.gif`/`revive.gif`),
+an optional `music/` subfolder holding those mp3s, and — from the two data pipelines —
+`wiki_zh.json`, `voice/*.mp3`, `story_zh.json` and `emotion/*.png`. The detail view plays music via a
+persistent `this.audio = new Audio()` instance
 (`toggleMusicTrack`/`stopMusic` in the component script), rendered as pill buttons next to Skill/Special
 when `music.length > 0`.

@@ -16,7 +16,10 @@ const BUCKET = 'wf-assets';
 
 const SOURCE_DIR = path.resolve('Character Assets');
 const MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
-const CONCURRENCY = 2;
+// Each upload spawns its own `wrangler` process, so throughput is dominated by process
+// startup rather than bandwidth — the workers spend most of their time waiting. 8 keeps the
+// ~8k-file emotion/story asset push to roughly an hour instead of ~4.
+const CONCURRENCY = 8;
 const FORCE = process.argv.includes('--force');
 const WRANGLER_BIN = path.resolve(
   'node_modules/.bin',
