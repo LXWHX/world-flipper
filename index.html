@@ -764,17 +764,21 @@
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="1" width="2" height="2" fill="currentColor"></rect><rect x="2" y="3" width="6" height="2" fill="currentColor"></rect><rect x="2" y="5" width="6" height="4" fill="currentColor"></rect><rect x="4" y="7" width="2" height="2" fill="#B4E3F5"></rect></svg>
         <span style="font-size: 10px; font-weight: 800;">{{ tabHomeLabel }}</span>
       </button>
-      <button onClick="{{ goArt }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgArt }}; color: {{ tabColArt }};">
-        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="1" width="8" height="8" fill="currentColor"></rect><rect x="2" y="5" width="3" height="3" fill="#8BE86E"></rect><rect x="5" y="2" width="3" height="3" fill="#FFD35C"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">{{ tabArtLabel }}</span>
-      </button>
       <button onClick="{{ goUnits }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgUnits }}; color: {{ tabColUnits }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="3" y="1" width="4" height="4" fill="currentColor"></rect><rect x="2" y="6" width="6" height="3" fill="currentColor"></rect></svg>
         <span style="font-size: 10px; font-weight: 800;">{{ tabUnitsLabel }}</span>
       </button>
+      <button onClick="{{ goArms }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgArms }}; color: {{ tabColArms }};">
+        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="6" y="1" width="3" height="1" fill="currentColor"></rect><rect x="7" y="1" width="1" height="4" fill="currentColor"></rect><rect x="1" y="6" width="2" height="1" fill="currentColor"></rect><rect x="2" y="5" width="5" height="3" fill="currentColor"></rect><rect x="6" y="4" width="2" height="2" fill="currentColor"></rect></svg>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabArmsLabel }}</span>
+      </button>
       <button onClick="{{ goStory }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgStory }}; color: {{ tabColStory }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="6" height="8" fill="currentColor"></rect><rect x="3" y="3" width="4" height="1" fill="#B4E3F5"></rect><rect x="3" y="5" width="4" height="1" fill="#B4E3F5"></rect></svg>
         <span style="font-size: 10px; font-weight: 800;">{{ tabStoryLabel }}</span>
+      </button>
+      <button onClick="{{ goArt }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgArt }}; color: {{ tabColArt }};">
+        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="1" width="8" height="8" fill="currentColor"></rect><rect x="2" y="5" width="3" height="3" fill="#8BE86E"></rect><rect x="5" y="2" width="3" height="3" fill="#FFD35C"></rect></svg>
+        <span style="font-size: 10px; font-weight: 800;">{{ tabArtLabel }}</span>
       </button>
       <button onClick="{{ goMusic }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgMusic }}; color: {{ tabColMusic }};">
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="5" y="1" width="2" height="6" fill="currentColor"></rect><rect x="3" y="6" width="3" height="3" fill="currentColor"></rect><rect x="7" y="1" width="2" height="2" fill="currentColor"></rect></svg>
@@ -861,6 +865,7 @@ const STRINGS = {
   tabUnits: { en: 'Units', zh: '角色' },
   tabStory: { en: 'Story', zh: '剧情' },
   tabMusic: { en: 'Music', zh: '音乐' },
+  tabArms: { en: 'Arms', zh: '武器' },
   tabMenu: { en: 'Menu', zh: '菜单' },
   unitsScreenTitle: { en: 'Characters', zh: '角色' },
   loadingRoster: { en: 'Loading roster…', zh: '角色加载中…' },
@@ -1516,7 +1521,7 @@ class Component extends DCLogic {
     const tab = this.state.tab;
     const accent = this.props.accent ?? '#FFA726';
     const sec = this.sections[tab];
-    const menuOrder = ['art', 'units', 'story', 'music', 'arms'];
+    const menuOrder = ['units', 'arms', 'story', 'art', 'music'];
 
     // The filter narrows the roster before pagination, so `visibleCount` counts matches rather
     // than raw entries — otherwise a narrow filter would page through mostly-hidden batches.
@@ -1754,6 +1759,7 @@ class Component extends DCLogic {
       tabUnitsLabel: this.t('tabUnits'),
       tabStoryLabel: this.t('tabStory'),
       tabMusicLabel: this.t('tabMusic'),
+      tabArmsLabel: this.t('tabArms'),
       tabMenuLabel: this.t('tabMenu'),
       sectionLabel: sec ? sec.label : '',
       sectionDesc: sec ? sec.desc : '',
@@ -1926,6 +1932,7 @@ class Component extends DCLogic {
       goUnits: () => this.go('units'),
       goStory: () => this.go('story'),
       goMusic: () => this.go('music'),
+      goArms: () => this.go('arms'),
       toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
       closeMenu: () => this.setState({ menuOpen: false }),
       menuItems: menuOrder.map(id => ({
@@ -1936,7 +1943,7 @@ class Component extends DCLogic {
       }))
     };
 
-    ['Home', 'Art', 'Units', 'Story', 'Music', 'Menu'].forEach(name => {
+    ['Home', 'Art', 'Units', 'Story', 'Music', 'Arms', 'Menu'].forEach(name => {
       const id = name.toLowerCase();
       const active = id === 'menu' ? this.state.menuOpen : (id === 'units' ? (tab === 'units' || tab === 'detail') : tab === id);
       vals['tabBg' + name] = active ? accent : 'transparent';
