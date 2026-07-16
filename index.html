@@ -895,6 +895,25 @@ class Component extends DCLogic {
 
     this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false }));
     this.voiceAudio.addEventListener('ended', () => this.setState({ voicePlaying: false }));
+
+    // The units strip scrolls on its x axis only, and a mouse wheel emits deltaY, which
+    // browsers don't reliably map onto a horizontal scroller — so translate it here.
+    // This is a document-level, non-passive listener rather than an `onWheel` template
+    // binding because React 18 registers wheel handlers passively at the root container:
+    // a bound handler could never preventDefault(), and would then double-scroll on the
+    // browsers that do map the wheel themselves.
+    document.addEventListener('wheel', (e) => this.handleUnitsWheel(e), { passive: false });
+  }
+
+  handleUnitsWheel(e) {
+    if (this.state.tab !== 'units') return;
+    const el = e.target && e.target.closest ? e.target.closest('#units-scroll') : null;
+    if (!el) return;
+    // Trackpads and tilt wheels send real horizontal intent as deltaX — leave those native.
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    const step = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientWidth : 1;
+    el.scrollLeft += e.deltaY * step;
+    e.preventDefault();
   }
 
   updateScale() {
@@ -1017,6 +1036,10 @@ class Component extends DCLogic {
   toggleArt() { this.setState(s => ({ artIndex: s.artIndex === 0 ? 1 : 0 })); }
 
   setSheetPanel(panel) {
+    // The GIF overlay floats over the whole detail view, not inside the sheet, so it would
+    // keep playing on top of the voice/story/related panels — and the buttons that dismiss
+    // it only exist in the profile panel, leaving no way to turn it off.
+    if (panel !== 'profile') this.clearAnimTimers();
     this.setState({ sheetPanel: panel });
     if (panel === 'story') this.loadStory();
   }
