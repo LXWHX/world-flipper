@@ -106,6 +106,21 @@ What it produces per character, beyond the `wiki_zh.json` keys:
   the path to resolve. Note `head.png`'s fast path skips when the file exists, so **changing the
   composite means deleting the old files** — don't reach for `--force`, which would also regenerate
   every pixel GIF (see above).
+
+It also writes **`story_heads/<devName>.png`** plus a **`story_heads.json`** manifest (a flat
+`devName -> "story_heads/<devName>.png"` map) — the one per-character-ish art produced outside a
+`rarityN/` folder. These are the same 212x212 framed portrait as `head.png`, but for the story-only
+NPCs who *speak* in the story panel yet aren't playable — the protagonists (`light`, `stella`),
+guild staff, recurring bosses — so they have no roster entry or folder. `buildStoryHeads` runs once
+after the per-character loop: it scans every written `story_zh.json` for `speakerDev`s
+(`collectStorySpeakers`, read off disk so `--only`/`--limit` still sees the full set and doesn't
+shrink the manifest), drops the ones already in the roster, and composites a portrait for each that
+the `head` atlas actually has a sprite for (~42 of them, covering ~13% more dialogue lines). They
+carry no `character.json` row, so `composeHeadIcon` gets element `-1` and they all take the
+un-notched empty frame with no badge. `composeHeadIcon` is the shared composite `buildHeadIcon`
+also uses. Same skip-if-exists fast path as `head.png`, so **changing the composite means deleting
+the old files**; unlike the `icons/` chrome these live under `Character Assets/` and *do* go to R2
+(added to `upload-to-r2.mjs`'s `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`).
 - missing pixel `*.gif` — the site already ships 5 actions + `special`; miaowm5's pixel timeline
   usually also has `into_coffin`/`ghost_raise`/`ghost_neutral`/`revive` (and a few characters have
   many more). **`special` is a special case**: its frames live in a *second* atlas
@@ -211,9 +226,10 @@ back. The page outside the card is plain `#EAEAEA`; the card is the same grey, s
 its (now neutral, once blue-tinted) shadow.
 
 The CSS lives in the `<helmet>` block as `.wf-circle` plus upstream's `dialog` variant
-(`.wf-circle-dialog` — smaller, 60% opacity, pushed further down). Five hosts carry one: the card's
-**screen area** (the app's backdrop), the **detail drawer**, the **filter dialog**, and each of the
-two per-character art stages (the platform GIF stage and the expression viewer).
+(`.wf-circle-dialog` — smaller, 60% opacity, pushed further down). Three hosts carry one: the card's
+**screen area** (the app's backdrop), the **detail drawer**, and the **filter dialog**. The two
+per-character art stages (the platform GIF stage and the expression viewer) deliberately have none —
+a pattern turning behind the sprites competed with them — so those stay flat `#F4F6F9`.
 
 Four things to respect if you touch this:
 
@@ -335,8 +351,27 @@ renders — one `sc-if`-gated block per panel:
   `goDetail` via the `rosterByDev` map; entries with no roster match get a placeholder tile) and
   keyword cards.
 
-Emotion art only renders for the character being viewed and only for expressions the pipeline
-exported, so story dialogue from other speakers falls back to a plain name plate.
+**Story dialogue avatars.** Every speaker in a story line gets an avatar, resolved in three tiers:
+
+1. The character being viewed speaks in their own **expression art** (base + emotion layers) — it's
+   expression-specific, so it beats a static portrait. This is the only tier keyed on the exported
+   `emotions[]`, so it applies only to the viewed character and only for lines whose emotion the
+   pipeline exported.
+2. Any other **roster** speaker uses their framed `head.png`, looked up in `rosterByDev` by the
+   dialogue's `speakerDev` — that's a `storyId`, but it agrees with `devName` for all 485 roster
+   entries, so no second map is needed.
+3. **Story-only NPCs** (the protagonists Light and Stella, guild staff, recurring bosses) have no
+   roster entry, so they use a portrait from the `story_heads/` set (see the pipeline's
+   `buildStoryHeads`), looked up in the `this.storyHeads` map loaded from `story_heads.json`. This
+   lifts avatar coverage from ~70% of dialogue lines to ~84%.
+
+Whatever's left — one-off NPCs the head atlas has no sprite for — keeps the plain name plate. The
+avatar box is a rounded square rather than a circle because `head.png`'s element badge sits in a
+corner that a circle would clip.
+
+`story_heads.json` is fetched once in `componentDidMount`, independently of the roster (a failure
+just costs those avatars, never the grid). Like `hasHead`, the front-end trusts the manifest rather
+than the bare path, so it never renders a 404 for an NPC the pipeline skipped.
 
 **Hero art.** The detail screen normally shows `full_shot_1440_1920_{0,1}.png` with the awaken
 toggle. `bustOnly` characters have no such file, so `renderVals()` swaps in the 570x690 story bust
@@ -398,9 +433,9 @@ The site's UI chrome (nav labels, tab bar, buttons, status/error text, section t
 
 This means asset-loading code paths differ between local testing and production — when changing how
 character assets are referenced, check both branches. `Character Assets/`, `WF OST/`, and `node_modules/`
-are all gitignored (large binary asset trees); only `roster.json` + `rarityN/*` get uploaded to R2, so any
-new asset type added under `Character Assets/` needs to be added to `upload-to-r2.mjs`'s include rules
-too, or it will silently never reach production.
+are all gitignored (large binary asset trees); only `roster.json`, `story_heads.json`, `rarityN/*`,
+and `story_heads/*` get uploaded to R2, so any new asset type added under `Character Assets/` needs
+to be added to `upload-to-r2.mjs`'s include rules too, or it will silently never reach production.
 
 `Character Assets/roster.json` is the character index driving the Units tab: each entry has `devName`,
 `enName`, `jpName`, `rarity`, `attribute`, `thumb`, an optional `music` array (mp3 filenames, only

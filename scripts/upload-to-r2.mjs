@@ -26,10 +26,11 @@ const WRANGLER_BIN = path.resolve(
   process.platform === 'win32' ? 'wrangler.cmd' : 'wrangler'
 );
 
-// Only ship what the site actually needs: the roster.json index plus every rarityN/ folder.
+// Only ship what the site actually needs: the roster.json index, the story_heads.json NPC-portrait
+// manifest, every rarityN/ folder, and the story_heads/ folder those portraits live in.
 // Dev-only files (fetch/*.ps1, *_log.txt, metadata.json, unmatched_music_report.md, _unmatched_music/) are skipped.
-const INCLUDE_TOP_LEVEL = new Set(['roster.json']);
-const INCLUDE_DIR_PREFIX = /^rarity\d+$/;
+const INCLUDE_TOP_LEVEL = new Set(['roster.json', 'story_heads.json']);
+const INCLUDE_DIR_PREFIX = /^(rarity\d+|story_heads)$/;
 
 function collectFiles(dir, baseDir, out) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

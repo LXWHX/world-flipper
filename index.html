@@ -427,11 +427,8 @@
             <div id="sheetBody" style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
               <sc-if value="{{ showProfilePanel }}" hint-placeholder-val="{{ true }}">
               <!-- Stage with 3 pixel platforms, each playing its own animation -->
-              <!-- The character's own stage. Was a transparency checkerboard; now the same circle
-                   as everywhere else, so the sprites stand on it. z-index: 0 makes the stacking
-                   context the circle's z-index: -1 needs. -->
-              <div style="position: relative; z-index: 0; height: 150px; margin: 0 14px; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
-                <div class="wf-circle"></div>
+              <!-- The character's own stage: plain, so nothing competes with the sprites. -->
+              <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
                 <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 22px;">
                   <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
                     <img src="{{ platformUrl0 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
@@ -467,8 +464,7 @@
               <sc-if value="{{ hasEmotions }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 14px 18px 0;">
                   <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ emotionsTitleLabel }}</div>
-                  <div style="position: relative; z-index: 0; width: 100%; padding-top: {{ emotionRatioPadding }}; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
-                    <div class="wf-circle"></div>
+                  <div style="position: relative; width: 100%; padding-top: {{ emotionRatioPadding }}; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
                     <sc-if value="{{ hasEmotionBase }}" hint-placeholder-val="{{ true }}">
                       <img src="{{ emotionBaseUrl }}" alt="{{ emotionName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
                     </sc-if>
@@ -631,14 +627,21 @@
                       </div>
                       <sc-for list="{{ storyDialogs }}" as="sd" hint-placeholder-count="4">
                         <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
-                          <sc-if value="{{ sd.hasEmotionArt }}" hint-placeholder-val="{{ false }}">
-                            <div style="flex: none; position: relative; width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: #F0F3F7;">
+                          <!-- The viewed character speaks in their own expression art; every other
+                               roster speaker gets their framed portrait. The portrait's element
+                               badge sits in a corner, so the box is a rounded square rather than a
+                               circle — and both branches share the shape to keep the column even. -->
+                          <sc-if value="{{ sd.hasAvatar }}" hint-placeholder-val="{{ false }}">
+                            <div style="flex: none; position: relative; width: 40px; height: 40px; border-radius: 8px; overflow: hidden; background: #F0F3F7;">
                               <sc-if value="{{ sd.hasEmotionBase }}" hint-placeholder-val="{{ true }}">
                                 <img src="{{ sd.emotionBaseUrl }}" alt="{{ sd.speaker }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
                               </sc-if>
                               <sc-for list="{{ sd.emotionFronts }}" as="ef" hint-placeholder-count="1">
                                 <img src="{{ ef.url }}" alt="{{ sd.speaker }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
                               </sc-for>
+                              <sc-if value="{{ sd.hasHeadArt }}" hint-placeholder-val="{{ false }}">
+                                <img src="{{ sd.headUrl }}" alt="{{ sd.speaker }}" loading="lazy" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
+                              </sc-if>
                             </div>
                           </sc-if>
                           <div style="flex: 1; min-width: 0;">
@@ -1071,6 +1074,12 @@ class Component extends DCLogic {
   // goDetail() with the same object the Units grid would have handed it.
   rosterByDev = new Map();
 
+  // devName -> story_heads/<dev>.png, for story speakers with no roster entry (the protagonists
+  // and recurring NPCs). Populated from story_heads.json; empty until it loads, so story avatars
+  // for these speakers just appear a beat later. Only devs the pipeline actually exported a
+  // portrait for are present, so a hit is safe to render without a broken-image guard.
+  storyHeads = {};
+
   loadLang() {
     try {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
@@ -1169,6 +1178,14 @@ class Component extends DCLogic {
         console.error('[units] failed to load roster.json', err);
         this.setState({ rosterLoading: false, rosterError: String(err && err.message || err) });
       });
+
+    // Portraits for story-only NPCs (see the storyHeads field). Independent of the roster fetch and
+    // non-critical — a failure just leaves those speakers on a name plate — so it never blocks the
+    // grid. setState forces a re-render in case a story panel is already open when it resolves.
+    fetch(ASSET_BASE + '/story_heads.json')
+      .then(r => (r.ok ? r.json() : {}))
+      .then(map => { this.storyHeads = (map && typeof map === 'object') ? map : {}; this.setState({ storyHeadsLoaded: true }); })
+      .catch(() => { /* NPC avatars fall back to name plates */ });
 
     const onResize = () => this.updateScale();
     window.addEventListener('resize', onResize);
@@ -1661,7 +1678,8 @@ class Component extends DCLogic {
       onClick: () => this.openStory(i)
     }));
     // Only the viewed character's own emotion art is available locally, and only for
-    // expressions the pipeline actually exported — everyone else gets a plain name plate.
+    // expressions the pipeline actually exported. Everyone else falls back to the framed
+    // portrait, and a speaker with neither gets a plain name plate.
     const emotionByName = new Map(emotions.map(e => [e.name, e]));
     // A dialogue line's emotion is a layer stack ("normal,sweat"), so resolve every token and
     // draw the fronts in order over the body layer. Looking the raw string up as a single name
@@ -1680,14 +1698,26 @@ class Component extends DCLogic {
       const art = (selectedChar && d.speakerDev === selectedChar.devName && d.emotion)
         ? resolveEmotionStack(d.emotion)
         : null;
+      // `speakerDev` is a storyId, but it agrees with devName for every roster character, so it
+      // looks up directly. A roster speaker uses their own framed head.png; a story-only speaker
+      // (Light, Stella, recurring NPCs) uses the story_heads portrait the pipeline exported for
+      // them, if any. Whatever's left — one-off NPCs with no head sprite — stays a name plate.
+      let headUrl = '';
+      if (!art && d.speakerDev) {
+        const other = this.rosterByDev.get(d.speakerDev);
+        if (other) headUrl = other.headUrl || '';
+        else if (this.storyHeads[d.speakerDev]) headUrl = ASSET_BASE + '/' + this.storyHeads[d.speakerDev];
+      }
       return {
         speaker: d.speaker,
         color: d.color,
         text: d.text,
-        hasEmotionArt: !!art,
+        hasAvatar: !!art || !!headUrl,
         emotionBaseUrl: art && art.base ? emotionDir + art.base : '',
         hasEmotionBase: !!(art && art.base),
-        emotionFronts: art ? art.fronts : []
+        emotionFronts: art ? art.fronts : [],
+        hasHeadArt: !!headUrl,
+        headUrl
       };
     }) : [];
 

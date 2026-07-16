@@ -58,6 +58,10 @@ const ASSETS_DIR = path.resolve('Character Assets');
 // Shared UI art (the rarity strips) is served with the site, not from R2, so it lands here.
 const ICONS_DIR = path.resolve('icons');
 const ROSTER_PATH = path.join(ASSETS_DIR, 'roster.json');
+// Framed portraits for story-only NPCs (Light, Stella, guild staff…) who speak in the story
+// panel but aren't playable, so they have no rarityN/<devName>/ folder of their own.
+const STORY_HEADS_DIR = path.join(ASSETS_DIR, 'story_heads');
+const STORY_HEADS_MANIFEST = path.join(ASSETS_DIR, 'story_heads.json');
 const MANIFEST_PATH = path.resolve('scripts/.miaowm5-manifest.json');
 const R2_MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
 const REPORT_PATH = path.join(ASSETS_DIR, '_miaowm5_report.md');
@@ -473,19 +477,14 @@ const ELEMENT_ICONS = [
   'element_black_medium', // 5 Dark
 ];
 
-async function buildHeadIcon(devName, charDir, elementIndex, sheets) {
-  const dest = path.join(charDir, 'head.png');
-  // As in buildEmotions: an existing file means the sprite resolved on an earlier run, so the
-  // atlas page (24 of them, shared across characters) never has to be decoded on a re-run.
-  if (!FORCE && existsSync(dest)) return { has: true, wrote: 0 };
-  const portrait = await sheets.head.getSprite(devName);
-  if (!portrait) return { has: false, wrote: 0 };
-
+// The 212x212 composite itself, shared by buildHeadIcon (roster characters) and buildStoryHeads
+// (story-only NPCs). A character with no element — every pure NPC, since they carry no
+// character.json row — gets the frame whose corner isn't notched and no badge.
+async function composeHeadIcon(portrait, elementIndex, sheets) {
   const canvas = createRgba(212, 212);
   const inset = scaleBilinear(portrait, 184, 184);
   blit(canvas, inset, 0, 0, inset.w, inset.h, 14, 14);
 
-  // A character with no element (upstream: NPCs) gets the frame whose corner isn't notched.
   const elementName = ELEMENT_ICONS[elementIndex];
   const frame = await sheets.icon.getSprite(
     elementName ? 'character_face_frame' : 'character_face_empty_frame'
@@ -498,7 +497,18 @@ async function buildHeadIcon(devName, charDir, elementIndex, sheets) {
       blit(canvas, b, 0, 0, b.w, b.h, 154, 10);
     }
   }
+  return canvas;
+}
 
+async function buildHeadIcon(devName, charDir, elementIndex, sheets) {
+  const dest = path.join(charDir, 'head.png');
+  // As in buildEmotions: an existing file means the sprite resolved on an earlier run, so the
+  // atlas page (24 of them, shared across characters) never has to be decoded on a re-run.
+  if (!FORCE && existsSync(dest)) return { has: true, wrote: 0 };
+  const portrait = await sheets.head.getSprite(devName);
+  if (!portrait) return { has: false, wrote: 0 };
+
+  const canvas = await composeHeadIcon(portrait, elementIndex, sheets);
   const wrote = writeIfChanged(dest, encodePng(canvas));
   if (wrote) invalidateR2(dest);
   return { has: true, wrote: wrote ? 1 : 0 };
@@ -584,6 +594,64 @@ async function buildMagicCircle() {
   if (!FORCE && existsSync(dest)) return 0;
   const buf = await cachedFetchBuffer(`${CDN_A}ui/circle.png`);
   return writeIfChanged(dest, buf) ? 1 : 0;
+}
+
+// Every speaker that appears in any already-written story_zh.json. Read off disk rather than
+// accumulated in the per-character loop so the set stays complete under --only/--limit (a partial
+// run still sees every prior run's story files), which is what keeps the manifest below from
+// dropping icons other characters' stories still reference.
+function collectStorySpeakers() {
+  const speakers = new Set();
+  for (const entry of readdirSync(ASSETS_DIR, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^rarity\d+$/.test(entry.name)) continue;
+    const rarityDir = path.join(ASSETS_DIR, entry.name);
+    for (const sub of readdirSync(rarityDir, { withFileTypes: true })) {
+      if (!sub.isDirectory()) continue;
+      const storyPath = path.join(rarityDir, sub.name, 'story_zh.json');
+      if (!existsSync(storyPath)) continue;
+      try {
+        const data = JSON.parse(readFileSync(storyPath, 'utf8'));
+        for (const st of data.stories || []) {
+          for (const d of st.dialogs || []) if (d.speakerDev) speakers.add(d.speakerDev);
+        }
+      } catch {
+        // a corrupt/half-written story file just contributes no speakers
+      }
+    }
+  }
+  return speakers;
+}
+
+// Portraits for the story-only NPCs. A roster character already has their own head.png, so this
+// covers exactly the speakers the front-end can't resolve through the roster — the protagonists
+// (Light, Stella) and recurring NPCs. Same 212x212 composite as buildHeadIcon, but with no element
+// (these carry no character.json row), so they all get the un-notched empty frame. Writes a flat
+// devName->path map the front-end loads once, mirroring `hasHead`: the UI trusts the manifest, not
+// the bare path, so a speaker with no head sprite keeps its plain name plate instead of a 404.
+async function buildStoryHeads(g, roster, sheets) {
+  const rosterDevs = new Set(roster.characters.map((c) => c.devName));
+  const speakers = [...collectStorySpeakers()].filter((d) => !rosterDevs.has(d)).sort();
+  const manifest = {};
+  let wrote = 0;
+  for (const dev of speakers) {
+    const dest = path.join(STORY_HEADS_DIR, `${dev}.png`);
+    if (!FORCE && existsSync(dest)) {
+      manifest[dev] = `story_heads/${dev}.png`;
+      continue;
+    }
+    const portrait = await sheets.head.getSprite(dev);
+    if (!portrait) continue; // NPC with dialogue but no head sprite — stays a name plate
+    const rec = g.byDevName.get(dev); // almost always absent; -1 -> empty frame, no badge
+    const canvas = await composeHeadIcon(portrait, rec ? Number(rec.row[3]) : -1, sheets);
+    if (!existsSync(STORY_HEADS_DIR)) mkdirSync(STORY_HEADS_DIR, { recursive: true });
+    if (writeIfChanged(dest, encodePng(canvas))) {
+      invalidateR2(dest);
+      wrote++;
+    }
+    manifest[dev] = `story_heads/${dev}.png`;
+  }
+  if (writeJsonIfChanged(STORY_HEADS_MANIFEST, manifest)) invalidateR2(STORY_HEADS_MANIFEST);
+  return { wrote, count: Object.keys(manifest).length };
 }
 
 // (g) Full story dialogue. One fetch per character returns every one of their stories, keyed
@@ -925,6 +993,12 @@ async function main() {
   if (writeIfChanged(ROSTER_PATH, Buffer.from(JSON.stringify(roster, null, 2), 'utf8'))) {
     invalidateR2(ROSTER_PATH);
   }
+
+  // After every story_zh.json is written, so the speaker scan is complete.
+  const storyHeads = await buildStoryHeads(g, roster, sheets);
+  console.log(
+    `\nStory-participant heads: ${storyHeads.count} NPC portrait(s) (${storyHeads.wrote} written this run)`
+  );
 
   const removed = flushR2Invalidations();
 
