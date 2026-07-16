@@ -172,23 +172,41 @@
         <div data-screen-label="Character Detail" style="position: absolute; inset: 0; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 30%, #EAF6FD 0%, #CBE8F6 70%, #BEE1F2 100%); overflow: hidden;">
 
           <!-- Full art -->
-          <div style="position: absolute; inset: 0;">
-            <img src="{{ fullShotUrl }}" alt="{{ detailEnName }}" style="width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
-          </div>
+          <sc-if value="{{ showFullShot }}" hint-placeholder-val="{{ true }}">
+            <div style="position: absolute; inset: 0;">
+              <img src="{{ fullShotUrl }}" alt="{{ detailEnName }}" style="width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+            </div>
+          </sc-if>
+
+          <!-- Bust hero: same stacked body+face layers as the expression viewer, for the
+               characters with no full-shot art (see showBustHero in renderVals). -->
+          <sc-if value="{{ showBustHero }}" hint-placeholder-val="{{ false }}">
+            <div style="position: absolute; inset: 0;">
+              <sc-if value="{{ hasBustBase }}" hint-placeholder-val="{{ true }}">
+                <img src="{{ bustBaseUrl }}" alt="{{ detailEnName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+              </sc-if>
+              <sc-if value="{{ hasBustFront }}" hint-placeholder-val="{{ true }}">
+                <img src="{{ bustFrontUrl }}" alt="{{ detailEnName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+              </sc-if>
+            </div>
+          </sc-if>
 
           <!-- Back button -->
           <button onClick="{{ backFromDetail }}" style="position: absolute; left: 14px; top: 14px; z-index: 8; width: 40px; height: 40px; border: none; border-radius: 50%; cursor: pointer; background: #FFFFFF; box-shadow: 0 3px 0 rgba(62,68,80,0.2); display: flex; align-items: center; justify-content: center; font-family: inherit;" style-active="transform: translateY(2px);">
             <svg width="16" height="16" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="4" y="1" width="2" height="1" fill="#3E4450"></rect><rect x="3" y="2" width="2" height="1" fill="#3E4450"></rect><rect x="2" y="3" width="2" height="1" fill="#3E4450"></rect><rect x="1" y="3" width="6" height="1" fill="#3E4450"></rect><rect x="2" y="4" width="2" height="1" fill="#3E4450"></rect><rect x="3" y="5" width="2" height="1" fill="#3E4450"></rect><rect x="4" y="6" width="2" height="1" fill="#3E4450"></rect></svg>
           </button>
 
-          <!-- Awakening toggle (double arrow) -->
-          <button onClick="{{ toggleArt }}" style="position: absolute; right: 14px; top: 14px; z-index: 8; width: 44px; height: 44px; border: none; border-radius: 50%; cursor: pointer; background: #FFFFFF; box-shadow: 0 3px 0 rgba(62,68,80,0.2); display: flex; align-items: center; justify-content: center; font-family: inherit;" style-hover="filter: brightness(1.05);" style-active="transform: translateY(2px) rotate(120deg);">
-            <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;">
-              <rect x="6" y="1" width="3" height="1" fill="#3E4450"></rect><rect x="8" y="1" width="1" height="2" fill="#3E4450"></rect><rect x="5" y="2" width="1" height="1" fill="#3E4450"></rect><rect x="2" y="3" width="5" height="1" fill="#3E4450"></rect>
-              <rect x="1" y="8" width="3" height="1" fill="#3E4450"></rect><rect x="1" y="7" width="1" height="2" fill="#3E4450"></rect><rect x="4" y="7" width="1" height="1" fill="#3E4450"></rect><rect x="3" y="6" width="5" height="1" fill="#3E4450"></rect>
-            </svg>
-          </button>
-          <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
+          <!-- Awakening toggle (double arrow) — full-shot art only; there is no awakened
+               variant of the bust, so bustOnly characters don't get this control. -->
+          <sc-if value="{{ showArtToggle }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ toggleArt }}" style="position: absolute; right: 14px; top: 14px; z-index: 8; width: 44px; height: 44px; border: none; border-radius: 50%; cursor: pointer; background: #FFFFFF; box-shadow: 0 3px 0 rgba(62,68,80,0.2); display: flex; align-items: center; justify-content: center; font-family: inherit;" style-hover="filter: brightness(1.05);" style-active="transform: translateY(2px) rotate(120deg);">
+              <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;">
+                <rect x="6" y="1" width="3" height="1" fill="#3E4450"></rect><rect x="8" y="1" width="1" height="2" fill="#3E4450"></rect><rect x="5" y="2" width="1" height="1" fill="#3E4450"></rect><rect x="2" y="3" width="5" height="1" fill="#3E4450"></rect>
+                <rect x="1" y="8" width="3" height="1" fill="#3E4450"></rect><rect x="1" y="7" width="1" height="2" fill="#3E4450"></rect><rect x="4" y="7" width="1" height="1" fill="#3E4450"></rect><rect x="3" y="6" width="5" height="1" fill="#3E4450"></rect>
+              </svg>
+            </button>
+            <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
+          </sc-if>
 
           <!-- Sheet panel switcher: floats above the sheet's top edge, tracks its drag transform,
                but isn't part of the sheet's own flex layout/scroll area. -->
@@ -850,10 +868,14 @@ class Component extends DCLogic {
           .filter(c => c.thumb)
           .map(c => ({
             devName: c.devName,
-            enName: c.enName || c.devName,
+            // Characters sourced only from miaowm5 (a Chinese source) have no enName, so English
+            // mode falls back to their Chinese name — the alternative is the internal devName,
+            // which reads far worse than 惠惠 does.
+            enName: c.enName || c.zhName || c.devName,
             zhName: c.zhName || '',
             jpName: c.jpName || '',
             rarity: c.rarity,
+            bustOnly: !!c.bustOnly,
             thumbUrl: ASSET_BASE + '/' + c.thumb,
             music: c.music || [],
             starSlots: Array.from({ length: 5 }, (_, i) => ({ color: i < c.rarity ? STAR_ON : STAR_OFF }))
@@ -900,7 +922,7 @@ class Component extends DCLogic {
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
     this.setState({
       tab: 'detail', menuOpen: false,
-      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [] },
+      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
       wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
@@ -913,9 +935,13 @@ class Component extends DCLogic {
     probe.src = folderUrl + '/special.gif';
 
     // Preload both base and awakened full shots up front so the awaken toggle is
-    // instant instead of popping in a blank/loading image on first switch.
-    new Image().src = folderUrl + '/full_shot_1440_1920_0.png';
-    new Image().src = folderUrl + '/full_shot_1440_1920_1.png';
+    // instant instead of popping in a blank/loading image on first switch. bustOnly
+    // characters have neither file — their hero art is the story bust in emotion/,
+    // which arrives with the wiki_zh.json fetch below.
+    if (!c.bustOnly) {
+      new Image().src = folderUrl + '/full_shot_1440_1920_0.png';
+      new Image().src = folderUrl + '/full_shot_1440_1920_1.png';
+    }
 
     // Wiki text data (基本信息/技能/故事/评价/语音) is a separate, optional per-character
     // file — fetched lazily here rather than folded into roster.json, since most of the
@@ -1196,6 +1222,16 @@ class Component extends DCLogic {
       .filter(e => this.state.emotionOverlays.includes(emotionOverlayKey(e.name)))
       .map(e => ({ url: emotionDir + e.front, name: e.name }));
 
+    // Characters that came from miaowm5 alone have no full_shot_1440_1920_* art — that source
+    // only ever had the 570x690 story bust, which is what its own site shows too. So the detail
+    // hero re-uses the expression viewer's stacked body+face layers, and the awaken toggle (a
+    // full-shot-only affordance) is hidden. The bust rides along with wikiData, so the hero
+    // simply appears once that fetch lands, rather than needing its own probe.
+    const bustOnly = !!(selectedChar && selectedChar.bustOnly);
+    const heroFace = bustOnly
+      ? (emotionFaces.find(e => e.name === 'normal') || emotionFaces[0] || null)
+      : null;
+
     // The encyclopedia's profile blocks, minus anything the bilibili wiki already says (the
     // pipeline de-dupes those), shown under the character-story intro.
     const wikiInfoBlocks = (wikiData && wikiData.info) || [];
@@ -1308,6 +1344,13 @@ class Component extends DCLogic {
       detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
       detailStarSlots: selectedChar ? selectedChar.starSlots : [],
       fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
+      showFullShot: !bustOnly,
+      showArtToggle: !bustOnly,
+      showBustHero: !!heroFace,
+      hasBustBase: !!(heroFace && heroFace.base),
+      bustBaseUrl: heroFace && heroFace.base ? emotionDir + heroFace.base : '',
+      hasBustFront: !!(heroFace && heroFace.front),
+      bustFrontUrl: heroFace && heroFace.front ? emotionDir + heroFace.front : '',
       platformUrl0: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[0]) : '',
       platformUrl1: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[1]) : '',
       platformUrl2: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[2]) : '',

@@ -18,6 +18,14 @@
 //   node scripts/fetch-miaowm5.mjs --force             redo every step, ignore the manifest
 //   node scripts/fetch-miaowm5.mjs --limit=30          only the first 30 roster characters
 //   node scripts/fetch-miaowm5.mjs --only=fire_dragon  only these devNames (comma-separated)
+//   node scripts/fetch-miaowm5.mjs --new-chars         add characters missing from roster.json
+//
+// --new-chars iterates character.json instead of roster.json, so it can bootstrap characters
+// the roster has never heard of: it creates rarityN/<devName>/, runs the same per-character
+// steps, and appends a roster entry. Those characters get no full_shot_1440_1920_*.png —
+// miaowm5 has no 1440x1920 art, only the 570x690 story bust we already export as emotion/*.png
+// — so their roster entry carries `bustOnly: true` and the detail page uses the bust as hero
+// art. They also carry no enName/jpName (miaowm5 is a Chinese source), only zhName.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -49,12 +57,22 @@ const REPORT_PATH = path.join(ASSETS_DIR, '_miaowm5_report.md');
 const SOURCE = 'worldflipper.miaowm5.com';
 
 const FORCE = process.argv.includes('--force');
+const NEW_CHARS = process.argv.includes('--new-chars');
 const LIMIT = Number((process.argv.find((a) => a.startsWith('--limit=')) || '').split('=')[1]) || 0;
 const ONLY = new Set(
   ((process.argv.find((a) => a.startsWith('--only=')) || '').split('=')[1] || '')
     .split(',')
     .filter(Boolean)
 );
+
+// character.json row columns, verified against all 377 pre-existing roster entries:
+// row[0] devName, row[2] rarity, row[3] attribute, row[8] storyId.
+const ATTRIBUTES = ['Fire', 'Water', 'Thunder', 'Wind', 'Light', 'Dark'];
+
+// Engine-internal entries — assist-character stubs, mechanic variants (`_no_piercing`) and
+// story-boss forms (`_chapter12`) — all live in this gameId block, and none of the roster's
+// real characters do, so the prefix is a safe exclusion rule on its own.
+const INTERNAL_GAMEID_PREFIX = '700';
 
 // The five pixel actions the site already ships per character (plus `special`), so the pixel
 // step only generates what's genuinely missing.
@@ -505,6 +523,61 @@ function setOrDelete(obj, key, value) {
 }
 
 // ---------------------------------------------------------------------------
+// target selection
+// ---------------------------------------------------------------------------
+
+// Default mode: the roster is the source of truth, and a character.json/folder miss is
+// reportable (`missing`) rather than something to create.
+function rosterTargets(roster, g, missing) {
+  const out = [];
+  for (const c of roster.characters) {
+    if (!c.thumb) continue;
+    const rec = g.byDevName.get(c.devName);
+    if (!rec) {
+      missing.push(c);
+      continue;
+    }
+    const charDir = path.join(ASSETS_DIR, path.dirname(c.thumb));
+    if (!existsSync(charDir)) {
+      missing.push(c);
+      continue;
+    }
+    out.push({ devName: c.devName, gameId: rec.gameId, storyId: rec.storyId, charDir, isNew: false });
+  }
+  return out;
+}
+
+// --new-chars mode: character.json is the source of truth. A real, addable character is one
+// the roster lacks that has both a pixel timeline (its sprites, incl. the neutral.gif we use
+// as the thumbnail) and story_character art (its bust, which is the only hero art available).
+function newCharTargets(roster, g) {
+  const known = new Set(roster.characters.map((c) => c.devName));
+  const out = [];
+  for (const [devName, rec] of g.byDevName) {
+    if (known.has(devName)) continue;
+    if (String(rec.gameId).startsWith(INTERNAL_GAMEID_PREFIX)) continue;
+    if (!g.pixel[rec.storyId]) continue;
+    const sc = g.storyChar[rec.storyId];
+    if (!sc || !Object.keys(sc.emotions).length) continue;
+    const rarity = Number(rec.row[2]);
+    const attribute = ATTRIBUTES[Number(rec.row[3])];
+    const zhName = g.text[String(rec.gameId)]?.[0] || '';
+    if (!rarity || !attribute || !zhName) continue;
+    out.push({
+      devName,
+      gameId: rec.gameId,
+      storyId: rec.storyId,
+      charDir: path.join(ASSETS_DIR, `rarity${rarity}`, devName),
+      isNew: true,
+      rarity,
+      attribute,
+      zhName,
+    });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -526,38 +599,32 @@ async function main() {
   };
 
   const rosterByDev = new Map(roster.characters.map((c) => [c.devName, c]));
-  let targets = roster.characters.filter((c) => c.thumb);
-  if (ONLY.size) targets = targets.filter((c) => ONLY.has(c.devName));
-  if (LIMIT) targets = targets.slice(0, LIMIT);
-
   const missing = [];
+  let targets = NEW_CHARS ? newCharTargets(roster, g) : rosterTargets(roster, g, missing);
+  if (ONLY.size) targets = targets.filter((t) => ONLY.has(t.devName));
+  if (LIMIT) targets = targets.slice(0, LIMIT);
+  console.log(`${targets.length} target(s)${NEW_CHARS ? ' (new characters)' : ''}\n`);
+
+  const added = [];
+  const noThumb = [];
   let processed = 0;
   let failures = 0;
   let storyFiles = 0;
   let gifCount = 0;
   let emotionCount = 0;
 
-  for (const c of targets) {
-    const rec = g.byDevName.get(c.devName);
-    if (!rec) {
-      missing.push(c);
-      continue;
-    }
-    const { gameId, storyId } = rec;
-    const charDir = path.join(ASSETS_DIR, path.dirname(c.thumb));
-    if (!existsSync(charDir)) {
-      missing.push(c);
-      continue;
-    }
-
+  for (const t of targets) {
+    const { devName, gameId, storyId, charDir } = t;
     try {
+      if (t.isNew) mkdirSync(charDir, { recursive: true });
+
       const wikiPath = path.join(charDir, 'wiki_zh.json');
       const wiki = existsSync(wikiPath) ? JSON.parse(readFileSync(wikiPath, 'utf8')) : emptyWiki();
 
       const encEntry = g.encByGameId.get(String(gameId));
       const info = buildInfo(encEntry, wiki);
       const related = buildRelated(encEntry, g, rosterByDev);
-      const jpCount = applyTextJp(wiki, c.devName, g);
+      const jpCount = applyTextJp(wiki, devName, g);
 
       const emotions = await buildEmotions(storyId, charDir, g, sheets);
       if (emotions) emotionCount += emotions.wrote;
@@ -583,7 +650,29 @@ async function main() {
 
       if (writeJsonIfChanged(wikiPath, wiki)) invalidateR2(wikiPath);
 
-      manifest[c.devName] = { gameId, storyId, at: new Date().toISOString() };
+      // The roster entry is only worth adding once the character has the two things the UI
+      // needs: a thumbnail (neutral.gif) for the grid and a bust for the detail hero. Adding
+      // it earlier would put a broken tile in the grid.
+      if (t.isNew) {
+        if (existsSync(path.join(charDir, 'neutral.gif'))) {
+          const entry = {
+            devName,
+            rarity: t.rarity,
+            attribute: t.attribute,
+            thumb: `rarity${t.rarity}/${devName}/neutral.gif`,
+            zhName: t.zhName,
+            hasWiki: false,
+            bustOnly: true,
+          };
+          roster.characters.push(entry);
+          rosterByDev.set(devName, entry);
+          added.push(entry);
+        } else {
+          noThumb.push(devName);
+        }
+      }
+
+      manifest[devName] = { gameId, storyId, at: new Date().toISOString() };
       processed++;
       const bits = [];
       if (info.length) bits.push(`info ${info.length}`);
@@ -592,46 +681,55 @@ async function main() {
       if (emotions) bits.push(`emotions ${emotions.manifest.length}`);
       if (pixel?.generated.length) bits.push(`gif +${pixel.generated.join(',')}`);
       if (stories) bits.push(`stories ${stories.length}`);
-      console.log(`[${processed}/${targets.length}] ${c.devName}  ${bits.join(' | ') || '(nothing new)'}`);
+      console.log(`[${processed}/${targets.length}] ${devName}  ${bits.join(' | ') || '(nothing new)'}`);
     } catch (err) {
       failures++;
-      console.error(`FAIL ${c.devName}: ${err.message}`);
+      console.error(`FAIL ${devName}: ${err.message}`);
     }
 
     if (processed % 10 === 0) saveManifest(manifest);
   }
 
   saveManifest(manifest);
+  if (added.length) {
+    roster.count = roster.characters.length;
+    roster.generatedAt = new Date().toISOString();
+  }
   if (writeIfChanged(ROSTER_PATH, Buffer.from(JSON.stringify(roster, null, 2), 'utf8'))) {
     invalidateR2(ROSTER_PATH);
   }
 
   const removed = flushR2Invalidations();
 
-  writeFileSync(
-    REPORT_PATH,
-    [
-      '# miaowm5 pipeline report',
-      '',
-      `Generated ${new Date().toISOString()}`,
-      '',
-      `- processed: ${processed}`,
-      `- failures: ${failures}`,
-      `- story_zh.json written: ${storyFiles}`,
-      `- pixel GIFs generated: ${gifCount}`,
-      `- emotion PNGs written: ${emotionCount}`,
-      '',
-      `## roster characters not found in miaowm5 character.json (${missing.length})`,
-      '',
-      ...missing.map((c) => `- ${c.devName} — "${c.enName}"`),
-      '',
-    ].join('\n')
-  );
+  // The roster-vs-miaowm5 gap report only means anything when the roster drives the run;
+  // --new-chars walks character.json, so leave the existing report alone.
+  if (!NEW_CHARS) {
+    writeFileSync(
+      REPORT_PATH,
+      [
+        '# miaowm5 pipeline report',
+        '',
+        `Generated ${new Date().toISOString()}`,
+        '',
+        `- processed: ${processed}`,
+        `- failures: ${failures}`,
+        `- story_zh.json written: ${storyFiles}`,
+        `- pixel GIFs generated: ${gifCount}`,
+        `- emotion PNGs written: ${emotionCount}`,
+        '',
+        `## roster characters not found in miaowm5 character.json (${missing.length})`,
+        '',
+        ...missing.map((c) => `- ${c.devName} — "${c.enName}"`),
+        '',
+      ].join('\n')
+    );
+  }
 
   console.log(
     `\nDone. ${processed} processed, ${failures} failure(s), ${missing.length} not in miaowm5 data.` +
       `\n  story_zh.json: ${storyFiles} | new GIFs: ${gifCount} | emotion PNGs: ${emotionCount} | R2 keys invalidated: ${removed}` +
-      `\n  See ${path.relative(process.cwd(), REPORT_PATH)}.`
+      (NEW_CHARS ? `\n  roster entries added: ${added.length}${noThumb.length ? ` | skipped (no neutral.gif): ${noThumb.join(', ')}` : ''}` : '') +
+      (NEW_CHARS ? '' : `\n  See ${path.relative(process.cwd(), REPORT_PATH)}.`)
   );
   process.exit(failures > 0 ? 1 : 0);
 }

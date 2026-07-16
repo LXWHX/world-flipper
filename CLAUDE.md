@@ -34,11 +34,36 @@ fetches the same JSON the site does and decodes it with ports of the site's own 
 (`scripts/lib/miaowm5-common.mjs`). When changing a decoder, check it against the upstream source
 rather than reverse-engineering the raw columns.
 
-`npm run fetch:miaowm5` (flags: `--force`, `--limit=N`, `--only=devName,...`) is dev-only and
-resumable: every HTTP response is disk-cached under `scripts/.miaowm5-cache/` (gitignored) keyed by
+`npm run fetch:miaowm5` (flags: `--force`, `--limit=N`, `--only=devName,...`, `--new-chars`) is
+dev-only and resumable: every HTTP response is disk-cached under `scripts/.miaowm5-cache/` (gitignored) keyed by
 URL path, and per-character progress lands in `scripts/.miaowm5-manifest.json`. A cold full run takes
 ~60 min (it decodes ~180 atlas pages and encodes ~1400 GIFs) and needs ~1.2GB of cache on disk; a
 no-op re-run takes seconds, because every step checks for its output file before decoding anything.
+
+**`--new-chars` (roster-producing mode).** The default run iterates `roster.json`; `--new-chars`
+iterates `character.json` instead, so it can bootstrap characters the roster has never heard of —
+it creates `rarityN/<devName>/`, runs the same per-character steps, and appends a roster entry
+(`rarity` = `character.json` row[2], `attribute` = row[3] via `Fire/Water/Thunder/Wind/Light/Dark`).
+It only adds a character that has **both** a pixel timeline (its `neutral.gif` thumbnail) and
+`story_character` art (its bust), and skips the `700xxx` `gameId` block outright: those are
+engine-internal entries (assist stubs, `_no_piercing` mechanic variants, `_chapter12` boss forms),
+and no real roster character lives there. That filter yields 108 characters; the roster is now 485.
+The mode is naturally idempotent — once a character is in the roster, it's no longer "new".
+
+**`bustOnly` characters.** miaowm5 has **no** 1440x1920 full illustration — only the 570x690 story
+bust (it's what miaowm5's own site displays), and the `full_shot_*` files came from a separate
+source that has nothing for these 108. So their roster entries carry `bustOnly: true` and the detail
+page uses the stacked bust as hero art with the awaken toggle hidden (see "Character detail bottom
+sheet"). They also carry **no `enName`/`jpName`** — miaowm5 is a Chinese source — only `zhName` from
+`character_text[gameId][0]`, so the front-end falls back `enName || zhName || devName`. Three
+Black Clover collab characters (`asta`, `yuno`, `noelle_silva`) have Japanese-script `zhName`s
+because the game's own CN data left them untranslated. They get no `special.gif` either: it lives
+in a separate atlas the pipeline doesn't decode, so `hasSpecial` probes false and the button hides.
+
+Note that adding roster entries makes previously-unresolvable `related` chips on **existing**
+characters resolve, so a default run after `--new-chars` legitimately rewrites their `wiki_zh.json`
+(163 files / 362 chips, the last time this happened). That's a real content change, not the
+gratuitous timestamp churn the byte-stability rules below exist to prevent — don't suppress it.
 
 **Three ID spaces — the main trap.** `devName` is the roster/folder key (and the key for
 `character.json`/`pixel.json`); `gameId` keys `character_text`/`character_quest` and is what
@@ -165,6 +190,13 @@ renders — one `sc-if`-gated block per panel:
 Emotion art only renders for the character being viewed and only for expressions the pipeline
 exported, so story dialogue from other speakers falls back to a plain name plate.
 
+**Hero art.** The detail screen normally shows `full_shot_1440_1920_{0,1}.png` with the awaken
+toggle. `bustOnly` characters have no such file, so `renderVals()` swaps in the 570x690 story bust
+(`showBustHero`, the same stacked `base_N.png` + face layers the expression viewer draws, picking
+the `normal` face) and hides the toggle (`showArtToggle`), since there's no awakened bust to toggle
+to. The bust arrives with the lazy `wiki_zh.json` fetch, so it needs no separate probe — but that
+also means the hero paints a beat after the rest of the screen.
+
 #### Emotion layers (faces vs. overlays)
 
 The game composites an expression as a **comma-separated layer stack**: `story_zh.json`'s `emotion`
@@ -225,7 +257,9 @@ too, or it will silently never reach production.
 `Character Assets/roster.json` is the character index driving the Units tab: each entry has `devName`,
 `enName`, `jpName`, `rarity`, `attribute`, `thumb`, an optional `music` array (mp3 filenames, only
 present for the ~150 characters with matched BGM), and — for the ~368 characters matched by the wiki
-pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. Per-character
+pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. The 108
+entries added by `fetch-miaowm5.mjs --new-chars` instead carry `bustOnly: true` with no
+`enName`/`jpName` and no full-shot art (see the miaowm5 section above). Per-character
 folders (`rarityN/<devName>/`) hold the
 actual art/GIFs (`neutral.gif`, `full_shot_1440_1920_{0,1}.png`, `walk_front.gif`, `kachidoki.gif`,
 `walk_back.gif`, optional `special.gif`, `skill_ready.gif`, plus any extra pixel actions generated by
