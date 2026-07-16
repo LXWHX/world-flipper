@@ -74,12 +74,12 @@
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
-            <svg width="12" height="12" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="2" y="0" width="4" height="2" fill="#8BE86E"></rect><rect x="1" y="2" width="6" height="3" fill="#4ECB4E"></rect><rect x="2" y="5" width="4" height="2" fill="#2E9E3C"></rect></svg>
-            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;">1,108</span>
+            <img src="icons/Mana.png" alt="" width="14" height="14" style="image-rendering: pixelated; display: block;">
+            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ pvTitle }}">{{ pvCount }}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
-            <svg width="12" height="12" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="2" y="1" width="4" height="2" fill="#D9A6F5"></rect><rect x="1" y="3" width="6" height="2" fill="#A66FE0"></rect><rect x="2" y="5" width="4" height="2" fill="#7B44BE"></rect></svg>
-            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;">5,325</span>
+            <img src="icons/Lodestar_Bead.png" alt="" width="14" height="14" style="image-rendering: pixelated; display: block;">
+            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ uvTitle }}">{{ uvCount }}</span>
           </div>
         </div>
       </sc-if>
@@ -802,6 +802,17 @@
 const ASSET_BASE = location.protocol === 'file:' || location.hostname === 'localhost'
   ? 'Character Assets'
   : 'https://pub-e1f9dd7473954e4b9b7d20b302cddb4a.r2.dev';
+
+// Visit counters (top status bar). A single Supabase RPC, `record_visit(vid)`, bumps the total
+// page-view count, registers this browser's visitor id (a random uuid persisted in localStorage,
+// so it's deduped across reloads) and returns { pv, uv }. The anon key is safe to ship: it only
+// grants EXECUTE on that one SECURITY DEFINER function — the underlying tables stay behind RLS
+// with no policies, so nothing else is readable or writable. Fill these in after creating the
+// project + running the SQL in the setup notes; while they hold the placeholder the counters just
+// show a dash. See the `record_visit` recording path in componentDidMount.
+const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+const VISITOR_STORAGE_KEY = 'wf_visitor_id';
 const ROSTER_BATCH = 60;
 // The Units grid stands each character's pixel sprite on a pedestal tinted by their attribute
 // (the game's own party screen colours its bases too). `top` is the elliptical face the sprite
@@ -853,6 +864,8 @@ const LANG_STORAGE_KEY = 'wf_lang';
 // character-facing fields like enName/jpName stay separate, unlocalized fields.
 const STRINGS = {
   brandMuseum: { en: 'MUSEUM', zh: '博物馆' },
+  counterPv: { en: 'Total visits', zh: '总访问量' },
+  counterUv: { en: 'Unique visitors', zh: '独立访客' },
   heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
   navNews: { en: 'News', zh: '资讯' },
   navAbout: { en: 'About', zh: '关于' },
@@ -1068,6 +1081,9 @@ class Component extends DCLogic {
     wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
     storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
     emotionOverlays: [],
+    // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
+    // where we deliberately don't count) — renderVals shows a dash in that case.
+    pv: null, uv: null,
     // `filter` is what the grid actually applies; `draftFilter` is the dialog's working copy, so
     // that (as upstream) chip toggles only take effect on OK and Cancel discards them.
     filterOpen: false, filter: { ...EMPTY_FILTER }, draftFilter: { ...EMPTY_FILTER }
@@ -1127,6 +1143,46 @@ class Component extends DCLogic {
         if (el) el.scrollLeft = this.unitsScrollLeft;
       });
     });
+  }
+
+  // Bump the total page-view count and register this browser as a visitor (deduped via a
+  // localStorage uuid), then show both numbers in the top bar. Fires once per page load.
+  // Skipped on file:// and localhost so local dev reloads never inflate the live totals, and
+  // skipped while SUPABASE_URL still holds its placeholder so the site works before it's wired up.
+  recordVisit() {
+    if (location.protocol === 'file:' || location.hostname === 'localhost') return;
+    if (!SUPABASE_URL || SUPABASE_URL.indexOf('YOUR_PROJECT') !== -1) return;
+
+    // A stable per-browser id so reloads count as one unique visitor. Falls back to an ephemeral
+    // id if localStorage is unavailable (private mode) — that visit still counts toward PV.
+    let vid = '';
+    try {
+      vid = localStorage.getItem(VISITOR_STORAGE_KEY) || '';
+      if (!vid) {
+        vid = (window.crypto && crypto.randomUUID)
+          ? crypto.randomUUID()
+          : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+        localStorage.setItem(VISITOR_STORAGE_KEY, vid);
+      }
+    } catch (e) {
+      vid = 'anon-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+    }
+
+    fetch(SUPABASE_URL + '/rest/v1/rpc/record_visit', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ vid })
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row && row.pv != null) this.setState({ pv: Number(row.pv), uv: Number(row.uv) });
+      })
+      .catch(() => { /* counters just stay on the dash placeholder */ });
   }
 
   componentDidMount() {
@@ -1191,6 +1247,8 @@ class Component extends DCLogic {
       .then(r => (r.ok ? r.json() : {}))
       .then(map => { this.storyHeads = (map && typeof map === 'object') ? map : {}; this.setState({ storyHeadsLoaded: true }); })
       .catch(() => { /* NPC avatars fall back to name plates */ });
+
+    this.recordVisit();
 
     const onResize = () => this.updateScale();
     window.addEventListener('resize', onResize);
@@ -1734,6 +1792,13 @@ class Component extends DCLogic {
       isSection: !!sec && tab !== 'units' && tab !== 'detail',
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,
+      // Visit counters: total page views (left, Mana) and unique visitors (right, Lodestar Bead).
+      // A dash until the Supabase RPC resolves — and permanently a dash on local dev, where we
+      // don't count. The tooltip spells out what each number is (also bilingual).
+      pvCount: this.state.pv == null ? '—' : this.state.pv.toLocaleString('en-US'),
+      uvCount: this.state.uv == null ? '—' : this.state.uv.toLocaleString('en-US'),
+      pvTitle: this.t('counterPv'),
+      uvTitle: this.t('counterUv'),
       langToggleLabel: this.t('langToggle'),
       toggleLang: () => this.toggleLang(),
       brandMuseumLabel: this.t('brandMuseum'),

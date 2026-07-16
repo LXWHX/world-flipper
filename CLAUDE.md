@@ -302,3 +302,18 @@ Per-character folders (`rarityN/<devName>/`) hold the GIFs/art, optional `music/
 pipeline outputs (`wiki_zh.json`, `voice/`, `story_zh.json`, `emotion/`). Music plays through one
 persistent `this.audio = new Audio()` (`toggleMusicTrack`/`stopMusic`), rendered as pill buttons
 when `music.length > 0`.
+
+### Visit counters (top status bar)
+
+The two top-right pills (`icons/Mana.png` = total page views, `icons/Lodestar_Bead.png` = unique
+visitors) are backed by Supabase. `recordVisit()` (called once in `componentDidMount`) POSTs to one
+RPC, `record_visit(vid)`, which bumps a PV counter, upserts the visitor id, and returns `{pv, uv}`;
+`renderVals` formats them into `pvCount`/`uvCount` (a dash until it resolves). `vid` is a random
+uuid persisted in `localStorage` (`wf_visitor_id`), so reloads dedupe to one unique visitor — **no
+IP is ever read** (a browser can't, and it'd miscount shared/rotating IPs anyway). Config lives in
+`SUPABASE_URL`/`SUPABASE_ANON_KEY` next to `ASSET_BASE`; the anon key is safe to ship because the
+SQL (`supabase-visit-counter.sql`) grants the anon role EXECUTE on only that SECURITY DEFINER
+function and leaves both tables behind RLS with no policies. **`recordVisit()` no-ops on
+`file://`/`localhost`** (so dev reloads don't inflate the live totals) and while `SUPABASE_URL`
+still holds its `YOUR_PROJECT` placeholder. This is unrelated to R2 — the counters never touch
+`Character Assets/` or the upload pipeline.
