@@ -57,8 +57,7 @@ page uses the stacked bust as hero art with the awaken toggle hidden (see "Chara
 sheet"). They also carry **no `enName`/`jpName`** — miaowm5 is a Chinese source — only `zhName` from
 `character_text[gameId][0]`, so the front-end falls back `enName || zhName || devName`. Three
 Black Clover collab characters (`asta`, `yuno`, `noelle_silva`) have Japanese-script `zhName`s
-because the game's own CN data left them untranslated. They get no `special.gif` either: it lives
-in a separate atlas the pipeline doesn't decode, so `hasSpecial` probes false and the button hides.
+because the game's own CN data left them untranslated.
 
 Note that adding roster entries makes previously-unresolvable `related` chips on **existing**
 characters resolve, so a default run after `--new-chars` legitimately rewrites their `wiki_zh.json`
@@ -88,7 +87,14 @@ What it produces per character, beyond the `wiki_zh.json` keys:
   that the front-end stacks, rather than one flattened composite per expression.
 - missing pixel `*.gif` — the site already ships 5 actions + `special`; miaowm5's pixel timeline
   usually also has `into_coffin`/`ghost_raise`/`ghost_neutral`/`revive` (and a few characters have
-  many more). `pixelActions` lists what the folder actually holds, so the UI never links a missing
+  many more). **`special` is a special case**: its frames live in a *second* atlas
+  (`pixel_special`, same `storyId` key) and `pixel.json`'s timeline never references them — no
+  entry is `>= 10000`. Upstream synthesizes that entry (`loadPixel.svelte.js` pushes
+  `{name:'special', begin:10000, end:<last special frame id>}`) and merges both frame lists into
+  one `imageList`, using the 10000 offset to keep the two id spaces apart; `buildPixelGifs` mirrors
+  that. Characters below 4★ have no special frames at all, which is why ~92 of them legitimately
+  have no `special.gif` and no Special button — that's the game's data, not a gap.
+  `pixelActions` lists what the folder actually holds, so the UI never links a missing
   file. Existing GIFs are left alone: they were exported from an older revision of the upstream
   pixel data, so regenerating them would change timings for no benefit.
 

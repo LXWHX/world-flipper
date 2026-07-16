@@ -78,6 +78,10 @@ const INTERNAL_GAMEID_PREFIX = '700';
 // step only generates what's genuinely missing.
 const EXISTING_GIFS = ['neutral', 'walk_front', 'walk_back', 'kachidoki', 'skill_ready', 'special'];
 
+// Upstream's offset for merging the pixel_special atlas's frames into the same imageList as
+// pixel_normal's without their ids colliding. See buildPixelGifs.
+const SPECIAL_OFFSET = 10000;
+
 // ---------------------------------------------------------------------------
 // manifests
 // ---------------------------------------------------------------------------
@@ -357,6 +361,14 @@ async function buildEmotions(storyId, charDir, g, sheets) {
 // (e) Generate any pixel action the character folder is missing. The site ships 5 normal
 // actions + special; pixel.json's timeline usually also holds into_coffin / ghost_raise /
 // ghost_neutral / revive, which is what this fills in.
+//
+// `special` is the odd one out: its frames live in a separate atlas (pixel_special) and
+// pixel.json's timeline never references them — no entry is >= SPECIAL_OFFSET. Upstream
+// synthesizes that entry instead (loadPixel.svelte.js):
+//   let specialList = createFrame(config.special, image, 10000)
+//   timeline.push({ name: "special", begin: 10000, end: specialList.at(-1)[0] })
+// so the offset is what separates the two frame id spaces inside one imageList. Characters
+// below 4* have no special frames at all, which is why they legitimately get no special.gif.
 async function buildPixelGifs(storyId, charDir, g, sheets) {
   const cfg = g.pixel[storyId];
   if (!cfg) return null;
@@ -366,13 +378,32 @@ async function buildPixelGifs(storyId, charDir, g, sheets) {
       .filter((f) => f.endsWith('.gif'))
       .map((f) => f.slice(0, -4))
   );
-  const wanted = (cfg.timeline || []).filter((t) => FORCE || !present.has(t.name));
+
+  // `end` is the last special frame's id, which is plain data — deriving it here rather than
+  // from the decoded specialList keeps the "output exists? then don't decode" fast path.
+  const specialFrames = cfg.special || [];
+  const timeline = [...(cfg.timeline || [])];
+  if (specialFrames.length) {
+    timeline.push({
+      name: 'special',
+      begin: SPECIAL_OFFSET,
+      end: specialFrames[specialFrames.length - 1].n + SPECIAL_OFFSET,
+    });
+  }
+  const wanted = timeline.filter((t) => FORCE || !present.has(t.name));
 
   const generated = [];
   if (wanted.length) {
     const sheet = await sheets.pixelNormal.getSprite(storyId);
     if (!sheet) return null;
-    const imageList = createFrame(cfg.normal || [], sheet, 0);
+    let imageList = createFrame(cfg.normal || [], sheet, 0);
+    // Only pay for the second atlas when a special.gif is actually being generated.
+    if (wanted.some((t) => t.name === 'special')) {
+      const specialSheet = await sheets.pixelSpecial.getSprite(storyId);
+      if (specialSheet) {
+        imageList = imageList.concat(createFrame(specialFrames, specialSheet, SPECIAL_OFFSET));
+      }
+    }
 
     for (const t of wanted) {
       const movie = createTimeline(t, imageList);
@@ -395,7 +426,7 @@ async function buildPixelGifs(storyId, charDir, g, sheets) {
   const actions = readdirSync(charDir)
     .filter((f) => f.endsWith('.gif'))
     .map((f) => f.slice(0, -4));
-  const order = (cfg.timeline || []).map((t) => t.name);
+  const order = timeline.map((t) => t.name);
   actions.sort((a, b) => {
     const ia = order.indexOf(a);
     const ib = order.indexOf(b);
@@ -596,6 +627,7 @@ async function main() {
   const sheets = {
     story: new Spritesheet('character/story', CDN_A),
     pixelNormal: new Spritesheet('pixel_normal', CDN_B),
+    pixelSpecial: new Spritesheet('pixel_special', CDN_B),
   };
 
   const rosterByDev = new Map(roster.characters.map((c) => [c.devName, c]));
