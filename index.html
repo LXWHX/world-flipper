@@ -15,14 +15,54 @@
   <script src="image-slot.js"></script>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
-    body { font-family: 'M PLUS Rounded 1c', sans-serif; background: #8FCCE8; }
+    body { font-family: 'M PLUS Rounded 1c', sans-serif; background: #EAEAEA; }
     @keyframes wfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes wfPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    /* The magic circle turning behind the app, ported from miaowm5's ui/magicCircle.svelte —
+       same art, same 25s linear spin, and both of its variants. `bottom: 0` plus a translate of
+       half its own height parks the circle's centre on its container's bottom edge, so only the
+       top half is ever on screen; the container needs `position: relative` + `overflow: hidden`.
+       The translate has to be repeated inside the keyframes because `transform` carries position
+       and rotation together — animating rotate() alone drops the centering and flings the circle
+       off to the right. That's also why the two variants need separate keyframes: their resting
+       translate differs, so they can't share one. */
+    /* z-index: -1 is upstream's own value, and it is load-bearing: it puts the circle above its
+       host's background but behind the host's ordinary in-flow content, which is the only way the
+       drawer's text stays on top of it. It works only where the host makes a stacking context, so
+       every host below carries `position: relative; z-index: 0` (or already has a z-index) —
+       without that the circle escapes to the nearest one and slides behind the host entirely. */
+    .wf-circle {
+      position: absolute; left: 50%; bottom: 0; width: 90%; aspect-ratio: 1 / 1;
+      background: url('icons/circle.png') center / contain no-repeat;
+      transform: translate(-50%, 50%);
+      animation: wfCircleSpin 25s linear infinite;
+      pointer-events: none; z-index: -1;
+    }
+    /* Upstream's `dialog` variant, for surfaces laid over the app (the detail drawer, the filter
+       dialog) — smaller, dimmer, and pushed further down than the backdrop one. */
+    .wf-circle-dialog {
+      width: 70%; opacity: 0.6;
+      transform: translate(-50%, 60%);
+      animation-name: wfCircleSpinDialog;
+    }
+    @keyframes wfCircleSpin {
+      from { transform: translate(-50%, 50%) rotate(0deg); }
+      to   { transform: translate(-50%, 50%) rotate(360deg); }
+    }
+    @keyframes wfCircleSpinDialog {
+      from { transform: translate(-50%, 60%) rotate(0deg); }
+      to   { transform: translate(-50%, 60%) rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) { .wf-circle { animation: none !important; } }
   </style>
 </helmet>
 
-<div style="width: 100%; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; background: repeating-conic-gradient(#84C4E2 0% 25%, #8FCCE8 0% 50%) 0 0 / 28px 28px;">
-  <div style="width: 430px; height: 860px; flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: linear-gradient(180deg, #D8F1FB 0%, #B4E3F5 55%, #C9ECF8 100%); box-shadow: 0 0 40px rgba(30, 80, 110, 0.35); position: relative; overflow: hidden;">
+<!-- Page field: miaowm5's flat #EAEAEA. The magic circle lives inside the card's screen area (see
+     below), not out here — out here the card would hide all but its spill. -->
+<div style="width: 100%; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #EAEAEA; position: relative;">
+  <!-- The card sits on the same grey as the page, so its (now neutral, was blue-tinted) shadow is
+       the only thing separating the two. -->
+  <div style="width: 430px; height: 860px; flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: #EAEAEA; box-shadow: 0 0 40px rgba(0, 0, 0, 0.3); position: relative; z-index: 1; overflow: hidden;">
 
     <!-- ===== Top status bar ===== -->
     <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #3E4450; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); z-index: 30;">
@@ -47,7 +87,12 @@
     </div>
 
     <!-- ===== Screen area ===== -->
-    <div style="flex: 1; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+    <div style="flex: 1; position: relative; z-index: 0; overflow: hidden; display: flex; flex-direction: column;">
+
+      <!-- The app's backdrop. It hangs off this element rather than the card so the tab bar can't
+           cover it, and `overflow: hidden` here is what crops the circle's bottom half. Screens are
+           transparent by design now — the blue gradients they used to carry are what this replaces. -->
+      <div class="wf-circle"></div>
 
       <!-- ===== HOME ===== -->
       <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
@@ -130,7 +175,9 @@
           </div>
 
           <!-- Horizontal-scrolling roster -->
-          <div id="units-scroll" onScroll="{{ handleRosterScroll }}" style="flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 24px 24px; padding: 16px 12px; display: flex; align-items: center;">
+          <!-- Transparent, so the screen area's magic circle reads through behind the roster —
+               this is what replaced the checkerboard the grid used to sit on. -->
+          <div id="units-scroll" onScroll="{{ handleRosterScroll }}" style="flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 16px 12px; display: flex; align-items: center;">
             <sc-if value="{{ rosterLoading }}" hint-placeholder-val="{{ false }}">
               <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ loadingRosterText }}</div>
             </sc-if>
@@ -172,13 +219,136 @@
                 </sc-for>
               </div>
             </sc-if>
+            <sc-if value="{{ showRosterEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ filterNoMatchText }}</div>
+            </sc-if>
+          </div>
+
+          <!-- Filter button, at the list's top-left straddling the banner's bottom edge — the
+               same corner upstream puts it in (its ListBanner slot is left/bottom).
+               The position is wedged into the one gap that's actually free: the banner's section
+               icon ends at y=68 and the grid's first tile starts at y=101 with its portrait art
+               from x=38, so a 38px circle at (4,66) clears both. Moving or resizing it much in
+               any direction lands on the icon above or the first portrait below. -->
+          <sc-if value="{{ showFilterButton }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ openFilter }}" style="position: absolute; left: 4px; top: 66px; z-index: 3; width: 38px; height: 38px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 0 rgba(62,68,80,0.25), 0 2px 8px rgba(30,80,110,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(1px);">
+              <img src="icons/filer.jpg" alt="{{ filterTitleText }}" style="width: 19px; height: 19px; object-fit: contain; mix-blend-mode: multiply;">
+              <sc-if value="{{ hasFilterCount }}" hint-placeholder-val="{{ false }}">
+                <div style="position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; border-radius: 8px; background: #F0526E; color: #FFFFFF; font-size: 9px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 0 rgba(62,68,80,0.25);">{{ filterCount }}</div>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ===== UNITS FILTER DIALOG (port of miaowm5's dialog/filterCharacter.svelte) ===== -->
+      <sc-if value="{{ filterOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeFilter }}" style="position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.5);">
+          <!-- position: relative + z-index: 0 is upstream's own pairing on `.dialog`, and it's what
+               contains the circle below. -->
+          <div onClick="{{ stopDialogClick }}" style="position: relative; z-index: 0; width: 90%; max-height: 80%; background: linear-gradient(to top, #EFF0F2 0, #FAFAFA 2em, #FAFAFA 100%); border: 2px solid #FFFFFF; border-radius: 16px; box-shadow: 0 0 8px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; padding: 14px; box-sizing: border-box; color: #3E4450;">
+            <!-- Upstream's dialog/index.svelte turns one behind every dialog too. -->
+            <div class="wf-circle wf-circle-dialog"></div>
+
+            <!-- Frame header -->
+            <div style="flex: none; text-align: center; padding-bottom: 11px; border-bottom: 2px solid #DEDEDE; font-size: 15px; font-weight: 900;">{{ filterTitleText }}</div>
+
+            <!-- Frame content -->
+            <div style="flex: 1; overflow-y: auto; padding: 0 7px 20px;">
+
+              <!-- Name -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ filterNameTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="text-align: center;">
+                <!-- onChange, not onInput: the runtime hands props straight to React, whose
+                     onChange already fires per keystroke and is what marks a `value` input as
+                     controlled rather than read-only. -->
+                <input type="text" value="{{ filterNameValue }}" onChange="{{ setFilterText }}" placeholder="{{ filterNameHint }}" style="width: 60%; border: 2px solid #DCDCDC; border-radius: 4px; padding: 7px; background: #FAFAFA; font-size: 12px; font-family: inherit; color: #3E4450; box-sizing: border-box;">
+              </div>
+
+              <!-- Rarity -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ filterRarityTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <!-- Stars only, no number beside them: the star count already reads as the rarity.
+                   The label lives on as the img's alt so the chip stays legible to a screen
+                   reader. Every rarity has art, so this row needs no hasIcon guard. -->
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ rarityChips }}" as="ch" hint-placeholder-count="5">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px; min-width: 44px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(0.96);">
+                    <img src="{{ ch.iconUrl }}" alt="{{ ch.label }}" style="height: 13px; width: auto;">
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- Element -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ filterElementTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ elementChips }}" as="ch" hint-placeholder-count="6">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px; min-width: 44px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3); font-size: 12px; font-weight: 700;" style-hover="filter: brightness(0.96);">
+                    <sc-if value="{{ ch.hasIcon }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ ch.iconUrl }}" alt="{{ ch.label }}" style="height: 14px; width: auto;">
+                    </sc-if>
+                    <span>{{ ch.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- Gender -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ filterGenderTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ genderChips }}" as="ch" hint-placeholder-count="3">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px; min-width: 44px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3); font-size: 12px; font-weight: 700;" style-hover="filter: brightness(0.96);">
+                    <span>{{ ch.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <!-- Race -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ filterRaceTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ raceChips }}" as="ch" hint-placeholder-count="10">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px; min-width: 44px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3); font-size: 12px; font-weight: 700;" style-hover="filter: brightness(0.96);">
+                    <sc-if value="{{ ch.hasIcon }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ ch.iconUrl }}" alt="{{ ch.label }}" style="height: 14px; width: auto;">
+                    </sc-if>
+                    <span>{{ ch.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- Frame submit -->
+            <div style="flex: none; display: flex; flex-wrap: wrap; justify-content: center; border-top: 2px solid #DEDEDE; padding-top: 14px; padding-bottom: 7px; gap: 7px 14px;">
+              <div onClick="{{ closeFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #E93551; border: 2px solid #F04064; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterCancelText }}</div>
+              <div onClick="{{ applyFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #2DC4B6; border: 2px solid #38D0C6; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterOkText }}</div>
+            </div>
           </div>
         </div>
       </sc-if>
 
       <!-- ===== CHARACTER DETAIL SCREEN ===== -->
       <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
-        <div data-screen-label="Character Detail" style="position: absolute; inset: 0; display: flex; flex-direction: column; background: radial-gradient(circle at 50% 30%, #EAF6FD 0%, #CBE8F6 70%, #BEE1F2 100%); overflow: hidden;">
+        <!-- Transparent too (was a blue radial gradient), so the hero art stands on the same
+             circle backdrop as the rest of the app. -->
+        <div data-screen-label="Character Detail" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden;">
 
           <!-- Full art -->
           <sc-if value="{{ showFullShot }}" hint-placeholder-val="{{ true }}">
@@ -234,8 +404,12 @@
             </button>
           </div>
 
-          <!-- Draggable bottom sheet: fixed drag-handle strip on top, scrollable info card below -->
-          <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: {{ sheetHeight }}px; background: #FFFFFF; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(30,60,90,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; display: flex; flex-direction: column; overflow: hidden;">
+          <!-- Draggable bottom sheet: fixed drag-handle strip on top, scrollable info card below.
+               The sheet covers the screen area's circle whole, so it carries its own (the dialog
+               variant). Its own z-index: 9 already makes the stacking context that keeps the
+               circle behind the sheet's content. -->
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 9; height: {{ sheetHeight }}px; background: #FAFAFA; border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(0,0,0,0.18); transform: {{ sheetTransform }}; transition: {{ sheetTransition }}; display: flex; flex-direction: column; overflow: hidden;">
+            <div class="wf-circle wf-circle-dialog"></div>
             <div onPointerDown="{{ sheetPointerDown }}" style="flex: none; touch-action: none; cursor: grab;">
               <div style="display: flex; justify-content: center; padding: 8px 0 4px;">
                 <div style="width: 40px; height: 5px; border-radius: 999px; background: #E3E9F0;"></div>
@@ -253,7 +427,11 @@
             <div id="sheetBody" style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
               <sc-if value="{{ showProfilePanel }}" hint-placeholder-val="{{ true }}">
               <!-- Stage with 3 pixel platforms, each playing its own animation -->
-              <div style="position: relative; height: 150px; margin: 0 14px; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
+              <!-- The character's own stage. Was a transparency checkerboard; now the same circle
+                   as everywhere else, so the sprites stand on it. z-index: 0 makes the stacking
+                   context the circle's z-index: -1 needs. -->
+              <div style="position: relative; z-index: 0; height: 150px; margin: 0 14px; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
+                <div class="wf-circle"></div>
                 <div style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: flex-end; gap: 22px;">
                   <div style="position: relative; width: 46px; display: flex; flex-direction: column; align-items: center;">
                     <img src="{{ platformUrl0 }}" alt="{{ detailEnName }}" style="height: 64px; margin-bottom: 4px; image-rendering: pixelated; filter: drop-shadow(0 3px 2px rgba(0,0,0,0.25));">
@@ -289,7 +467,8 @@
               <sc-if value="{{ hasEmotions }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 14px 18px 0;">
                   <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ emotionsTitleLabel }}</div>
-                  <div style="position: relative; width: 100%; padding-top: {{ emotionRatioPadding }}; border-radius: 14px; background: repeating-conic-gradient(#E7EBF1 0% 25%, #F4F6F9 0% 50%) 0 0 / 20px 20px; overflow: hidden;">
+                  <div style="position: relative; z-index: 0; width: 100%; padding-top: {{ emotionRatioPadding }}; border-radius: 14px; background: #F4F6F9; overflow: hidden;">
+                    <div class="wf-circle"></div>
                     <sc-if value="{{ hasEmotionBase }}" hint-placeholder-val="{{ true }}">
                       <img src="{{ emotionBaseUrl }}" alt="{{ emotionName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
                     </sc-if>
@@ -629,6 +808,30 @@ const PEDESTAL = {
   Dark: { top: '#B6A2DE', side: '#7059A8' }
 };
 const PEDESTAL_DEFAULT = { top: '#E4E9F0', side: '#A9B3C2' };
+// The game's own attribute order (character.json's row[3] index) — it drives both the Units
+// grid's sort and the filter's element chips, so the two always agree.
+const ELEMENT_ORDER = ['Fire', 'Water', 'Thunder', 'Wind', 'Light', 'Dark'];
+// The Units filter, ported from miaowm5's dialog/filterCharacter.svelte. Its rarity chips run
+// 5*->1* and its element chips follow ELEMENT_ORDER, both matching upstream's own ordering.
+//
+// Upstream also offers a rarity "Other" (its NPC bucket, rarity 0) and an element "Other" (-1).
+// Both are dropped here: this site's roster is characters only — every one of the 485 has a
+// rarity of 1-5 and an element of 0-5 — so those two chips could only ever match nothing.
+const FILTER_RARITIES = [5, 4, 3, 2, 1];
+const FILTER_GENDERS = ['Female', 'Male', 'Other'];
+const FILTER_RACES = ['Human', 'Element', 'Devil', 'Beast', 'Machine', 'Mystery', 'Dragon', 'Undead', 'Aquatic', 'Plants'];
+const EMPTY_FILTER = { text: '', rarity: [], element: [], gender: [], race: [] };
+// The group arrays have to be copied too — a shallow spread would let the dialog's draft mutate
+// the applied filter's arrays in place, so Cancel wouldn't actually cancel.
+function cloneFilter(f) {
+  return {
+    text: f.text,
+    rarity: f.rarity.slice(),
+    element: f.element.slice(),
+    gender: f.gender.slice(),
+    race: f.race.slice()
+  };
+}
 const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
 // The sheet now also hosts the wiki text data inline (scrollable), so it's much taller than the
 // old "peek" card — tall enough to show most of a character's info at the expanded snap point,
@@ -665,6 +868,43 @@ const STRINGS = {
     en: 'Serve this page over http(s) (e.g. `npx serve` or `python -m http.server`) — opening it as a local file:// URL blocks the fetch.',
     zh: '请通过 http(s) 提供此页面（例如 `npx serve` 或 `python -m http.server`）——以本地 file:// 方式打开会导致请求被阻止。'
   },
+  // Units filter. Copy is taken verbatim from miaowm5's own i18n.json (dialog.filterCharacter.*)
+  // so the ported dialog reads exactly like theirs. Note four race labels don't match their data
+  // key: Element is shown as "Elf", Devil as "Demon", Mystery as "Fairy", Plants as "Plant".
+  filterTitle: { en: 'Filter', zh: '筛选' },
+  filterName: { en: 'Name', zh: '角色名' },
+  filterNameHint: { en: 'Search by character name', zh: '通过角色名搜索' },
+  filterRarity: { en: 'Rarity', zh: '稀有度' },
+  filterElement: { en: 'Element', zh: '属性' },
+  filterGender: { en: 'Gender', zh: '性别' },
+  filterRace: { en: 'Race', zh: '种族' },
+  filterOk: { en: 'OK', zh: '确定' },
+  filterCancel: { en: 'Cancel', zh: '取消' },
+  filterNoMatch: { en: 'No characters match this filter', zh: '没有符合条件的角色' },
+  filterRarity5: { en: '5', zh: '五' },
+  filterRarity4: { en: '4', zh: '四' },
+  filterRarity3: { en: '3', zh: '三' },
+  filterRarity2: { en: '2', zh: '二' },
+  filterRarity1: { en: '1', zh: '一' },
+  filterElementFire: { en: 'Fire', zh: '火' },
+  filterElementWater: { en: 'Water', zh: '水' },
+  filterElementThunder: { en: 'Thunder', zh: '雷' },
+  filterElementWind: { en: 'Wind', zh: '风' },
+  filterElementLight: { en: 'Light', zh: '光' },
+  filterElementDark: { en: 'Dark', zh: '暗' },
+  filterGenderFemale: { en: 'Female', zh: '女' },
+  filterGenderMale: { en: 'Male', zh: '男' },
+  filterGenderOther: { en: 'Other', zh: '其他' },
+  filterRaceHuman: { en: 'Human', zh: '人' },
+  filterRaceElement: { en: 'Elf', zh: '精灵' },
+  filterRaceDevil: { en: 'Demon', zh: '魔' },
+  filterRaceBeast: { en: 'Beast', zh: '兽' },
+  filterRaceMachine: { en: 'Machine', zh: '机械' },
+  filterRaceMystery: { en: 'Fairy', zh: '妖' },
+  filterRaceDragon: { en: 'Dragon', zh: '龙' },
+  filterRaceUndead: { en: 'Undead', zh: '不死' },
+  filterRaceAquatic: { en: 'Aquatic', zh: '水棲' },
+  filterRacePlants: { en: 'Plant', zh: '植物' },
   skillBtn: { en: 'Skill', zh: '技能' },
   specialBtn: { en: 'Special', zh: '必杀' },
   underConstruction: { en: 'Under Construction', zh: '建设中' },
@@ -819,7 +1059,10 @@ class Component extends DCLogic {
     musicIndex: 0, musicPlaying: false,
     wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
     storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
-    emotionOverlays: []
+    emotionOverlays: [],
+    // `filter` is what the grid actually applies; `draftFilter` is the dialog's working copy, so
+    // that (as upstream) chip toggles only take effect on OK and Cancel discards them.
+    filterOpen: false, filter: { ...EMPTY_FILTER }, draftFilter: { ...EMPTY_FILTER }
   };
 
   audio = new Audio();
@@ -901,10 +1144,24 @@ class Component extends DCLogic {
             rarityUrl: 'icons/rarity_' + c.rarity + '.png',
             // Language-neutral, so it needs no STRINGS entry.
             rarityLabel: c.rarity + '★',
+            // Filter axes, all stamped from character.json by fetch-miaowm5.mjs. `elementIndex`
+            // doubles as the in-game attribute order, so it's what the grid sorts on.
+            elementIndex: ELEMENT_ORDER.indexOf(c.attribute),
+            race: c.race || [],
+            // Upstream folds every gender that isn't Male/Female into one 'Other' bucket
+            // (filterCharacter's `sex` branch); the raw values include 'Unknown' and one 'Ririi'.
+            gender: (c.gender === 'Male' || c.gender === 'Female') ? c.gender : 'Other',
             pedestalTop: (PEDESTAL[c.attribute] || PEDESTAL_DEFAULT).top,
             pedestalSide: (PEDESTAL[c.attribute] || PEDESTAL_DEFAULT).side,
             music: c.music || []
-          }));
+          }))
+          // The roster file is in the order characters were appended to it (the wiki pipeline's,
+          // then --new-chars'), which is meaningless to a reader. Present it the way the game's
+          // own party screen does: rarest first, then by attribute in element order.
+          .sort((a, b) =>
+            b.rarity - a.rarity ||
+            a.elementIndex - b.elementIndex ||
+            a.devName.localeCompare(b.devName));
         this.rosterByDev = new Map(roster.map(c => [c.devName, c]));
         this.setState({ roster, rosterLoading: false });
       })
@@ -952,11 +1209,75 @@ class Component extends DCLogic {
     if (tab === 'units') this.restoreUnitsScroll();
   }
 
+  // --- Units filter (ported from miaowm5's dialog/filterCharacter.svelte) ------------------
+  // Each group is OR within itself and AND across groups, and an empty group is inert rather
+  // than exclusive — that's upstream's `if (!filterInfo) return true` plus its per-type
+  // `Set.has` checks, and it's what makes "no chips picked" mean "show everything".
+
+  openFilter() {
+    // Re-seed the draft from the applied filter so a cancelled edit leaves no trace.
+    this.setState(s => ({ filterOpen: true, draftFilter: cloneFilter(s.filter) }));
+  }
+
+  closeFilter() {
+    this.setState({ filterOpen: false });
+  }
+
+  applyFilter() {
+    // Snap back to the first batch: the old visibleCount belongs to the previous result set,
+    // and keeping it would show a scroll position the new, shorter list can't support.
+    this.setState(s => ({
+      filterOpen: false,
+      filter: cloneFilter(s.draftFilter),
+      visibleCount: ROSTER_BATCH
+    }));
+    this.unitsScrollLeft = 0;
+    this.restoreUnitsScroll();
+  }
+
+  toggleFilterChip(group, value) {
+    this.setState(s => {
+      const draft = cloneFilter(s.draftFilter);
+      const i = draft[group].indexOf(value);
+      if (i === -1) draft[group].push(value);
+      else draft[group].splice(i, 1);
+      return { draftFilter: draft };
+    });
+  }
+
+  setFilterText(e) {
+    const text = e.target.value;
+    this.setState(s => ({ draftFilter: { ...cloneFilter(s.draftFilter), text } }));
+  }
+
+  // The grid's real source list — renderVals paints it and handleRosterScroll paginates it, so
+  // both have to agree on the count or scrolling would keep paging past the last match.
+  filteredRoster() {
+    const f = this.state.filter;
+    return this.state.roster.filter(c => this.matchesFilter(c, f));
+  }
+
+  matchesFilter(c, f) {
+    if (f.rarity.length && !f.rarity.includes(c.rarity)) return false;
+    if (f.element.length && !f.element.includes(c.elementIndex)) return false;
+    if (f.gender.length && !f.gender.includes(c.gender)) return false;
+    // A character can hold several races ("Human,Beast"), so this is "any of the picked ones".
+    if (f.race.length && !c.race.some(r => f.race.includes(r))) return false;
+    if (f.text) {
+      // Upstream searches its two name fields; ours are up to three, and which one is on screen
+      // depends on state.lang — so match against all of them and let either script work.
+      const hay = [c.enName, c.zhName, c.jpName].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(f.text.trim().toLowerCase())) return false;
+    }
+    return true;
+  }
+
   handleRosterScroll(e) {
     const el = e.currentTarget;
     this.unitsScrollLeft = el.scrollLeft;
     if (el.scrollLeft + el.clientWidth < el.scrollWidth - 500) return;
-    this.setState(s => ({ visibleCount: Math.min(s.roster.length, s.visibleCount + ROSTER_BATCH) }));
+    const total = this.filteredRoster().length;
+    this.setState(s => ({ visibleCount: Math.min(total, s.visibleCount + ROSTER_BATCH) }));
   }
 
   goDetail(c) {
@@ -1180,7 +1501,10 @@ class Component extends DCLogic {
     const sec = this.sections[tab];
     const menuOrder = ['art', 'units', 'story', 'music', 'arms'];
 
-    const roster = this.state.roster;
+    // The filter narrows the roster before pagination, so `visibleCount` counts matches rather
+    // than raw entries — otherwise a narrow filter would page through mostly-hidden batches.
+    const filter = this.state.filter;
+    const roster = this.filteredRoster();
     const visibleRoster = roster.slice(0, this.state.visibleCount).map(c => ({
       ...c,
       displayName: (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName,
@@ -1192,6 +1516,29 @@ class Component extends DCLogic {
       : this.state.rosterError
         ? this.t('failedToLoadRoster')
         : visibleRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix');
+
+    // Chip lists for the filter dialog. Each carries its own label, icon and active flag, so the
+    // template stays a plain sc-for with no lookups of its own.
+    const draft = this.state.draftFilter;
+    const chip = (group, value, labelKey, iconUrl) => ({
+      label: this.t(labelKey),
+      iconUrl: iconUrl || '',
+      hasIcon: !!iconUrl,
+      // #ffcf8f is upstream's own `.choice.active` colour.
+      chipBg: draft[group].includes(value) ? '#FFCF8F' : '#FAFAFA',
+      onToggle: () => this.toggleFilterChip(group, value)
+    });
+    const rarityChips = FILTER_RARITIES.map(r =>
+      chip('rarity', r, 'filterRarity' + r, 'icons/rarity_' + r + '.png'));
+    const elementChips = ELEMENT_ORDER.map((name, i) =>
+      chip('element', i, 'filterElement' + name, 'icons/element_' + i + '.png'));
+    const genderChips = FILTER_GENDERS.map(g => chip('gender', g, 'filterGender' + g));
+    const raceChips = FILTER_RACES.map(r =>
+      chip('race', r, 'filterRace' + r, 'icons/race_' + r + '.png'));
+    // A badge on the button, so an active filter is visible without opening the dialog.
+    const filterCount =
+      filter.rarity.length + filter.element.length + filter.gender.length + filter.race.length +
+      (filter.text ? 1 : 0);
 
     const selectedChar = this.state.selectedChar;
     const sheetY = this.state.sheetY;
@@ -1384,10 +1731,37 @@ class Component extends DCLogic {
       sectionSlotId: 'section-preview-' + tab,
       rosterLoading: this.state.rosterLoading,
       rosterError: this.state.rosterError,
-      showRosterGrid: !this.state.rosterLoading && !this.state.rosterError,
+      showRosterGrid: !this.state.rosterLoading && !this.state.rosterError && roster.length > 0,
+      showRosterEmpty: !this.state.rosterLoading && !this.state.rosterError && roster.length === 0,
       visibleRoster: visibleRoster,
       unitsStatusText: unitsStatusText,
       handleRosterScroll: (e) => this.handleRosterScroll(e),
+      // --- Units filter ---
+      showFilterButton: !this.state.rosterLoading && !this.state.rosterError,
+      filterOpen: this.state.filterOpen,
+      hasFilterCount: filterCount > 0,
+      filterCount: filterCount,
+      filterTitleText: this.t('filterTitle'),
+      filterNameTitle: this.t('filterName'),
+      filterNameHint: this.t('filterNameHint'),
+      filterNameValue: draft.text,
+      filterRarityTitle: this.t('filterRarity'),
+      filterElementTitle: this.t('filterElement'),
+      filterGenderTitle: this.t('filterGender'),
+      filterRaceTitle: this.t('filterRace'),
+      filterOkText: this.t('filterOk'),
+      filterCancelText: this.t('filterCancel'),
+      filterNoMatchText: this.t('filterNoMatch'),
+      rarityChips: rarityChips,
+      elementChips: elementChips,
+      genderChips: genderChips,
+      raceChips: raceChips,
+      openFilter: () => this.openFilter(),
+      closeFilter: () => this.closeFilter(),
+      applyFilter: () => this.applyFilter(),
+      setFilterText: (e) => this.setFilterText(e),
+      // Swallows clicks inside the dialog so they don't reach the backdrop's close handler.
+      stopDialogClick: (e) => e.stopPropagation(),
       detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
       detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
       detailRarityUrl: selectedChar ? selectedChar.rarityUrl : '',

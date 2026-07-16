@@ -119,7 +119,15 @@ What it produces per character, beyond the `wiki_zh.json` keys:
   file. Existing GIFs are left alone: they were exported from an older revision of the upstream
   pixel data, so regenerating them would change timings for no benefit.
 
-It also writes **`icons/rarity_{1..5}.png`** — the one thing it produces outside `Character Assets/`.
+It also stamps **`race`** (an array — a character can be `["Human","Beast"]`) and **`gender`** on each
+roster entry, straight from the `character.json` row (`[4]` and `[7]`). Both exist only to drive the
+Units filter. `gender`'s raw values include `Unknown` and a one-off `Ririi` alongside `Male`/`Female`;
+the roster keeps them raw and the front-end folds anything that isn't Male/Female into `Other`, which
+is what upstream's own filter does. Three roster entries (`anger_investigator`, `estateguild_leader`,
+`scissor_ratgirl`) have `thumb: null` and so are skipped by every pipeline mode and filtered out of
+the grid — they legitimately carry neither field.
+
+It also writes **`icons/*.png`** — the one thing it produces outside `Character Assets/`.
 These are the game's own rarity stars (`res/icon`'s `rarity_{one..five}`), laid on each pedestal by
 the Units grid and shown beside the name in the detail sheet — the site draws no star glyphs of its
 own any more. They're shared UI chrome rather than per-character art, so they live in the repo's
@@ -131,6 +139,22 @@ the plate only muddied it. Each rarity's art is a fixed 27px tall but widens wit
 (29px at 1★ up to 128px at 5★), which is why the front-end sizes them by height and lets width
 follow — that keeps a star the same size at every rarity. The 5★ stars carry cyan accents and the
 lower tiers don't; that's the game's art, not a bug.
+
+`buildFilterIcons` writes the rest of the `icons/` set, on the same terms (shared chrome, in git,
+never uploaded to R2) and with the same "skip if the file exists" fast path — **so changing one of
+these composites means deleting the old file first**:
+- `element_{0..5}.png` / `race_<Race>.png` — the badges the Units filter puts on its chips. They're
+  named by the *data* value (row[3]'s index, row[4]'s token), not by upstream's sprite name, so the
+  front-end builds a path straight from a roster field with no second lookup table. `element_*` is
+  the same `element_*_medium` art `buildHeadIcon` stamps on the portrait; the race chips use the
+  sheet's `_medium2` variants, which is what upstream's filter uses.
+- `title_border_{left,right}.png` — the flourish upstream's `<Title>` trails either side of a
+  section heading. Upstream's sprite names are `wf_ui_flipper_border_left` and (for the right one)
+  plain `wf_ui_flipper_border`; we save them as left/right to spare the next reader that trap.
+- `circle.png` — the magic circle turning behind the page (see "Page background" below). Written by
+  `buildMagicCircle`, not `buildFilterIcons`: it's the one asset here that isn't in an atlas — it's
+  a standalone file on `CDN_A` (`ui/circle.png`), so it's copied through byte-for-byte with no
+  decoding.
 
 Because any rewritten file must be re-uploaded, the script drops that file's key from
 `scripts/.r2-upload-manifest.json` (which `upload-to-r2.mjs` uses to skip already-uploaded paths)
@@ -177,6 +201,37 @@ whose compiled output is `support.js` (see its header: **generated from `dc-runt
 **Do not hand-edit `support.js`** — regenerate it from the `dc-runtime` project if it ever needs to change.
 Treat `image-slot.js` similarly (scaffold file, not meant for feature edits).
 
+### Backgrounds: the magic circle
+
+The site's backdrop is a port of miaowm5's `ui/magicCircle.svelte` — their `icons/circle.png`
+turning on a 25s linear loop over flat `#EAEAEA`. It replaced **every** blue surface the site used
+to have (the card's gradient, the detail screen's radial) and every transparency checkerboard
+(`repeating-conic-gradient`) the character art used to sit on, so those patterns should not come
+back. The page outside the card is plain `#EAEAEA`; the card is the same grey, separated only by
+its (now neutral, once blue-tinted) shadow.
+
+The CSS lives in the `<helmet>` block as `.wf-circle` plus upstream's `dialog` variant
+(`.wf-circle-dialog` — smaller, 60% opacity, pushed further down). Five hosts carry one: the card's
+**screen area** (the app's backdrop), the **detail drawer**, the **filter dialog**, and each of the
+two per-character art stages (the platform GIF stage and the expression viewer).
+
+Four things to respect if you touch this:
+
+- **`z-index: -1` on `.wf-circle` is load-bearing** and is upstream's own value. It puts the circle
+  above its host's background but behind the host's ordinary in-flow content — the only way the
+  drawer's text stays on top of it. It only works where the host establishes a stacking context, so
+  every host carries `position: relative; z-index: 0` (or already had a z-index, like the drawer's
+  `9`). Drop that and the circle escapes to the nearest stacking context and vanishes behind the
+  host. The host also needs `overflow: hidden` — that's what crops the circle's bottom half.
+- **The translate is repeated inside both keyframes.** `transform` carries position and rotation
+  together, so animating `rotate()` alone silently drops the centering and flings the circle off to
+  the right. It's also why the two variants can't share one keyframe: their resting translate
+  differs (50% vs 60%).
+- **The backdrop hangs off the screen area, not the card**, so the opaque tab bar can't cover it.
+- Where it is and isn't visible is inherent, not a bug: the home screen's island art and the detail
+  hero fill their space and hide it; the drawer's own circle only surfaces once the drawer is
+  dragged to its expanded snap point, since it sits at the drawer's bottom edge.
+
 ### Single component, tab-based navigation
 
 There's one `Component` instance for the whole app. `this.state.tab` (`'home' | 'units' | 'story' | 'music'
@@ -189,6 +244,41 @@ The **Characters (`units`)** tab is the most complex: it fetches `roster.json` o
 optional `special.gif` asset and drives GIF/PNG art switching, a draggable bottom sheet
 (`sheetPointerDown`, snapping between `SHEET_EXPANDED_Y`/`MID`/`COLLAPSED`), and skill/special overlay
 toggles.
+
+`componentDidMount` **sorts** the roster on the way in — rarity descending, then attribute in
+`ELEMENT_ORDER` (the game's own Fire/Water/Thunder/Wind/Light/Dark, i.e. `character.json` row[3]'s
+index), then `devName` to keep the order stable. The file's own order is just the sequence entries
+were appended in (the wiki pipeline's, then `--new-chars`'), which means nothing to a reader.
+
+#### Units filter
+
+A port of miaowm5's `dialog/filterCharacter.svelte`, opened by the round `icons/filer.jpg` button at
+the list's top-left. Five groups — name text, rarity, element, gender, race — each OR within itself
+and AND across groups, with an empty group inert rather than exclusive (upstream's
+`if (!filterInfo) return true`), so "nothing picked" means "show everything". Points worth knowing:
+
+- **Two upstream chips are deliberately dropped**: its rarity "Other" (rarity 0) and element
+  "Other" (-1) are its NPC buckets, and this site's roster is characters only (every entry is
+  rarity 1-5, element 0-5), so both could only ever match nothing.
+- **The rarity chips are stars-only** — no "5"/"四" beside the art, since the star count already
+  reads as the rarity (upstream does print both). The label survives as the `img`'s `alt`, so it's
+  still what a screen reader announces and what a test should select on (note the grid tile's
+  rarity art uses a different alt format, `5★`).
+- Chips carry `box-shadow: 1px 1px 5px rgba(0,0,0,0.3)`. That looks arbitrary but isn't: upstream's
+  chips are `<button>`s and its `reset.css` puts that shadow on every button — it's the only thing
+  separating a `#fafafa` chip from the `#fafafa` dialog behind it. Ours are `<div>`s, so the shadow
+  has to be explicit or the chips vanish into the surface.
+- **Four race labels don't match their data key** — `Element` shows as "Elf", `Devil` as "Demon",
+  `Mystery` as "Fairy", `Plants` as "Plant". That's upstream's own i18n, copied verbatim; the
+  `FILTER_RACES` values stay the raw `character.json` tokens because that's what `race` holds.
+- `state.filter` is what the grid applies; `state.draftFilter` is the dialog's working copy, so
+  chips only take effect on OK and Cancel discards them. `cloneFilter()` copies the group arrays
+  too — a shallow spread would let the draft mutate the applied filter in place.
+- `filteredRoster()` is the single source both `renderVals` and `handleRosterScroll` read, so
+  pagination counts matches rather than raw entries. Applying a filter resets `visibleCount`.
+- The button's position (a 38px circle at 4,66) is wedged into the only free gap: the banner's
+  section icon ends at y=68 and the grid's first tile starts at y=101 with its portrait from x=38.
+  Nudging or growing it lands on one or the other.
 
 #### Units grid tile
 
@@ -316,7 +406,8 @@ too, or it will silently never reach production.
 `enName`, `jpName`, `rarity`, `attribute`, `thumb`, an optional `music` array (mp3 filenames, only
 present for the ~150 characters with matched BGM), `hasHead` (stamped by `fetch-miaowm5.mjs`; the
 square `head.png` lives beside `thumb`, so the front-end derives its URL from that path rather than
-storing a second one), and — for the ~368 characters matched by the wiki
+storing a second one), `race`/`gender` (also from `fetch-miaowm5.mjs`, driving the Units filter —
+see above), and — for the ~368 characters matched by the wiki
 pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. The 108
 entries added by `fetch-miaowm5.mjs --new-chars` instead carry `bustOnly: true` with no
 `enName`/`jpName` and no full-shot art (see the miaowm5 section above). Per-character

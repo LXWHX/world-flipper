@@ -40,6 +40,7 @@ import {
   BATTLE_VOICE_MAP,
   Spritesheet,
   blit,
+  cachedFetchBuffer,
   cachedFetchJson,
   createFrame,
   createRgba,
@@ -72,8 +73,17 @@ const ONLY = new Set(
 );
 
 // character.json row columns, verified against all 377 pre-existing roster entries:
-// row[0] devName, row[2] rarity, row[3] attribute, row[8] storyId.
+// row[0] devName, row[2] rarity, row[3] attribute, row[4] race, row[7] gender, row[8] storyId.
 const ATTRIBUTES = ['Fire', 'Water', 'Thunder', 'Wind', 'Light', 'Dark'];
+
+// row[4] is a comma-separated race list — a character can hold more than one ("Human,Beast"),
+// which is why the roster stores an array and the filter matches on "any of".
+function parseRace(raw) {
+  return String(raw || '')
+    .split(',')
+    .map((r) => r.trim())
+    .filter(Boolean);
+}
 
 // Engine-internal entries — assist-character stubs, mechanic variants (`_no_piercing`) and
 // story-boss forms (`_chapter12`) — all live in this gameId block, and none of the roster's
@@ -519,6 +529,63 @@ async function buildRarityStrips(sheets) {
   return wrote;
 }
 
+// The element/race badges the Units filter puts on its choice chips, taken from the same
+// `res/icon` sheet as the rarity stars and living in icons/ for the same reason (shared UI
+// chrome, served with the site, never uploaded to R2).
+//
+// Files are keyed by the *data* value rather than upstream's sprite name — element_{0..5} by
+// character.json's row[3] index, race_<Race> by the row[4] token — so the front-end derives an
+// icon path straight from a roster field instead of carrying a second lookup table.
+// `element_*_medium` is the same badge buildHeadIcon stamps on the head portrait; the race
+// sheet's `_medium2` variants are the ones upstream's own filter uses.
+const RACE_ICONS = {
+  Human: 'race_human_medium2',
+  Element: 'race_element_medium2',
+  Devil: 'race_devil_medium2',
+  Beast: 'race_beast_medium2',
+  Machine: 'race_machine_medium2',
+  Mystery: 'race_mystery_medium2',
+  Dragon: 'race_dragon_medium2',
+  Undead: 'race_undead_medium2',
+  Aquatic: 'race_aquatic_medium2',
+  Plants: 'race_plants_medium2',
+};
+
+// The flourish upstream's <Title> trails either side of a section heading (ui/title.svelte).
+// Its sprite names are `..._left` / unsuffixed; we save them as left/right, which is how they're
+// actually used and spares the front-end the naming trap.
+const TITLE_BORDER_ICONS = {
+  'title_border_left.png': 'wf_ui_flipper_border_left',
+  'title_border_right.png': 'wf_ui_flipper_border',
+};
+
+async function buildFilterIcons(sheets) {
+  let wrote = 0;
+  const jobs = [
+    ...ELEMENT_ICONS.map((sprite, i) => [`element_${i}.png`, sprite]),
+    ...Object.entries(RACE_ICONS).map(([race, sprite]) => [`race_${race}.png`, sprite]),
+    ...Object.entries(TITLE_BORDER_ICONS),
+  ];
+  for (const [file, sprite] of jobs) {
+    const dest = path.join(ICONS_DIR, file);
+    if (!FORCE && existsSync(dest)) continue;
+    const img = await sheets.icon.getSprite(sprite);
+    if (!img) continue;
+    if (writeIfChanged(dest, encodePng(img))) wrote++;
+  }
+  return wrote;
+}
+
+// The magic circle that turns slowly behind the page (upstream's ui/magicCircle.svelte). Unlike
+// everything else here it isn't in an atlas — it's a standalone file on the `cdn` bundle — so it's
+// copied through byte-for-byte rather than decoded.
+async function buildMagicCircle() {
+  const dest = path.join(ICONS_DIR, 'circle.png');
+  if (!FORCE && existsSync(dest)) return 0;
+  const buf = await cachedFetchBuffer(`${CDN_A}ui/circle.png`);
+  return writeIfChanged(dest, buf) ? 1 : 0;
+}
+
 // (g) Full story dialogue. One fetch per character returns every one of their stories, keyed
 // by the same scenario path character_quest gave us.
 //
@@ -662,6 +729,8 @@ function rosterTargets(roster, g, missing) {
       gameId: rec.gameId,
       storyId: rec.storyId,
       element: Number(rec.row[3]),
+      race: parseRace(rec.row[4]),
+      gender: rec.row[7] || '',
       charDir,
       isNew: false,
     });
@@ -690,6 +759,8 @@ function newCharTargets(roster, g) {
       gameId: rec.gameId,
       storyId: rec.storyId,
       element: Number(rec.row[3]),
+      race: parseRace(rec.row[4]),
+      gender: rec.row[7] || '',
       charDir: path.join(ASSETS_DIR, `rarity${rarity}`, devName),
       isNew: true,
       rarity,
@@ -725,7 +796,12 @@ async function main() {
   };
 
   const stripsWritten = await buildRarityStrips(sheets);
-  if (stripsWritten) console.log(`Wrote ${stripsWritten} rarity strip(s) to icons/\n`);
+  if (stripsWritten) console.log(`Wrote ${stripsWritten} rarity strip(s) to icons/`);
+  const filterIconsWritten = await buildFilterIcons(sheets);
+  if (filterIconsWritten) console.log(`Wrote ${filterIconsWritten} filter icon(s) to icons/`);
+  const circleWritten = await buildMagicCircle();
+  if (circleWritten) console.log('Wrote circle.png to icons/');
+  if (stripsWritten || filterIconsWritten || circleWritten) console.log('');
 
   const rosterByDev = new Map(roster.characters.map((c) => [c.devName, c]));
   const missing = [];
@@ -814,6 +890,12 @@ async function main() {
       if (rosterEntry) {
         if (head.has) rosterEntry.hasHead = true;
         else delete rosterEntry.hasHead;
+        // Drives the Units filter. Both come straight off the character.json row, so they're
+        // stamped for every character in both modes rather than only for --new-chars.
+        if (t.race.length) rosterEntry.race = t.race;
+        else delete rosterEntry.race;
+        if (t.gender) rosterEntry.gender = t.gender;
+        else delete rosterEntry.gender;
       }
 
       manifest[devName] = { gameId, storyId, at: new Date().toISOString() };
