@@ -142,18 +142,27 @@
               </div>
             </sc-if>
             <sc-if value="{{ showRosterGrid }}" hint-placeholder-val="{{ true }}">
-              <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 108px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
+              <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 116px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
                 <sc-for list="{{ visibleRoster }}" as="c" hint-placeholder-count="24">
                   <div onClick="{{ c.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
-                    <div style="position: relative; width: 82px; height: 78px; flex: none;">
-                      <div style="position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 76px; height: 30px; background: #FFFFFF; border-radius: 50% / 60% 60% 40% 40%; box-shadow: 0 3px 0 rgba(62,68,80,0.15), inset 0 -3px 0 rgba(0,0,0,0.06); display: flex; align-items: flex-end; justify-content: center; gap: 1px; padding-bottom: 4px;">
-                        <sc-for list="{{ c.starSlots }}" as="s" hint-placeholder-count="5">
-                          <span style="font-size: 8px; line-height: 1; color: {{ s.color }};">★</span>
-                        </sc-for>
+                    <div style="position: relative; width: 82px; height: 100px; flex: none;">
+                      <!-- Framed square portrait on top, then the pixel sprite standing on its
+                           pedestal — the game's own party-screen layout. -->
+                      <sc-if value="{{ c.hasHead }}" hint-placeholder-val="{{ true }}">
+                        <img src="{{ c.headUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #F0F3F7; box-shadow: 0 1px 3px rgba(62,68,80,0.28); z-index: 2;">
+                      </sc-if>
+                      <!-- Pedestal: an elliptical top face the character stands on, over a
+                           trapezoid body carrying the game's own rarity stars. They're sized by
+                           height so every rarity's stars come out the same size — the source art
+                           keeps a constant 27px height but widens with each star. -->
+                      <div style="position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 52px; height: 16px; z-index: 1;">
+                        <div style="position: absolute; left: 0; top: 5px; width: 52px; height: 11px; background: {{ c.pedestalSide }}; clip-path: polygon(4% 0, 96% 0, 86% 100%, 14% 100%);"></div>
+                        <div style="position: absolute; left: 0; top: 0; width: 52px; height: 9px; border-radius: 50%; background: {{ c.pedestalTop }};"></div>
+                        <img src="{{ c.rarityUrl }}" alt="{{ c.rarityLabel }}" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 2px; height: 7px; width: auto; z-index: 2;">
                       </div>
-                      <img src="{{ c.thumbUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 56px; height: 56px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
+                      <img src="{{ c.thumbUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: 44px; height: 44px; object-fit: contain; object-position: bottom; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
                       <sc-if value="{{ c.hasMusic }}" hint-placeholder-val="{{ false }}">
-                        <div style="position: absolute; right: 2px; bottom: 6px; z-index: 3; width: 15px; height: 15px; border-radius: 50%; background: #FFA726; box-shadow: 0 1px 0 rgba(62,68,80,0.25); display: flex; align-items: center; justify-content: center;">
+                        <div style="position: absolute; right: 0; top: 0; z-index: 3; width: 15px; height: 15px; border-radius: 50%; background: #FFA726; box-shadow: 0 1px 0 rgba(62,68,80,0.25); display: flex; align-items: center; justify-content: center;">
                           <svg width="8" height="8" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="1" height="5" fill="#FFFFFF"></rect><rect x="4" y="0" width="3" height="1" fill="#FFFFFF"></rect><rect x="4" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="0" y="5" width="3" height="3" fill="#FFFFFF"></rect><rect x="5" y="4" width="3" height="3" fill="#FFFFFF"></rect></svg>
                         </div>
                       </sc-if>
@@ -237,11 +246,7 @@
                   <div style="font-size: 16px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnName }}</div>
                   <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ detailJpName }}</div>
                 </div>
-                <div style="display: flex; gap: 1px;">
-                  <sc-for list="{{ detailStarSlots }}" as="s" hint-placeholder-count="5">
-                    <span style="font-size: 12px; line-height: 1; color: {{ s.color }};">★</span>
-                  </sc-for>
-                </div>
+                <img src="{{ detailRarityUrl }}" alt="{{ detailRarityLabel }}" style="height: 13px; width: auto; flex: none;">
               </div>
             </div>
 
@@ -612,8 +617,18 @@ const ASSET_BASE = location.protocol === 'file:' || location.hostname === 'local
   ? 'Character Assets'
   : 'https://pub-e1f9dd7473954e4b9b7d20b302cddb4a.r2.dev';
 const ROSTER_BATCH = 60;
-const STAR_ON = '#FFD35C';
-const STAR_OFF = '#D8DEE8';
+// The Units grid stands each character's pixel sprite on a pedestal tinted by their attribute
+// (the game's own party screen colours its bases too). `top` is the elliptical face the sprite
+// stands on, `side` the trapezoid body below it that carries the rarity strip.
+const PEDESTAL = {
+  Fire: { top: '#FFB877', side: '#D9723A' },
+  Water: { top: '#7EC4F5', side: '#3D82C4' },
+  Thunder: { top: '#FFD861', side: '#D9A32C' },
+  Wind: { top: '#93D18C', side: '#4E9A57' },
+  Light: { top: '#F3EBD3', side: '#BFB18C' },
+  Dark: { top: '#B6A2DE', side: '#7059A8' }
+};
+const PEDESTAL_DEFAULT = { top: '#E4E9F0', side: '#A9B3C2' };
 const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
 // The sheet now also hosts the wiki text data inline (scrollable), so it's much taller than the
 // old "peek" card — tall enough to show most of a character's info at the expanded snap point,
@@ -877,8 +892,18 @@ class Component extends DCLogic {
             rarity: c.rarity,
             bustOnly: !!c.bustOnly,
             thumbUrl: ASSET_BASE + '/' + c.thumb,
-            music: c.music || [],
-            starSlots: Array.from({ length: 5 }, (_, i) => ({ color: i < c.rarity ? STAR_ON : STAR_OFF }))
+            // The framed square portrait sits next to neutral.gif, so it's derivable from
+            // `thumb` — but only `hasHead` says whether the miaowm5 pipeline actually exported
+            // it, and a partial run can leave it unset. Callers fall back to the pixel sprite.
+            headUrl: c.hasHead ? ASSET_BASE + '/' + c.thumb.replace(/[^/]+$/, 'head.png') : '',
+            hasHead: !!c.hasHead,
+            // Shared UI art served with the site, so it isn't under ASSET_BASE like the rest.
+            rarityUrl: 'icons/rarity_' + c.rarity + '.png',
+            // Language-neutral, so it needs no STRINGS entry.
+            rarityLabel: c.rarity + '★',
+            pedestalTop: (PEDESTAL[c.attribute] || PEDESTAL_DEFAULT).top,
+            pedestalSide: (PEDESTAL[c.attribute] || PEDESTAL_DEFAULT).side,
+            music: c.music || []
           }));
         this.rosterByDev = new Map(roster.map(c => [c.devName, c]));
         this.setState({ roster, rosterLoading: false });
@@ -941,7 +966,7 @@ class Component extends DCLogic {
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
     this.setState({
       tab: 'detail', menuOpen: false,
-      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, starSlots: c.starSlots, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
+      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
       wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
@@ -1264,7 +1289,7 @@ class Component extends DCLogic {
       const target = rc.devName ? this.rosterByDev.get(rc.devName) : null;
       return {
         name: (this.state.lang === 'zh' || !target) ? rc.zhName : (target.enName || rc.zhName),
-        thumbUrl: target ? target.thumbUrl : '',
+        thumbUrl: target ? (target.headUrl || target.thumbUrl) : '',
         hasThumb: !!target,
         // Related entries can point at NPCs and at variants that aren't in our roster, so
         // they have no art to show — keep the tile so the grid stays aligned.
@@ -1365,7 +1390,8 @@ class Component extends DCLogic {
       handleRosterScroll: (e) => this.handleRosterScroll(e),
       detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
       detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
-      detailStarSlots: selectedChar ? selectedChar.starSlots : [],
+      detailRarityUrl: selectedChar ? selectedChar.rarityUrl : '',
+      detailRarityLabel: selectedChar ? selectedChar.rarityLabel : '',
       fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
       showFullShot: !bustOnly,
       showArtToggle: !bustOnly,

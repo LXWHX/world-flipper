@@ -185,6 +185,36 @@ export function scaleNearest(src, factor) {
   return out;
 }
 
+// Smooth downscale, the stand-in for the browser's default (smoothed) drawImage that upstream
+// relies on when it shrinks the 212x212 head to 184 and the 61x61 element badge to 48.
+// scaleNearest is for pixel art and would alias these badly; this is for illustrated art.
+export function scaleBilinear(src, dw, dh) {
+  const out = createRgba(dw, dh);
+  for (let y = 0; y < dh; y++) {
+    const sy = Math.min(src.h - 1, (y * src.h) / dh);
+    const y0 = Math.floor(sy);
+    const y1 = Math.min(src.h - 1, y0 + 1);
+    const fy = sy - y0;
+    for (let x = 0; x < dw; x++) {
+      const sx = Math.min(src.w - 1, (x * src.w) / dw);
+      const x0 = Math.floor(sx);
+      const x1 = Math.min(src.w - 1, x0 + 1);
+      const fx = sx - x0;
+      const di = (y * dw + x) * 4;
+      for (let c = 0; c < 4; c++) {
+        const p00 = src.data[(y0 * src.w + x0) * 4 + c];
+        const p10 = src.data[(y0 * src.w + x1) * 4 + c];
+        const p01 = src.data[(y1 * src.w + x0) * 4 + c];
+        const p11 = src.data[(y1 * src.w + x1) * 4 + c];
+        out.data[di + c] = Math.round(
+          p00 * (1 - fx) * (1 - fy) + p10 * fx * (1 - fy) + p01 * (1 - fx) * fy + p11 * fx * fy
+        );
+      }
+    }
+  }
+  return out;
+}
+
 export function decodePng(buf) {
   const png = PNG.sync.read(buf);
   return { w: png.width, h: png.height, data: new Uint8Array(png.data) };

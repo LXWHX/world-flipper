@@ -5,7 +5,8 @@
 // What this pipeline owns (and the only things it may touch) in wiki_zh.json:
 //   info, related, emotions, pixelActions, storyCount, miaowm5Meta, and voice[].textJp
 // Everything else in that file belongs to the bilibili wiki pipeline and is passed through
-// untouched. Separately it writes story_zh.json, emotion/*.png and the missing pixel *.gif.
+// untouched. Separately it writes story_zh.json, emotion/*.png, head.png and the missing
+// pixel *.gif, and stamps `hasHead` on the roster entry.
 //
 // Three ID spaces, and mixing them up is the main trap here:
 //   devName  — roster.json + the on-disk folder name; the key for character.json/pixel.json
@@ -38,18 +39,23 @@ import {
   PIXEL_SPEED_MS,
   BATTLE_VOICE_MAP,
   Spritesheet,
+  blit,
   cachedFetchJson,
   createFrame,
+  createRgba,
   createTimeline,
   decodeScenarioText,
   encodeGif,
   encodePng,
+  scaleBilinear,
   scaleNearest,
   writeIfChanged,
   writeJsonIfChanged,
 } from './lib/miaowm5-common.mjs';
 
 const ASSETS_DIR = path.resolve('Character Assets');
+// Shared UI art (the rarity strips) is served with the site, not from R2, so it lands here.
+const ICONS_DIR = path.resolve('icons');
 const ROSTER_PATH = path.join(ASSETS_DIR, 'roster.json');
 const MANIFEST_PATH = path.resolve('scripts/.miaowm5-manifest.json');
 const R2_MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
@@ -435,7 +441,85 @@ async function buildPixelGifs(storyId, charDir, g, sheets) {
   return { actions, generated };
 }
 
-// (f) Full story dialogue. One fetch per character returns every one of their stories, keyed
+// (f) The 212x212 framed square portrait miaowm5's own character list shows. The head sprite is
+// keyed by devName — NOT storyId — because upstream's list passes character.json's row[0]
+// straight through (characterList.svelte: `file={data.extra[0]}` -> headIcon.svelte:
+// spriteSheet('head', file)).
+//
+// This is a port of headIcon.svelte's canvas composite, with its exact offsets: the portrait is
+// inset to 184x184 at (14,14) so the frame's white border rings it, and the element badge lands
+// in the notch the frame leaves open at the top right. Upstream also stamps the rarity strip at
+// (0,177); we skip it, because the Units grid renders that strip on the pedestal instead (see
+// buildRarityStrips) at a size where it's actually legible.
+//
+// The portrait carries its own background, so unlike the emotion layers there's nothing to
+// stack — the frame and badge are the only overlays.
+const ELEMENT_ICONS = [
+  'element_red_medium', // 0 Fire
+  'element_blue_medium', // 1 Water
+  'element_yellow_medium', // 2 Thunder
+  'element_green_medium', // 3 Wind
+  'element_white_medium', // 4 Light
+  'element_black_medium', // 5 Dark
+];
+
+async function buildHeadIcon(devName, charDir, elementIndex, sheets) {
+  const dest = path.join(charDir, 'head.png');
+  // As in buildEmotions: an existing file means the sprite resolved on an earlier run, so the
+  // atlas page (24 of them, shared across characters) never has to be decoded on a re-run.
+  if (!FORCE && existsSync(dest)) return { has: true, wrote: 0 };
+  const portrait = await sheets.head.getSprite(devName);
+  if (!portrait) return { has: false, wrote: 0 };
+
+  const canvas = createRgba(212, 212);
+  const inset = scaleBilinear(portrait, 184, 184);
+  blit(canvas, inset, 0, 0, inset.w, inset.h, 14, 14);
+
+  // A character with no element (upstream: NPCs) gets the frame whose corner isn't notched.
+  const elementName = ELEMENT_ICONS[elementIndex];
+  const frame = await sheets.icon.getSprite(
+    elementName ? 'character_face_frame' : 'character_face_empty_frame'
+  );
+  if (frame) blit(canvas, frame, 0, 0, frame.w, frame.h, 0, 0);
+  if (elementName) {
+    const badge = await sheets.icon.getSprite(elementName);
+    if (badge) {
+      const b = scaleBilinear(badge, 48, 48);
+      blit(canvas, b, 0, 0, b.w, b.h, 154, 10);
+    }
+  }
+
+  const wrote = writeIfChanged(dest, encodePng(canvas));
+  if (wrote) invalidateR2(dest);
+  return { has: true, wrote: wrote ? 1 : 0 };
+}
+
+// The rarity stars the Units grid lays on each character's pedestal. Shared UI chrome rather than
+// per-character art, so this lives in the repo's icons/ folder (served with the site) instead of
+// Character Assets/ — that keeps it out of R2 entirely.
+//
+// Upstream pairs these with `rarity_background{N}`, a dark angled plate that sits behind the
+// stars inside its head icon. We export the stars alone: on the grid they lie directly on the
+// pedestal's attribute colour, where that black plate only muddied it.
+//
+// Widths differ per rarity (29px at 1* up to 128px at 5*) while the height is always 27px, which
+// is why the front-end sizes them by height and lets width follow — that keeps a star the same
+// size at every rarity.
+const RARITY_WORDS = ['one', 'two', 'three', 'four', 'five'];
+
+async function buildRarityStrips(sheets) {
+  let wrote = 0;
+  for (let r = 1; r <= 5; r++) {
+    const dest = path.join(ICONS_DIR, `rarity_${r}.png`);
+    if (!FORCE && existsSync(dest)) continue;
+    const stars = await sheets.icon.getSprite(`rarity_${RARITY_WORDS[r - 1]}`);
+    if (!stars) continue;
+    if (writeIfChanged(dest, encodePng(stars))) wrote++;
+  }
+  return wrote;
+}
+
+// (g) Full story dialogue. One fetch per character returns every one of their stories, keyed
 // by the same scenario path character_quest gave us.
 //
 // Emotion state is tracked per speaker, not per on-screen slot: type 6 (face) introduces a
@@ -513,7 +597,7 @@ async function buildStories(gameId, g) {
   return stories.length ? stories : null;
 }
 
-// (g) A minimal wiki_zh.json for the handful of roster characters the bilibili pipeline never
+// (h) A minimal wiki_zh.json for the handful of roster characters the bilibili pipeline never
 // matched, so the front-end can treat every character's file the same shape.
 function emptyWiki() {
   return {
@@ -573,7 +657,14 @@ function rosterTargets(roster, g, missing) {
       missing.push(c);
       continue;
     }
-    out.push({ devName: c.devName, gameId: rec.gameId, storyId: rec.storyId, charDir, isNew: false });
+    out.push({
+      devName: c.devName,
+      gameId: rec.gameId,
+      storyId: rec.storyId,
+      element: Number(rec.row[3]),
+      charDir,
+      isNew: false,
+    });
   }
   return out;
 }
@@ -598,6 +689,7 @@ function newCharTargets(roster, g) {
       devName,
       gameId: rec.gameId,
       storyId: rec.storyId,
+      element: Number(rec.row[3]),
       charDir: path.join(ASSETS_DIR, `rarity${rarity}`, devName),
       isNew: true,
       rarity,
@@ -626,9 +718,14 @@ async function main() {
 
   const sheets = {
     story: new Spritesheet('character/story', CDN_A),
+    head: new Spritesheet('head', CDN_B),
+    icon: new Spritesheet('res/icon', CDN_A),
     pixelNormal: new Spritesheet('pixel_normal', CDN_B),
     pixelSpecial: new Spritesheet('pixel_special', CDN_B),
   };
+
+  const stripsWritten = await buildRarityStrips(sheets);
+  if (stripsWritten) console.log(`Wrote ${stripsWritten} rarity strip(s) to icons/\n`);
 
   const rosterByDev = new Map(roster.characters.map((c) => [c.devName, c]));
   const missing = [];
@@ -639,14 +736,16 @@ async function main() {
 
   const added = [];
   const noThumb = [];
+  const noHead = [];
   let processed = 0;
   let failures = 0;
   let storyFiles = 0;
   let gifCount = 0;
   let emotionCount = 0;
+  let headCount = 0;
 
   for (const t of targets) {
-    const { devName, gameId, storyId, charDir } = t;
+    const { devName, gameId, storyId, charDir, element } = t;
     try {
       if (t.isNew) mkdirSync(charDir, { recursive: true });
 
@@ -660,6 +759,10 @@ async function main() {
 
       const emotions = await buildEmotions(storyId, charDir, g, sheets);
       if (emotions) emotionCount += emotions.wrote;
+
+      const head = await buildHeadIcon(devName, charDir, element, sheets);
+      headCount += head.wrote;
+      if (!head.has) noHead.push(devName);
 
       const pixel = await buildPixelGifs(storyId, charDir, g, sheets);
       if (pixel) gifCount += pixel.generated.length;
@@ -704,6 +807,15 @@ async function main() {
         }
       }
 
+      // Stamped after the --new-chars block above, so both modes go through one path: by now
+      // a brand-new character is in rosterByDev too. The front-end needs the flag because a
+      // partial run (--only/--limit) would otherwise leave it pointing at a missing head.png.
+      const rosterEntry = rosterByDev.get(devName);
+      if (rosterEntry) {
+        if (head.has) rosterEntry.hasHead = true;
+        else delete rosterEntry.hasHead;
+      }
+
       manifest[devName] = { gameId, storyId, at: new Date().toISOString() };
       processed++;
       const bits = [];
@@ -711,6 +823,7 @@ async function main() {
       if (related) bits.push(`related ${(related.characters?.length || 0) + (related.keywords?.length || 0)}`);
       if (jpCount) bits.push(`jp ${jpCount}`);
       if (emotions) bits.push(`emotions ${emotions.manifest.length}`);
+      if (head.wrote) bits.push('head');
       if (pixel?.generated.length) bits.push(`gif +${pixel.generated.join(',')}`);
       if (stories) bits.push(`stories ${stories.length}`);
       console.log(`[${processed}/${targets.length}] ${devName}  ${bits.join(' | ') || '(nothing new)'}`);
@@ -748,10 +861,15 @@ async function main() {
         `- story_zh.json written: ${storyFiles}`,
         `- pixel GIFs generated: ${gifCount}`,
         `- emotion PNGs written: ${emotionCount}`,
+        `- head icons written: ${headCount}`,
         '',
         `## roster characters not found in miaowm5 character.json (${missing.length})`,
         '',
         ...missing.map((c) => `- ${c.devName} — "${c.enName}"`),
+        '',
+        `## roster characters with no head sprite (${noHead.length})`,
+        '',
+        ...noHead.map((d) => `- ${d}`),
         '',
       ].join('\n')
     );
@@ -759,7 +877,7 @@ async function main() {
 
   console.log(
     `\nDone. ${processed} processed, ${failures} failure(s), ${missing.length} not in miaowm5 data.` +
-      `\n  story_zh.json: ${storyFiles} | new GIFs: ${gifCount} | emotion PNGs: ${emotionCount} | R2 keys invalidated: ${removed}` +
+      `\n  story_zh.json: ${storyFiles} | new GIFs: ${gifCount} | emotion PNGs: ${emotionCount} | head icons: ${headCount} | R2 keys invalidated: ${removed}` +
       (NEW_CHARS ? `\n  roster entries added: ${added.length}${noThumb.length ? ` | skipped (no neutral.gif): ${noThumb.join(', ')}` : ''}` : '') +
       (NEW_CHARS ? '' : `\n  See ${path.relative(process.cwd(), REPORT_PATH)}.`)
   );

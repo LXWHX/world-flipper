@@ -67,7 +67,9 @@ gratuitous timestamp churn the byte-stability rules below exist to prevent — d
 **Three ID spaces — the main trap.** `devName` is the roster/folder key (and the key for
 `character.json`/`pixel.json`); `gameId` keys `character_text`/`character_quest` and is what
 `encyclopedia[5]` points at; `storyId` (= `character.json`'s `[8]`) keys `story_character` and the
-pixel atlases. `storyId` usually equals `devName`, but not always — never assume.
+pixel atlases. `storyId` usually equals `devName`, but not always — never assume. (`head.png` is
+the one piece of art keyed by `devName` rather than `storyId` — that's upstream's own choice, not
+an inconsistency to "fix".)
 
 **Owned-keys contract.** The pipeline owns exactly `info`, `related`, `emotions`, `pixelActions`,
 `storyCount`, `miaowm5Meta` and `voice[].textJp` inside `wiki_zh.json`, and never touches the
@@ -85,6 +87,25 @@ What it produces per character, beyond the `wiki_zh.json` keys:
   opened (`loadStory()`), not in `goDetail()`.
 - `emotion/*.png` — expression art as two 570x690 layers (`base_N.png` body + `<i>_<name>.png` face)
   that the front-end stacks, rather than one flattened composite per expression.
+- `head.png` — the 212x212 framed square portrait miaowm5's own character list shows, used by both
+  the Units grid tile and the detail sheet's related-character chips. It's a port of upstream's
+  `headIcon.svelte` canvas
+  composite and keeps its exact offsets: the portrait (the `head` atlas on `CDN_B`, keyed by
+  `devName`) is smooth-scaled to 184x184 and inset at (14,14) so `res/icon`'s
+  `character_face_frame` rings it in white, then the element badge is scaled 61->48 and dropped at
+  (154,10), landing in the notch the frame leaves open. The portrait carries its own background,
+  so unlike the emotion layers the frame and badge are the only overlays. Two things to know:
+  - The element index is `character.json` row[3], mapped `0..5 -> red/blue/yellow/green/white/black`
+    — i.e. the same order as `ATTRIBUTES` (Fire/Water/Thunder/Wind/Light/Dark), verified to agree
+    with every roster entry's `attribute`. A character with no element gets
+    `character_face_empty_frame`, whose corner isn't notched.
+  - Upstream also stamps the rarity strip at (0,177). **We deliberately skip it**, because the
+    Units grid renders that strip on the pedestal instead, where it's actually legible.
+  All 485 roster characters have a head sprite, but a partial run (`--only`/`--limit`) wouldn't, so
+  the roster carries `hasHead` and callers fall back to the pixel `neutral.gif` rather than trusting
+  the path to resolve. Note `head.png`'s fast path skips when the file exists, so **changing the
+  composite means deleting the old files** — don't reach for `--force`, which would also regenerate
+  every pixel GIF (see above).
 - missing pixel `*.gif` — the site already ships 5 actions + `special`; miaowm5's pixel timeline
   usually also has `into_coffin`/`ghost_raise`/`ghost_neutral`/`revive` (and a few characters have
   many more). **`special` is a special case**: its frames live in a *second* atlas
@@ -97,6 +118,19 @@ What it produces per character, beyond the `wiki_zh.json` keys:
   `pixelActions` lists what the folder actually holds, so the UI never links a missing
   file. Existing GIFs are left alone: they were exported from an older revision of the upstream
   pixel data, so regenerating them would change timings for no benefit.
+
+It also writes **`icons/rarity_{1..5}.png`** — the one thing it produces outside `Character Assets/`.
+These are the game's own rarity stars (`res/icon`'s `rarity_{one..five}`), laid on each pedestal by
+the Units grid and shown beside the name in the detail sheet — the site draws no star glyphs of its
+own any more. They're shared UI chrome rather than per-character art, so they live in the repo's
+`icons/` folder next to `small-*.png` — served with the site, committed to git, and **never touched
+by the R2 pipeline** (don't call `invalidateR2` on them; that helper resolves paths relative to
+`Character Assets/`). Upstream pairs the stars with a dark angled plate (`rarity_background{N}`);
+we deliberately export the stars alone, since on the pedestal they sit on the attribute colour and
+the plate only muddied it. Each rarity's art is a fixed 27px tall but widens with the star count
+(29px at 1★ up to 128px at 5★), which is why the front-end sizes them by height and lets width
+follow — that keeps a star the same size at every rarity. The 5★ stars carry cyan accents and the
+lower tiers don't; that's the game's art, not a bug.
 
 Because any rewritten file must be re-uploaded, the script drops that file's key from
 `scripts/.r2-upload-manifest.json` (which `upload-to-r2.mjs` uses to skip already-uploaded paths)
@@ -155,6 +189,24 @@ The **Characters (`units`)** tab is the most complex: it fetches `roster.json` o
 optional `special.gif` asset and drives GIF/PNG art switching, a draggable bottom sheet
 (`sheetPointerDown`, snapping between `SHEET_EXPANDED_Y`/`MID`/`COLLAPSED`), and skill/special overlay
 toggles.
+
+#### Units grid tile
+
+Each tile mimics the game's party screen, stacking three things in an 82x100 box: the framed
+`head.png` portrait on top, then the character's pixel `neutral.gif` standing on a pedestal built
+from two CSS shapes — an elliptical top face plus a trapezoid body (`clip-path`) — tinted by
+attribute via the `PEDESTAL` table, with `icons/rarity_{N}.png` centred on the body. Two coupled
+numbers to respect when editing:
+
+- The sprite is positioned by `bottom` so its feet land on the ellipse's centre line. Resize the
+  pedestal and that offset has to move with it, or the character floats above / sinks into it.
+- The stars are sized by height, so their *width* follows the rarity (33px at 5★, 8px at 1★). They
+  have to stay inside the trapezoid's narrow bottom edge, which is much narrower than the pedestal
+  itself — at 52px wide with a `14%/86%` clip, that edge is only ~37px. Widening the stars or
+  narrowing the pedestal makes 5★ overhang first.
+
+Row height (116px) is tuned against the scroller's usable height (622px for 5 rows + 4 8px gaps);
+there's ~10px of slack, so growing the tile means shrinking something else.
 
 #### Character detail bottom sheet
 
@@ -262,12 +314,14 @@ too, or it will silently never reach production.
 
 `Character Assets/roster.json` is the character index driving the Units tab: each entry has `devName`,
 `enName`, `jpName`, `rarity`, `attribute`, `thumb`, an optional `music` array (mp3 filenames, only
-present for the ~150 characters with matched BGM), and — for the ~368 characters matched by the wiki
+present for the ~150 characters with matched BGM), `hasHead` (stamped by `fetch-miaowm5.mjs`; the
+square `head.png` lives beside `thumb`, so the front-end derives its URL from that path rather than
+storing a second one), and — for the ~368 characters matched by the wiki
 pipeline — `zhName`/`hasWiki`/`voiceCount` stamped by `scripts/match-wiki-to-roster.mjs`. The 108
 entries added by `fetch-miaowm5.mjs --new-chars` instead carry `bustOnly: true` with no
 `enName`/`jpName` and no full-shot art (see the miaowm5 section above). Per-character
 folders (`rarityN/<devName>/`) hold the
-actual art/GIFs (`neutral.gif`, `full_shot_1440_1920_{0,1}.png`, `walk_front.gif`, `kachidoki.gif`,
+actual art/GIFs (`neutral.gif`, `head.png`, `full_shot_1440_1920_{0,1}.png`, `walk_front.gif`, `kachidoki.gif`,
 `walk_back.gif`, optional `special.gif`, `skill_ready.gif`, plus any extra pixel actions generated by
 the miaowm5 pipeline such as `into_coffin.gif`/`ghost_raise.gif`/`ghost_neutral.gif`/`revive.gif`),
 an optional `music/` subfolder holding those mp3s, and — from the two data pipelines —
