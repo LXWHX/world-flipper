@@ -2,20 +2,36 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <script src="./support.js"></script>
 </head>
 <body>
 <x-dc>
 <helmet>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- The app is a fixed-size canvas scaled to fit (see DESIGN_W/computeLayout), so browser zoom
+       has nothing useful to do here — it only fights the canvas. `user-scalable=no`/`maximum-scale`
+       cover Chrome/Android; iOS Safari ignores both, so the body's `touch-action` and the gesture
+       handlers in componentDidMount are what actually refuse the pinch there.
+       `viewport-fit=cover` is deliberately absent: the canvas now fills the viewport edge to edge,
+       so covering the display would push the top bar under the notch and the tab bar under the home
+       indicator. Without it the viewport is the safe area, which is exactly what we want to fill. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
   <script src="image-slot.js"></script>
   <style>
-    html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
-    body { font-family: 'M PLUS Rounded 1c', sans-serif; background: #EAEAEA; }
+    /* The page itself never scrolls or moves — every scroller in the app is an inner element.
+       `position: fixed` pins the body so mobile can't rubber-band the whole page around the canvas,
+       and `touch-action: pan-x pan-y` refuses pinch-zoom and double-tap-zoom at the root while
+       still letting those inner scrollers pan. Descendants that need to opt out further (the sheet's
+       drag handle) can still narrow this to `none` — the browser intersects down the tree. */
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+    body {
+      position: fixed; inset: 0;
+      font-family: 'M PLUS Rounded 1c', sans-serif; background: #EAEAEA;
+      touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%;
+    }
     @keyframes wfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes wfPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
     /* The magic circle turning behind the app, ported from miaowm5's ui/magicCircle.svelte —
@@ -60,9 +76,11 @@
 <!-- Page field: miaowm5's flat #EAEAEA. The magic circle lives inside the card's screen area (see
      below), not out here — out here the card would hide all but its spill. -->
 <div style="width: 100%; height: 100vh; height: 100dvh; display: flex; justify-content: center; align-items: center; overflow: hidden; background: #EAEAEA; position: relative;">
-  <!-- The card sits on the same grey as the page, so its (now neutral, was blue-tinted) shadow is
-       the only thing separating the two. -->
-  <div style="width: 430px; height: 860px; flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: #EAEAEA; box-shadow: 0 0 40px rgba(0, 0, 0, 0.3); position: relative; z-index: 1; overflow: hidden;">
+  <!-- On a desktop/landscape viewport the card sits on the same grey as the page, so its (now
+       neutral, was blue-tinted) shadow is the only thing separating the two. On a phone the card
+       *is* the page — it fills the viewport, there's no grey field left to separate it from, and
+       both the shadow and the 860px design height give way (see cardHeightCss/cardShadow). -->
+  <div style="width: 430px; {{ cardHeightCss }} flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: #EAEAEA; box-shadow: {{ cardShadow }}; position: relative; z-index: 1; overflow: hidden;">
 
     <!-- ===== Top status bar ===== -->
     <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #3E4450; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); z-index: 30;">
@@ -1325,17 +1343,40 @@ function emotionOverlayKey(name) {
 // below), the same way a fixed-resolution game screen fits itself to the window.
 const DESIGN_W = 430;
 const DESIGN_H = 860;
-function computeScale() {
-  const vw = (window.visualViewport ? window.visualViewport.width : window.innerWidth) || DESIGN_W;
-  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight) || DESIGN_H;
-  return Math.min(vw / DESIGN_W, vh / DESIGN_H, 1);
+// Width gate on filling the viewport: at or below this, the card is the whole app and the grey
+// field around it carries nothing. Above it (desktop, tablet) the field is the point, so the card
+// stays a floating card. 540 sits above every phone's portrait width and below a tablet's. Width is
+// only half the gate — see the aspect check in computeLayout, which is what excludes landscape.
+const FILL_MAX_W = 540;
+
+// Reads the *layout* viewport (`innerWidth`/`innerHeight`), never `visualViewport`. The visual
+// viewport is the part the user is actually looking at, so it shrinks as they pinch-zoom in — and
+// feeding that back into the canvas scale made the app shrink its content away from the gesture
+// while re-rendering the entire tree on every frame of it, which is what killed the tab. The layout
+// viewport is immune to zoom and still tracks what we do care about: rotation and the mobile URL
+// bar collapsing. Pinch zoom is refused outright now (see the viewport meta), but these two stay
+// independent regardless.
+function computeLayout() {
+  const vw = window.innerWidth || DESIGN_W;
+  const vh = window.innerHeight || DESIGN_H;
+  // Fill: match the width exactly and let the card's height run to the viewport's. The card is a
+  // flex column, so its `flex: 1` screen area absorbs any height *beyond* the design's 860 — but
+  // it can't give any back, because the content inside is fixed-height and clips rather than
+  // reflows (the roster grid is `repeat(5, 116px)` in an `overflow-y: hidden` scroller). So fill
+  // only when the viewport is at least as tall-aspect as the design; that's every phone still
+  // shipping (390x844 -> 931 design px of height), while the short SE-class ones and anything in
+  // landscape fall back to the letterboxed card rather than lose two rows of the grid.
+  const fillScale = vw / DESIGN_W;
+  if (vw <= FILL_MAX_W && vh / fillScale >= DESIGN_H) return { scale: fillScale, fill: true };
+  return { scale: Math.min(fillScale, vh / DESIGN_H, 1), fill: false };
 }
 
 class Component extends DCLogic {
   state = {
     tab: 'home', lang: this.loadLang(), menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
-    sheetY: SHEET_MID_Y, sheetDragging: false, scale: computeScale(),
+    sheetY: SHEET_MID_Y, sheetDragging: false,
+    ...computeLayout(), // -> scale, fill
     musicIndex: 0, musicPlaying: false,
     wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
     storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
@@ -1522,10 +1563,23 @@ class Component extends DCLogic {
 
     this.recordVisit();
 
-    const onResize = () => this.updateScale();
+    // Coalesced to one re-render per frame: a resize burst (URL bar collapsing, rotation) would
+    // otherwise re-render the whole tree — every roster tile included — once per event.
+    // Deliberately NOT listening on `visualViewport`: see computeLayout.
+    let scaleRaf = 0;
+    const onResize = () => {
+      if (scaleRaf) return;
+      scaleRaf = requestAnimationFrame(() => { scaleRaf = 0; this.updateScale(); });
+    };
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', onResize);
-    if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
+
+    // iOS Safari ignores `user-scalable=no`/`maximum-scale`, so the pinch has to be refused here.
+    // These `gesture*` events are WebKit-only and fire for exactly that gesture; the body's
+    // `touch-action` handles the same job on Chrome/Android.
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(type => {
+      document.addEventListener(type, e => e.preventDefault(), { passive: false });
+    });
 
     // One audio element serves both the character theme pills and the story-archive BGM pills,
     // so a finished track has to clear whichever "playing" flag is showing.
@@ -1553,8 +1607,10 @@ class Component extends DCLogic {
   }
 
   updateScale() {
-    const s = computeScale();
-    if (Math.abs(s - this.state.scale) > 0.001) this.setState({ scale: s });
+    const next = computeLayout();
+    if (Math.abs(next.scale - this.state.scale) > 0.001 || next.fill !== this.state.fill) {
+      this.setState(next);
+    }
   }
 
   go(tab) {
@@ -2222,6 +2278,14 @@ class Component extends DCLogic {
 
     const vals = {
       cardScaleTransform: 'scale(' + this.state.scale + ')',
+      // Filling means the card's height is the viewport's, expressed in design px so the scale
+      // above lands it back on exactly 100dvh. Stating it in CSS rather than JS px keeps it correct
+      // *through* a URL-bar collapse instead of a frame behind one, and matches how the page field
+      // above already sizes itself. The vh line is the fallback for browsers without dvh.
+      cardHeightCss: this.state.fill
+        ? 'height: calc(100vh / ' + this.state.scale + '); height: calc(100dvh / ' + this.state.scale + ');'
+        : 'height: ' + DESIGN_H + 'px;',
+      cardShadow: this.state.fill ? 'none' : '0 0 40px rgba(0, 0, 0, 0.3)',
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',

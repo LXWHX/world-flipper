@@ -229,6 +229,41 @@ viewer) deliberately have none and stay flat `#F4F6F9`. If you touch this:
 - Visibility gaps are inherent: home island art and the detail hero cover it; the drawer's circle
   only surfaces at the expanded snap point.
 
+### The fixed canvas: scaling and zoom
+
+The whole app is authored against a fixed **430x860** reference canvas (`DESIGN_W`/`DESIGN_H`) —
+fixed-pixel buttons, `clip-path` shapes and the roster grid all assume it. Rather than reflow per
+device, `computeLayout()` scales the canvas uniformly to fit, the way a fixed-resolution game screen
+fits itself to a window. Two modes:
+
+- **fill** (phones: `vw <= 540` and the viewport at least as tall-aspect as the design) — `scale =
+  vw/DESIGN_W`, card height `calc(100dvh / scale)`, no shadow. Edge to edge, no grey field.
+- **card** (desktop, tablet, landscape, short SE-class phones) — the original contain fit,
+  `min(vw/DESIGN_W, vh/DESIGN_H, 1)` at the design's 860px, floating on the grey field.
+
+Traps:
+
+- **Never read `visualViewport` here.** It's the *visual* viewport, so it shrinks as the user
+  pinch-zooms in. Feeding it into the scale made the canvas shrink content away from the gesture
+  while re-rendering the whole tree on every frame of it — that's what crashed mobile tabs. Use
+  `innerWidth`/`innerHeight` (the layout viewport): immune to zoom, still tracks rotation and the
+  URL bar. The resize handler is rAF-coalesced for the same reason — one re-render per frame.
+- **fill can only ever make the card taller than 860, never shorter.** The card is a flex column
+  whose `flex: 1` screen area absorbs extra height, but the content inside is fixed-height and
+  clips rather than reflows (the roster grid is `repeat(5, 116px)` in an `overflow-y: hidden`
+  scroller). That's the whole reason fill is gated on aspect rather than just width — a 375x667
+  SE would fill to 765 design px of height and lose two rows.
+- **Browser zoom is refused outright**, since it has nothing useful to do to a scaled canvas.
+  `user-scalable=no, maximum-scale=1` covers Chrome/Android; iOS Safari ignores both, so the body's
+  `touch-action: pan-x pan-y` and the `gesturestart`/`gesturechange`/`gestureend` preventDefault in
+  `componentDidMount` are what actually refuse the pinch there. The body is `position: fixed` +
+  `overflow: hidden` so the page itself can never scroll or rubber-band — every scroller in the app
+  is an inner element.
+- **`viewport-fit=cover` is deliberately absent.** With the canvas going edge to edge, covering the
+  display would push the top bar under the notch and the tab bar under the home indicator. Without
+  it the viewport *is* the safe area, which is exactly what fill should fill — no `env()` math,
+  which wouldn't survive the canvas scale anyway.
+
 ### Single component, tab-based navigation
 
 One `Component` instance; `state.tab` (`'home' | 'units' | 'story' | 'music' | 'arms' | 'art' |
