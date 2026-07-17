@@ -446,6 +446,11 @@
                 <!-- Name plate over the card's lower edge -->
                 <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; pointer-events: none; padding: 22px 14px 12px 14px; background: linear-gradient(to top, rgba(255,255,255,0.95) 55%, rgba(255,255,255,0)); display: flex; align-items: center; gap: 8px;">
                   <div style="font-size: 17px; font-weight: 900; color: #3E4450; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ flipCardName }}</div>
+                  <!-- Attribute badge, the same art the filter chips use (named by the roster's own
+                       element index, so the path is built straight from the data). -->
+                  <sc-if value="{{ flipCardHasElement }}" hint-placeholder-val="{{ true }}">
+                    <img src="{{ flipCardElementUrl }}" alt="{{ flipCardElementLabel }}" title="{{ flipCardElementLabel }}" style="height: 20px; width: 20px; flex: none;">
+                  </sc-if>
                   <img src="{{ flipCardRarityUrl }}" alt="{{ flipCardRarityLabel }}" style="height: 13px; width: auto; flex: none;">
                   <div style="flex: none; font-size: 10px; font-weight: 800; color: #8A93A5; background: #F0F3F7; border-radius: 999px; padding: 2px 8px;">{{ flipCardVariantLabel }}</div>
                 </div>
@@ -1537,6 +1542,10 @@ class Component extends DCLogic {
   state = {
     tab: 'home', lang: this.loadLang(), menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
+    // Which tab the detail screen's Back button returns to; set by goDetail from wherever you
+    // opened it. The Flip deck survives the round trip on its own (the deck is an instance field
+    // and flipIndex is plain state, so neither is rebuilt), so returning lands on the same card.
+    detailReturnTab: 'units',
     sheetY: SHEET_MID_Y, sheetDragging: false,
     ...computeLayout(), // -> scale, fill
     musicIndex: 0, musicPlaying: false,
@@ -2169,8 +2178,12 @@ class Component extends DCLogic {
     // reachable without ever opening Flip — so kick the (once-per-session) fetch here too.
     this.loadArtStats();
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
-    this.setState({
+    this.setState(s => ({
       tab: 'detail', menuOpen: false,
+      // Where Back returns to. A related-character chip navigates detail -> detail, so that case
+      // has to keep the original origin rather than answer 'detail'. Everything that isn't the
+      // Flip deck goes back to the Units grid, which is what this screen has always done.
+      detailReturnTab: s.tab === 'detail' ? s.detailReturnTab : (s.tab === 'flip' ? 'flip' : 'units'),
       selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
@@ -2179,7 +2192,7 @@ class Component extends DCLogic {
       emotionOverlays: [],
       // A story-archive related chip lands here, and stopMusic() above killed its BGM.
       arcBgmPlaying: false
-    });
+    }));
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
     probe.onerror = () => {};
@@ -2205,12 +2218,13 @@ class Component extends DCLogic {
       });
   }
 
+  // Back goes wherever you came in from (see detailReturnTab). Routed through go() rather than
+  // setting the tab directly, so the leaving-detail cleanup and the per-tab restore work — for
+  // 'flip' that's ensureFlipDeck/loadArtStats, both of which no-op on an already-built deck, so
+  // you land back on the same card you tapped.
   backFromDetail() {
-    this.clearAnimTimers();
-    this.stopMusic();
-    this.stopVoice();
-    this.setState({ tab: 'units', selectedChar: null });
-    this.restoreUnitsScroll();
+    this.go(this.state.detailReturnTab === 'flip' ? 'flip' : 'units');
+    this.setState({ selectedChar: null });
   }
 
   trackLabel(fileName, trackNumber) {
@@ -2770,6 +2784,7 @@ class Component extends DCLogic {
       : null;
     const flipEmotionDir = flipCard ? flipCard.folderUrl + '/emotion/' : '';
     const flipShowBust = !!flipFace;
+    const flipHasElement = !!(flipCard && flipCard.char.elementIndex >= 0);
     const flipStat = (flipCard && this.state.flipStats) ? this.state.flipStats[flipCard.key] : null;
     const flipMyVote = flipStat ? flipStat.my_vote : null;
     // A dash until art_stats_all resolves, matching the top bar's pv/uv convention.
@@ -2828,6 +2843,12 @@ class Component extends DCLogic {
         : '',
       flipCardRarityUrl: flipCard ? flipCard.char.rarityUrl : '',
       flipCardRarityLabel: flipCard ? flipCard.char.rarityLabel : '',
+      // Shared UI art served with the site, so it isn't under ASSET_BASE. Guarded on the index
+      // rather than assumed: elementIndex is an ELEMENT_ORDER.indexOf, so an unknown attribute
+      // would be -1 and would otherwise build icons/element_-1.png.
+      flipCardHasElement: flipHasElement,
+      flipCardElementUrl: flipHasElement ? 'icons/element_' + flipCard.char.elementIndex + '.png' : '',
+      flipCardElementLabel: flipHasElement ? this.t('filterElement' + ELEMENT_ORDER[flipCard.char.elementIndex]) : '',
       flipCardVariantLabel: flipCard
         ? (flipCard.variant === 'bust' ? this.t('flipVariantBust')
            : flipCard.variant === '1' ? this.t('artAwakened') : this.t('artBase'))

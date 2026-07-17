@@ -368,6 +368,13 @@ it reuses art that already ships.
   right before the card finishes flying out. Re-voting the same way nets to zero, which matches
   `vote_art`'s own `if prev is distinct from v` no-op — the two sides agree by construction.
 - **The detail page is display-only.** Voting happens on the Flip screen.
+- Tapping a card opens the character sheet, and **Back returns to the deck on the same card** —
+  `state.detailReturnTab`, set by `goDetail` from whichever tab you came in on (`backFromDetail`
+  used to hardcode `units`). The deck position needs no saving or restoring: `flipDeck` is an
+  instance field and `flipIndex` is plain state, so nothing resets and nothing is rebuilt. Note a
+  related-character chip navigates detail → detail, so `goDetail` keeps the existing
+  `detailReturnTab` in that case rather than recording `'detail'`; everything that isn't Flip still
+  goes back to the Units grid.
 
 #### Units filter
 
@@ -394,6 +401,9 @@ group inert ("nothing picked" = "show everything"). Notes:
   (ends y=68) and the first tile (starts y=101, portrait from x=38). Moving or growing it collides.
 
 #### Units grid tile
+
+Note `backFromDetail()` returns to `state.detailReturnTab` (Units or Flip), not unconditionally to
+Units — see the Flip section above.
 
 Mimics the game's party screen in an 82x100 box: framed `head.png` on top, pixel `neutral.gif` on
 a pedestal built from two CSS shapes (elliptical top face + `clip-path` trapezoid body) tinted by
