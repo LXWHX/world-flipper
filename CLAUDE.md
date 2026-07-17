@@ -266,9 +266,9 @@ Traps:
 
 ### Single component, tab-based navigation
 
-One `Component` instance; `state.tab` (`'home' | 'units' | 'story' | 'music' | 'arms' | 'art' |
-'detail'`) drives `<sc-if>` visibility — no router. `go(tab)` switches; `this.sections` holds
-per-tab metadata.
+One `Component` instance; `state.tab` (`'home' | 'units' | 'story' | 'flip' | 'music' | 'arms' |
+'art' | 'detail'`) drives `<sc-if>` visibility — no router. `go(tab)` switches; `this.sections`
+holds per-tab metadata.
 
 The **Units** tab fetches `roster.json` once (`componentDidMount`), **sorts** it (rarity desc,
 then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `devName` — the
@@ -276,7 +276,10 @@ file's own order is just append history), and paginates client-side (`ROSTER_BAT
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view.
 
 `isSection` is the under-construction placeholder that still backs art/music/arms; `units`,
-`detail` and `story` are excluded from it because they have real screens.
+`detail`, `story` and `flip` are excluded from it because they have real screens.
+
+The home screen's centre red button opens **`flip`**, not `units` — Units keeps its bottom-tab-bar
+button and its menu entry, which is the only reason repointing it strands nothing.
 
 #### Story tab (the story archive)
 
@@ -306,6 +309,65 @@ panel**, which is a different feature — read the prefix before assuming which 
   `arcBgmPlaying`, and the `ended` handler clears both playing flags.
 - The category chip row (全部/主线/活动/联动) filters on the `category` the pipeline stamps;
   single-select, `all` inert. `ARC_CATEGORIES` is the table.
+
+#### Flip tab (弹弹) — art voting
+
+A Tinder-style swipe deck over every illustration in the game: right = like, left = dislike, down =
+skip, tap = open that character's sheet. All three are counted per illustration and shown on the
+deck and on the detail hero. Backed by Supabase (`supabase-art-votes.sql`), not by any pipeline —
+it reuses art that already ships.
+
+- **The `flip` prefix is not decoration.** `artIndex`, `isArt`, `goArt`, `toggleArt`,
+  `showArtToggle` and `artToggleLabel` all already exist and mean either the Art tab or the detail
+  hero's awaken toggle. An unprefixed name in a feature *about* art voting would silently rewire
+  one of them — same hazard the story archive's `arc` prefix exists for. The detail page's pills
+  use `detailArt*`.
+- **Every illustration is its own artwork**, keyed `art_key` = `<devName>:<variant>`, variant ∈
+  `0` (base) | `1` (awakened) | `bust`. Base and awakened vote separately, so the detail pills
+  track `state.artIndex` and swap when you hit the awaken toggle.
+- **Deck size 855**, and the derivation matters because it's easy to get wrong: 485 roster entries
+  − 3 with `thumb: null` (the front-end filters those before the deck ever sees them) − 108
+  `bustOnly` = **374** base cards; **373** of those have awakened art; + **108** bust cards.
+- **`NO_AWAKENED_ART`** is the 374-vs-373 difference: `ruin_girl_smr21` is the sole character with
+  `full_shot_1440_1920_0.png` and no `_1`. `roster.json` has no field for it and the deck is built
+  synchronously from the roster alone, so it's a front-end constant. It belongs beside `hasHead` as
+  a roster stamp — promote it and delete the constant *if* the pipeline is ever re-run for another
+  reason, but it isn't worth a re-run plus an R2 re-upload on its own.
+- **bustOnly cards ride the same lazy `wiki_zh.json` fetch** the detail hero does (that file is
+  where the `emotions[]` layer filenames live), cached per character in `flipEmotionCache` and
+  never blocking — the card paints with the pixel `neutral.gif` it already has and swaps to the
+  stacked bust when the fetch lands. The cache's in-flight `null` marker is load-bearing: without
+  it every render during the fetch fires another one.
+- `this.flipDeck` is an **instance field**, not state — 855 objects don't belong in a `setState`
+  payload; `flipDeckVersion`/`flipWikiVersion` are what tell `renderVals` it moved. `go('flip')`
+  can beat the roster fetch home, so `ensureFlipDeck()` is called from **both** and whichever runs
+  second builds the deck.
+- The gesture is the second consumer of the `sheetPointerDown` pattern (see the bottom sheet
+  below) — **deltas divided by `state.scale`**, `touch-action: none` on the card. It additionally
+  rAF-coalesces its `setState`, because `renderVals` rebuilds the roster tiles and story lists on
+  every render regardless of tab and a card drag is much longer than a sheet drag. It does *not*
+  need `handleUnitsWheel`'s document-level listener — that exists only for `preventDefault` on
+  wheel.
+- **The card swap has no entrance animation, by design, and that takes work.** The card element is
+  *reused* across the swap, so left alone its transform would animate from the fly-out position
+  back to centre — the next card would slide in from off screen, when it's already on screen
+  underneath. `flipSnap` suppresses the transition for one frame and lands the card on the peek's
+  exact transform; `flipRising` then covers the frames after, where it rises off the peek into
+  place (`FLIP_RISE_MS`, shorter than `FLIP_FLY_MS` — a 10px rise paced like a 620px fly-out feels
+  like a stall). Two traps: the flag is cleared on a **double** rAF, because with one rAF both DOM
+  writes can land before a single style recalc and the browser animates the very thing the flag
+  exists to prevent; and the peek's transform is built from `FLIP_PEEK_Y`/`FLIP_PEEK_SCALE` in the
+  same **translate-then-scale order** as the live card's, because the swap frame stacks them
+  pixel-for-pixel and any mismatch shows up as a jump.
+- Each drag stamp (♥/✕/↓) sits **opposite** the direction it commits — right-swipe puts ♥ on the
+  left, down-swipe puts ↓ on top — so the stamp trails the card off screen instead of leading it
+  out of view.
+- The deck is **shuffled per session and never filters out already-voted cards** — votes are
+  changeable, so hiding them would make a vote unreachable to change. End of deck offers a reshuffle.
+- Votes are **optimistic locally** (`-1` from the old bucket, `+1` to the new) so the count is
+  right before the card finishes flying out. Re-voting the same way nets to zero, which matches
+  `vote_art`'s own `if prev is distinct from v` no-op — the two sides agree by construction.
+- **The detail page is display-only.** Voting happens on the Flip screen.
 
 #### Units filter
 
@@ -351,6 +413,12 @@ carrying `sheetPointerDown` and `touch-action: none`) and a `flex: 1; overflow-y
 that split is what keeps native touch scrolling working in the body. Dragging snaps between
 `SHEET_EXPANDED_Y`/`MID`/`COLLAPSED`; past the visible height, the body's own scroll reveals
 content.
+
+`sheetPointerDown` is now the reference for a **convention rather than a one-off** — the Flip
+deck's `flipPointerDown` follows it. Window-level `pointermove`/`pointerup` (so the gesture
+survives the pointer leaving the element), **deltas divided by `state.scale`** (the whole 430px
+canvas is CSS-scaled, so raw client px drift from the finger), `touch-action: none` on the drag
+surface, and `dragging ? 'none' : 'transform …'` for the transition.
 
 **Panel switcher.** Four round icon buttons float above the sheet's top-right corner as a
 *sibling* of the sheet div, sharing `sheetTransform`/`sheetTransition` so they track the drag
@@ -429,17 +497,43 @@ pipeline outputs (`wiki_zh.json`, `voice/`, `story_zh.json`, `emotion/`). Music 
 persistent `this.audio = new Audio()` (`toggleMusicTrack`/`stopMusic`), rendered as pill buttons
 when `music.length > 0`.
 
-### Visit counters (top status bar)
+### Supabase (visit counters + art votes)
 
-The two top-right pills (`icons/Mana.png` = total page views, `icons/Lodestar_Bead.png` = unique
-visitors) are backed by Supabase. `recordVisit()` (called once in `componentDidMount`) POSTs to one
-RPC, `record_visit(vid)`, which bumps a PV counter, upserts the visitor id, and returns `{pv, uv}`;
-`renderVals` formats them into `pvCount`/`uvCount` (a dash until it resolves). `vid` is a random
-uuid persisted in `localStorage` (`wf_visitor_id`), so reloads dedupe to one unique visitor — **no
-IP is ever read** (a browser can't, and it'd miscount shared/rotating IPs anyway). Config lives in
-`SUPABASE_URL`/`SUPABASE_ANON_KEY` next to `ASSET_BASE`; the anon key is safe to ship because the
-SQL (`supabase-visit-counter.sql`) grants the anon role EXECUTE on only that SECURITY DEFINER
-function and leaves both tables behind RLS with no policies. **`recordVisit()` no-ops on
-`file://`/`localhost`** (so dev reloads don't inflate the live totals) and while `SUPABASE_URL`
-still holds its `YOUR_PROJECT` placeholder. This is unrelated to R2 — the counters never touch
-`Character Assets/` or the upload pipeline.
+Two features, one project, one anon key, one set of helpers — and **nothing to do with R2**: no
+Supabase path ever touches `Character Assets/` or the upload pipeline. Config lives in
+`SUPABASE_URL`/`SUPABASE_ANON_KEY` next to `ASSET_BASE`. There is no supabase-js dependency; every
+call is a raw `fetch` POST to `/rest/v1/rpc/<name>` through `supabaseRpc()`.
+
+Each feature has its own run-once setup file, and both take the **same security posture**: tables
+with RLS enabled and **zero policies** (so nothing is directly readable or writable), and the anon
+role granted EXECUTE on only the SECURITY DEFINER functions, each pinned with
+`set search_path = public`. That is the whole reason the anon key is safe to ship.
+
+- `supabase-visit-counter.sql` → `record_visit(vid)`. The two top-right pills (`icons/Mana.png` =
+  total page views, `icons/Lodestar_Bead.png` = unique visitors). `recordVisit()` fires once in
+  `componentDidMount`; the RPC bumps PV, upserts the visitor id and returns `{pv, uv}`, which
+  `renderVals` formats into `pvCount`/`uvCount` (a dash until it resolves). **No IP is ever read**
+  (a browser can't, and it'd miscount shared/rotating IPs anyway).
+- `supabase-art-votes.sql` → `vote_art(vid, akey, v)` + `art_stats_all(vid)`, backing the Flip tab
+  (see above). `art_stats_all` returns **every** artwork's counts in one ~35KB call, cached in
+  `state.flipStats` and shared by the deck and the detail hero — per-key reads would leave the pill
+  blank under the user's thumb on every swipe. Two tables: per-visitor vote rows plus a
+  denormalized aggregate that only `vote_art` writes, in one transaction under a row lock, so they
+  can't drift. Note the RPC parameter is `akey`, not `art_key` — a parameter sharing a column's
+  name makes every unqualified reference in the body ambiguous.
+
+**Shared helpers**: `visitorId()` (the memoized `wf_visitor_id` uuid — both features key on the
+same id, which is what makes reloads dedupe to one visitor and one vote per artwork stick),
+`supabaseRpc()`, `supabaseConfigured()` (false while `SUPABASE_URL` holds its `YOUR_PROJECT`
+placeholder, so the site works un-wired — pills just show a dash), and `supabaseWritable()`.
+
+**Reads and writes are deliberately asymmetric on local dev**: `supabaseWritable()` is false on
+`file://`/`localhost` so dev reloads never inflate PV and test swipes never reach the live vote
+counts — but **reads aren't gated**, because seeing the real numbers locally is harmless and is
+what makes the Flip deck developable at all. To exercise voting end-to-end you have to serve the
+page from a non-localhost origin.
+
+**Threat model, stated once**: the anon key is in the page, so anyone can POST `vote_art` with a
+fabricated `vid`. These counts are a for-fun signal, not a poll. That's the exposure
+`record_visit` already carried; the `(visitor_id, art_key)` primary key still caps one row per
+claimed identity.

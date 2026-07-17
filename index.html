@@ -164,9 +164,9 @@
                 {{ navGalleryLabel }}
               </span>
             </button>
-            <button onClick="{{ goUnits }}" style="width: 120px; height: 120px; flex: none; border: none; cursor: pointer; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #FF7A8E 0%, #F0526E 55%, #D63B58 100%); box-shadow: 0 0 0 6px #FFFFFF, 0 6px 0 6px #C9CFDA, inset 0 3px 0 rgba(255,255,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; animation: wfPulse 3s ease-in-out infinite;" style-hover="filter: brightness(1.08);" style-active="transform: scale(0.95);">
-              <svg width="34" height="34" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="2" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="1" y="4" width="8" height="2" fill="#FFE1E7"></rect><rect x="2" y="6" width="2" height="2" fill="#FFFFFF"></rect><rect x="6" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
-              <span style="color: #FFFFFF; font-weight: 900; font-size: 16px; letter-spacing: 0.5px;">{{ navCharactersLabel }}</span>
+            <button onClick="{{ goFlip }}" style="width: 120px; height: 120px; flex: none; border: none; cursor: pointer; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #FF7A8E 0%, #F0526E 55%, #D63B58 100%); box-shadow: 0 0 0 6px #FFFFFF, 0 6px 0 6px #C9CFDA, inset 0 3px 0 rgba(255,255,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; animation: wfPulse 3s ease-in-out infinite;" style-hover="filter: brightness(1.08);" style-active="transform: scale(0.95);">
+              <svg width="34" height="34" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="6" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="1" y="2" width="8" height="2" fill="#FFFFFF"></rect><rect x="1" y="4" width="8" height="1" fill="#FFE1E7"></rect><rect x="2" y="5" width="6" height="1" fill="#FFE1E7"></rect><rect x="3" y="6" width="4" height="1" fill="#FFFFFF"></rect><rect x="4" y="7" width="2" height="1" fill="#FFFFFF"></rect></svg>
+              <span style="color: #FFFFFF; font-weight: 900; font-size: 16px; letter-spacing: 0.5px;">{{ navFlipLabel }}</span>
             </button>
             <button onClick="{{ goMusic }}" style="flex: 1; max-width: 132px; width: 132px; height: 60px; border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; display: flex; align-items: center; justify-content: center; padding-top: 10px; font-family: inherit; font-weight: 800; font-size: 14px; box-shadow: inset 0 -4px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4); margin-bottom: -4px; clip-path: path('M 16 60 L 116 60 Q 132 60 132 44 L 132 15 Q 132 0 117 1.9 L 13 15.7 Q 0 14 0 27 L 0 44 Q 0 60 16 60 Z');" style-hover="filter: brightness(1.07);" style-active="transform: translateY(2px);">
               <span style="display: flex; align-items: center; gap: 6px;">
@@ -360,6 +360,116 @@
         </div>
       </sc-if>
 
+      <!-- ===== FLIP SCREEN (弹弹: the art-voting swipe deck) =====
+           Every illustration is its own card with its own like/dislike/skip counts. Sized against
+           the ~758 design px the screen area has between the top bar and the tab bar: fill mode
+           only ever makes the card taller than 860, never shorter, so what fits here fits
+           everywhere. -->
+      <sc-if value="{{ isFlip }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="Flip" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow: hidden;">
+
+          <!-- Header: title + the current card's three counts -->
+          <div style="flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 0 16px;">
+            <div style="font-size: 19px; font-weight: 900; color: #3E4450;">{{ flipScreenTitle }}</div>
+            <sc-if value="{{ flipHasCard }}" hint-placeholder-val="{{ true }}">
+              <div style="display: flex; gap: 6px;">
+                <div title="{{ flipLikeTitle }}" style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #F0526E; box-shadow: 0 2px 0 rgba(62,68,80,0.12);">♥ {{ flipLikeCount }}</div>
+                <div title="{{ flipDislikeTitle }}" style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #8A93A5; box-shadow: 0 2px 0 rgba(62,68,80,0.12);">✕ {{ flipDislikeCount }}</div>
+                <div title="{{ flipSkipTitle }}" style="display: flex; align-items: center; gap: 4px; background: #FFFFFF; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 800; color: #8A93A5; box-shadow: 0 2px 0 rgba(62,68,80,0.12);">↓ {{ flipSkipCount }}</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Card stack -->
+          <div style="flex: none; position: relative; height: 540px; margin: 12px 25px 0 25px;">
+
+            <sc-if value="{{ flipLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #8A93A5;">{{ flipLoadingText }}</div>
+            </sc-if>
+
+            <sc-if value="{{ flipDone }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #FFFFFF; border-radius: 18px; box-shadow: 0 6px 0 rgba(62,68,80,0.2);">
+                <div style="font-size: 15px; font-weight: 900; color: #3E4450;">{{ flipDoneText }}</div>
+                <button onClick="{{ flipReshuffle }}" style="border: none; cursor: pointer; background: #F0526E; color: #FFFFFF; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 9px 22px; font-family: inherit; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px);">{{ flipReshuffleText }}</button>
+              </div>
+            </sc-if>
+
+            <!-- The card behind, revealed as the top one leaves. Deliberately static: scaling it
+                 with the drag distance is another interpolated value per frame for something
+                 nobody sees at 0.95. The transform must stay in sync with FLIP_PEEK_Y/SCALE and in
+                 the same order (translate then scale) — the live card lands on exactly this
+                 transform for one frame before rising out of it, and a mismatch would show up as a
+                 jump at the swap. -->
+            <sc-if value="{{ flipHasNext }}" hint-placeholder-val="{{ false }}">
+              <div style="position: absolute; inset: 0; z-index: 1; transform: {{ flipPeekTransform }}; background: #F4F6F9; border-radius: 18px; box-shadow: 0 6px 0 rgba(62,68,80,0.12); overflow: hidden;">
+                <img src="{{ flipNextFullShotUrl }}" alt="" style="width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+              </div>
+            </sc-if>
+
+            <!-- The live card. touch-action: none is what actually stops the browser claiming the
+                 swipe; the pointer handler divides by the canvas scale. -->
+            <sc-if value="{{ flipHasCard }}" hint-placeholder-val="{{ true }}">
+              <div onPointerDown="{{ flipPointerDown }}" style="position: absolute; inset: 0; z-index: 2; touch-action: none; cursor: grab; background: #F4F6F9; border-radius: 18px; box-shadow: 0 6px 0 rgba(62,68,80,0.2); overflow: hidden; transform: {{ flipCardTransform }}; transition: {{ flipCardTransition }}; opacity: {{ flipCardOpacity }};">
+
+                <sc-if value="{{ flipShowFullShot }}" hint-placeholder-val="{{ true }}">
+                  <img src="{{ flipFullShotUrl }}" alt="{{ flipCardName }}" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%; pointer-events: none;">
+                </sc-if>
+
+                <!-- bustOnly characters: the same stacked body+face layers the detail hero uses. -->
+                <sc-if value="{{ flipShowBust }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; inset: 0; pointer-events: none;">
+                    <sc-if value="{{ flipHasBustBase }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ flipBustBaseUrl }}" alt="{{ flipCardName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+                    </sc-if>
+                    <sc-if value="{{ flipHasBustFront }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ flipBustFrontUrl }}" alt="{{ flipCardName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <!-- The bust's wiki_zh.json is still in flight: stand in with the pixel sprite the
+                     roster already gave us rather than showing an empty card. -->
+                <sc-if value="{{ flipShowBustFallback }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+                    <img src="{{ flipBustFallbackUrl }}" alt="{{ flipCardName }}" style="height: 140px; image-rendering: pixelated;">
+                  </div>
+                </sc-if>
+
+                <!-- Directional stamps, fading in with the drag so the commit is never a surprise.
+                     Each sits opposite the direction it commits — swipe right and the ♥ is on the
+                     left, swipe left and the ✕ is on the right, swipe down and the ↓ is on top —
+                     so the stamp trails the card off screen instead of leading it out of view. -->
+                <div style="position: absolute; left: 16px; top: 16px; z-index: 3; pointer-events: none; opacity: {{ flipLikeBadgeOpacity }}; border: 4px solid #F0526E; color: #F0526E; border-radius: 10px; padding: 4px 12px; font-size: 18px; font-weight: 900; transform: rotate(-12deg); background: rgba(255,255,255,0.75);">♥</div>
+                <div style="position: absolute; right: 16px; top: 16px; z-index: 3; pointer-events: none; opacity: {{ flipDislikeBadgeOpacity }}; border: 4px solid #8A93A5; color: #8A93A5; border-radius: 10px; padding: 4px 12px; font-size: 18px; font-weight: 900; transform: rotate(12deg); background: rgba(255,255,255,0.75);">✕</div>
+                <div style="position: absolute; left: 50%; top: 16px; z-index: 3; pointer-events: none; margin-left: -22px; opacity: {{ flipSkipBadgeOpacity }}; border: 4px solid #3FA6DD; color: #3FA6DD; border-radius: 10px; padding: 4px 12px; font-size: 18px; font-weight: 900; background: rgba(255,255,255,0.75);">↓</div>
+
+                <!-- Name plate over the card's lower edge -->
+                <div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; pointer-events: none; padding: 22px 14px 12px 14px; background: linear-gradient(to top, rgba(255,255,255,0.95) 55%, rgba(255,255,255,0)); display: flex; align-items: center; gap: 8px;">
+                  <div style="font-size: 17px; font-weight: 900; color: #3E4450; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ flipCardName }}</div>
+                  <img src="{{ flipCardRarityUrl }}" alt="{{ flipCardRarityLabel }}" style="height: 13px; width: auto; flex: none;">
+                  <div style="flex: none; font-size: 10px; font-weight: 800; color: #8A93A5; background: #F0F3F7; border-radius: 999px; padding: 2px 8px;">{{ flipCardVariantLabel }}</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- Fallback buttons: desktop, accessibility, and changing a vote. They also show which
+               way you voted (accent fill), the same way the music pills do. -->
+          <sc-if value="{{ flipHasCard }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: none; display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 16px;">
+              <button onClick="{{ flipVoteDislike }}" title="{{ flipDislikeTitle }}" style="width: 56px; height: 56px; border: none; border-radius: 50%; cursor: pointer; font-family: inherit; font-size: 22px; font-weight: 900; background: {{ flipDislikeBtnBg }}; color: {{ flipDislikeBtnColor }}; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px);">✕</button>
+              <button onClick="{{ flipVoteSkip }}" title="{{ flipSkipTitle }}" style="width: 56px; height: 56px; border: none; border-radius: 50%; cursor: pointer; font-family: inherit; font-size: 22px; font-weight: 900; background: {{ flipSkipBtnBg }}; color: {{ flipSkipBtnColor }}; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px);">↓</button>
+              <button onClick="{{ flipVoteLike }}" title="{{ flipLikeTitle }}" style="width: 64px; height: 64px; border: none; border-radius: 50%; cursor: pointer; font-family: inherit; font-size: 26px; font-weight: 900; background: {{ flipLikeBtnBg }}; color: {{ flipLikeBtnColor }}; box-shadow: 0 3px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px);">♥</button>
+            </div>
+            <div style="flex: none; text-align: center; margin-top: 10px; display: flex; flex-direction: column; gap: 2px;">
+              <div style="font-size: 11px; font-weight: 800; color: #3E4450;">{{ flipProgressText }}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #8A93A5;">{{ flipHintText }}</div>
+              <div style="font-size: 10px; font-weight: 700; color: #8A93A5;">{{ flipTapHintText }}</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
       <!-- ===== CHARACTER DETAIL SCREEN ===== -->
       <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
         <!-- Transparent too (was a blue radial gradient), so the hero art stands on the same
@@ -401,6 +511,20 @@
               </svg>
             </button>
             <div style="position: absolute; right: 16px; top: 60px; z-index: 8; font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">{{ artToggleLabel }}</div>
+          </sc-if>
+
+          <!-- Flip vote counts for the illustration currently on screen. Display-only here —
+               voting lives on the Flip screen. The top offset dodges the awaken toggle (44px at
+               y=14) and its label pill (ends ~y=76); bustOnly characters have neither, so the
+               stack rides up to the toggle's own y. Styled like that label so the two read as one
+               family. Toggling awaken swaps these to the other illustration's counts, since base
+               and awakened are separate artworks with separate votes. -->
+          <sc-if value="{{ detailShowArtCounts }}" hint-placeholder-val="{{ true }}">
+            <div style="position: absolute; right: 14px; top: {{ detailArtCountsTop }}px; z-index: 8; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+              <div title="{{ detailArtLikeTitle }}" style="font-size: 9px; font-weight: 800; color: #F0526E; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">♥ {{ detailArtLikeCount }}</div>
+              <div title="{{ detailArtDislikeTitle }}" style="font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">✕ {{ detailArtDislikeCount }}</div>
+              <div title="{{ detailArtSkipTitle }}" style="font-size: 9px; font-weight: 800; color: #3E4450; background: rgba(255,255,255,0.85); border-radius: 999px; padding: 2px 8px;">↓ {{ detailArtSkipCount }}</div>
+            </div>
           </sc-if>
 
           <!-- Sheet panel switcher: floats above the sheet's top edge, tracks its drag transform,
@@ -1107,6 +1231,26 @@ const SHEET_MID_Y = 390;
 const SHEET_COLLAPSED_Y = 560;
 const LANG_STORAGE_KEY = 'wf_lang';
 
+// --- Flip (弹弹): the art-voting swipe deck ------------------------------------------------
+// The one character whose folder has full_shot_1440_1920_0.png but no _1: of the 374 characters
+// with full-shot art, 373 have the awakened variant and this is the difference. roster.json has no
+// field recording it and the deck is built synchronously from the roster alone, so the exception
+// lives here. It belongs beside `hasHead` as a roster stamp, but that costs a fetch-miaowm5.mjs
+// change, a pipeline re-run, a roster.json rewrite and an R2 re-upload for one boolean on one of
+// 485 rows — do it if the pipeline is ever re-run for another reason, and delete this then.
+const NO_AWAKENED_ART = new Set(['ruin_girl_smr21']);
+// Swipe thresholds in design px (deltas are divided by the canvas scale first — see
+// flipPointerDown), against a 380px-wide card: about a quarter of the card's width commits.
+const FLIP_THRESHOLD_X = 90;
+const FLIP_THRESHOLD_Y = 110;
+const FLIP_FLY_MS = 260;
+// Where the next card sits in the stack, behind the live one. The live card borrows these for the
+// swap frame so it lands exactly on the peek before rising out of it — the two must agree, and the
+// transform order (translate then scale) has to match the peek's for the same reason.
+const FLIP_PEEK_Y = 10;
+const FLIP_PEEK_SCALE = 0.95;
+const FLIP_RISE_MS = 170;
+
 // UI-chrome copy only (not character/content data) — see CLAUDE.md for why
 // character-facing fields like enName/jpName stay separate, unlocalized fields.
 const STRINGS = {
@@ -1118,7 +1262,9 @@ const STRINGS = {
   navAbout: { en: 'About', zh: '关于' },
   navStory: { en: 'Story', zh: '剧情' },
   navGallery: { en: 'Gallery', zh: '画廊' },
-  navCharacters: { en: 'Characters', zh: '角色' },
+  // The home screen's centre button opens the Flip deck, not the roster — Units stays reachable
+  // from the bottom tab bar and the menu.
+  navFlip: { en: 'Flip', zh: '弹弹' },
   navMusic: { en: 'Music', zh: '音乐' },
   tabHome: { en: 'Home', zh: '首页' },
   tabArt: { en: 'Art', zh: '画廊' },
@@ -1237,6 +1383,22 @@ const STRINGS = {
   overlaySunglass: { en: 'Sunglasses', zh: '墨镜' },
   overlayEffect: { en: 'Effect', zh: '特效' },
   storyBackToList: { en: 'Back to episode list', zh: '返回剧情列表' },
+  // Flip (弹弹): the art-voting swipe deck. The card's variant chip reuses artBase/artAwakened
+  // above rather than duplicating them — only the bust variant is new here.
+  flipScreenTitle: { en: 'Flip', zh: '弹弹' },
+  flipLike: { en: 'Like', zh: '喜欢' },
+  flipDislike: { en: 'Dislike', zh: '不喜欢' },
+  flipSkip: { en: 'Skip', zh: '跳过' },
+  flipHint: {
+    en: 'Swipe right to like, left to pass, down to skip',
+    zh: '右滑喜欢，左滑不喜欢，往下滑跳过'
+  },
+  flipTapHint: { en: 'Tap the art for details', zh: '点击立绘查看详情' },
+  flipLoading: { en: 'Shuffling the deck…', zh: '正在洗牌…' },
+  flipDone: { en: "That's every illustration", zh: '所有立绘都看完了' },
+  flipReshuffle: { en: 'Shuffle again', zh: '再来一轮' },
+  flipProgressSuffix: { en: ' left', zh: ' 张待看' },
+  flipVariantBust: { en: 'Bust', zh: '半身' },
   // Story archive (the Story tab: main/event/collab story browser)
   arcLoadingIndex: { en: 'Loading stories…', zh: '剧情加载中…' },
   arcIndexError: { en: 'Failed to load stories', zh: '剧情加载失败' },
@@ -1391,6 +1553,24 @@ class Component extends DCLogic {
     // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
     // where we deliberately don't count) — renderVals shows a dash in that case.
     pv: null, uv: null,
+    // Flip (弹弹) — the art-voting deck. The `flip` prefix runs through every key, handler and
+    // renderVals binding for the same reason the story archive's `arc` does: artIndex, isArt,
+    // goArt, toggleArt, showArtToggle and artToggleLabel all already exist and mean either the Art
+    // tab or the detail hero's awaken toggle, so an unprefixed name here would quietly rewire one
+    // of them. The deck itself is this.flipDeck; these two counters are what tell renderVals the
+    // deck or a bust fetch changed underneath it.
+    flipIndex: 0, flipDeckVersion: 0, flipWikiVersion: 0,
+    flipDX: 0, flipDY: 0, flipDragging: false,
+    flipFlying: null, // null | 'like' | 'dislike' | 'skip' — the fly-out in progress
+    // True for the single frame that swaps in the next card. The card element persists across the
+    // swap, so without suppressing its transition the incoming card would animate back from
+    // wherever the outgoing one flew to — i.e. slide in from off screen. It shouldn't: it's
+    // already on screen, sitting under the card that just left. flipRising then covers the frames
+    // right after, where the card rises off the peek into place.
+    flipSnap: false, flipRising: false,
+    // art_key -> { likes, dislikes, skips, my_vote }; null until art_stats_all resolves. The Flip
+    // deck and the detail hero's pills share this one map.
+    flipStats: null, flipStatsLoading: false,
     // `filter` is what the grid actually applies; `draftFilter` is the dialog's working copy, so
     // that (as upstream) chip toggles only take effect on OK and Cancel discards them.
     filterOpen: false, filter: { ...EMPTY_FILTER }, draftFilter: { ...EMPTY_FILTER }
@@ -1413,6 +1593,22 @@ class Component extends DCLogic {
   // re-requests what it already has.
   arcDetailCache = new Map();
   arcEpisodeCache = new Map();
+
+  // Memoized by visitorId(); see there for why it's the same id the visit counter uses.
+  _vid = '';
+
+  // The Flip deck: one card per illustration. An instance field rather than state because 855
+  // objects have no business in a setState payload — state.flipDeckVersion is the bump that tells
+  // renderVals it changed. Built lazily on first open; see ensureFlipDeck.
+  flipDeck = null;
+  // devName -> emotions[] from wiki_zh.json, for the bustOnly cards' stacked hero layers.
+  // Deliberately separate from state.wikiData, which holds one character at a time for the detail
+  // sheet — this rolls across the whole deck. absent = never asked, null = in flight, array = done.
+  flipEmotionCache = new Map();
+  flipFlyTimer = 0;
+  flipDragRaf = 0;
+  flipSnapRaf = 0;
+  flipRiseTimer = 0;
 
   loadLang() {
     try {
@@ -1458,44 +1654,68 @@ class Component extends DCLogic {
     });
   }
 
-  // Bump the total page-view count and register this browser as a visitor (deduped via a
-  // localStorage uuid), then show both numbers in the top bar. Fires once per page load.
-  // Skipped on file:// and localhost so local dev reloads never inflate the live totals, and
-  // skipped while SUPABASE_URL still holds its placeholder so the site works before it's wired up.
-  recordVisit() {
-    if (location.protocol === 'file:' || location.hostname === 'localhost') return;
-    if (!SUPABASE_URL || SUPABASE_URL.indexOf('YOUR_PROJECT') !== -1) return;
+  // --- Supabase (visit counters + art votes) ------------------------------------------------
+  // Two features share one project, one anon key and these helpers. See supabase-visit-counter.sql
+  // and supabase-art-votes.sql.
 
-    // A stable per-browser id so reloads count as one unique visitor. Falls back to an ephemeral
-    // id if localStorage is unavailable (private mode) — that visit still counts toward PV.
-    let vid = '';
+  // A stable per-browser id, memoized. Reloads then count as one unique visitor, and one vote per
+  // artwork keys on exactly this id. Falls back to an ephemeral id if localStorage is unavailable
+  // (private mode) — that visit still counts toward PV, and its votes still land, just not durably.
+  visitorId() {
+    if (this._vid) return this._vid;
     try {
-      vid = localStorage.getItem(VISITOR_STORAGE_KEY) || '';
+      let vid = localStorage.getItem(VISITOR_STORAGE_KEY) || '';
       if (!vid) {
         vid = (window.crypto && crypto.randomUUID)
           ? crypto.randomUUID()
           : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
         localStorage.setItem(VISITOR_STORAGE_KEY, vid);
       }
+      this._vid = vid;
     } catch (e) {
-      vid = 'anon-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+      this._vid = 'anon-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
     }
+    return this._vid;
+  }
 
-    fetch(SUPABASE_URL + '/rest/v1/rpc/record_visit', {
+  // False while SUPABASE_URL still holds its placeholder, so the site works before it's wired up
+  // (the counters show a dash; the vote pills show one too).
+  supabaseConfigured() {
+    return !!SUPABASE_URL && SUPABASE_URL.indexOf('YOUR_PROJECT') === -1;
+  }
+
+  // Reads and writes are deliberately asymmetric on local dev. Writes (visit counts, votes) are
+  // suppressed on file:// and localhost so reloads and test swipes never touch the live numbers;
+  // reads aren't, because seeing the real counts locally is harmless and is what makes the Flip
+  // deck developable at all.
+  supabaseWritable() {
+    return this.supabaseConfigured()
+      && location.protocol !== 'file:' && location.hostname !== 'localhost';
+  }
+
+  supabaseRpc(name, body) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
         'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ vid })
+      body: JSON.stringify(body)
     })
       .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        const row = Array.isArray(data) ? data[0] : data;
-        if (row && row.pv != null) this.setState({ pv: Number(row.pv), uv: Number(row.uv) });
-      })
-      .catch(() => { /* counters just stay on the dash placeholder */ });
+      .catch(() => null);
+  }
+
+  // Bump the total page-view count and register this browser as a visitor (deduped via the
+  // visitorId uuid), then show both numbers in the top bar. Fires once per page load.
+  recordVisit() {
+    if (!this.supabaseWritable()) return;
+    this.supabaseRpc('record_visit', { vid: this.visitorId() }).then(data => {
+      const row = Array.isArray(data) ? data[0] : data;
+      // A failed call leaves the counters on their dash placeholder.
+      if (row && row.pv != null) this.setState({ pv: Number(row.pv), uv: Number(row.uv) });
+    });
   }
 
   componentDidMount() {
@@ -1547,6 +1767,9 @@ class Component extends DCLogic {
             a.devName.localeCompare(b.devName));
         this.rosterByDev = new Map(roster.map(c => [c.devName, c]));
         this.setState({ roster, rosterLoading: false });
+        // The Flip deck is built from the roster, and go('flip') can beat this fetch home —
+        // whichever of the two happens second is the one that builds it.
+        if (this.state.tab === 'flip') this.ensureFlipDeck();
       })
       .catch(err => {
         console.error('[units] failed to load roster.json', err);
@@ -1618,9 +1841,253 @@ class Component extends DCLogic {
     // The story archive plays its BGM through the same audio element, so leaving it must stop
     // the track rather than let it follow you into another tab.
     if (this.state.tab === 'story' && tab !== 'story') this.stopMusic();
+    // A fly-out timer that outlives the screen would advance a deck nobody's looking at.
+    if (this.state.tab === 'flip' && tab !== 'flip') this.clearFlipTimers();
     this.setState({ tab: tab, menuOpen: false, arcBgmPlaying: false });
     if (tab === 'units') this.restoreUnitsScroll();
     if (tab === 'story') this.loadArcIndex();
+    if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
+  }
+
+  // --- Flip (弹弹): the art-voting swipe deck ------------------------------------------------
+  // Every illustration is its own card with its own counts: a character's base art and awakened
+  // art are two separate artworks, and the 108 bustOnly characters (no full shot anywhere) get one
+  // card each from their 570x690 story bust. 374 base + 373 awakened + 108 bust = 855 cards.
+
+  buildFlipDeck() {
+    const cards = [];
+    for (const c of this.state.roster) {
+      // Same derivation goDetail uses — the roster stores the thumb URL, and every other asset in
+      // the character's folder hangs off its directory.
+      const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
+      const base = { dev: c.devName, char: c, folderUrl };
+      if (c.bustOnly) {
+        cards.push({ ...base, key: c.devName + ':bust', variant: 'bust', url: '' });
+      } else {
+        cards.push({ ...base, key: c.devName + ':0', variant: '0', url: folderUrl + '/full_shot_1440_1920_0.png' });
+        if (!NO_AWAKENED_ART.has(c.devName)) {
+          cards.push({ ...base, key: c.devName + ':1', variant: '1', url: folderUrl + '/full_shot_1440_1920_1.png' });
+        }
+      }
+    }
+    // Fisher-Yates. The roster arrives sorted rarity-desc then element, which is exactly the order
+    // a shuffle has to destroy — otherwise the first hundred swipes are all 5* Fire.
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = cards[i]; cards[i] = cards[j]; cards[j] = t;
+    }
+    return cards;
+  }
+
+  // go('flip') can fire before roster.json resolves, so this is called from both there and the
+  // roster fetch's own .then — whichever happens second builds the deck. Until then the screen
+  // shows its loading state.
+  ensureFlipDeck() {
+    if (this.flipDeck || !this.state.roster.length) return;
+    this.flipDeck = this.buildFlipDeck();
+    this.setState(s => ({ flipDeckVersion: s.flipDeckVersion + 1, flipIndex: 0 }));
+    this.prefetchFlip();
+  }
+
+  reshuffleFlipDeck() {
+    this.flipDeck = this.buildFlipDeck();
+    this.setState(s => ({ flipDeckVersion: s.flipDeckVersion + 1, flipIndex: 0, flipFlying: null, flipDX: 0, flipDY: 0 }));
+    this.prefetchFlip();
+  }
+
+  flipTopCard() {
+    return (this.flipDeck && this.flipDeck[this.state.flipIndex]) || null;
+  }
+
+  // bustOnly characters have no full shot — their hero is the same stacked body+face art the
+  // detail page and expression viewer use, and those layer filenames only exist inside the
+  // per-character wiki_zh.json. Fetched once per character and never blocking: the card paints
+  // immediately with the pixel neutral.gif it already has from the roster, then swaps to the bust
+  // when this lands.
+  ensureFlipBust(card) {
+    if (!card || card.variant !== 'bust') return;
+    // absent = never asked; null = in flight (without this marker, three renders during the fetch
+    // would fire three fetches); array = done.
+    if (this.flipEmotionCache.has(card.dev)) return;
+    this.flipEmotionCache.set(card.dev, null);
+    fetch(card.folderUrl + '/wiki_zh.json')
+      .then(r => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then(data => {
+        this.flipEmotionCache.set(card.dev, (data && data.emotions) || []);
+        if (this.state.tab === 'flip') this.setState(s => ({ flipWikiVersion: s.flipWikiVersion + 1 }));
+      });
+  }
+
+  // Warm the top card and the two behind it: the full shots so a swipe reveals painted art rather
+  // than a white box, the busts so their wiki_zh.json is usually already home. Mirrors goDetail's
+  // preload of both full shots.
+  prefetchFlip() {
+    if (!this.flipDeck) return;
+    const end = Math.min(this.state.flipIndex + 3, this.flipDeck.length);
+    for (let i = this.state.flipIndex; i < end; i++) {
+      const card = this.flipDeck[i];
+      if (card.url) new Image().src = card.url;
+      else this.ensureFlipBust(card);
+    }
+  }
+
+  // Modelled on sheetPointerDown: window-level pointermove/pointerup so the gesture survives the
+  // pointer leaving the card, and every delta divided by the canvas scale because the whole 430px
+  // card is CSS-transform-scaled to the viewport — raw client px would drift from the finger by
+  // whatever the scale is. The card carries `touch-action: none`, which is what actually stops the
+  // browser claiming the gesture; preventDefault here is belt-and-braces, as on the sheet's handle.
+  flipPointerDown(e) {
+    if (this.state.flipFlying) return; // a card already on its way out ignores input
+    if (!this.flipTopCard()) return;
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const scale = this.state.scale || 1;
+    let dx = 0, dy = 0, moved = false;
+
+    const onMove = (ev) => {
+      dx = (ev.clientX - startX) / scale;
+      dy = (ev.clientY - startY) / scale;
+      if (!moved && Math.abs(dx) + Math.abs(dy) > 4) moved = true;
+      // Coalesced to one setState per frame, the same guard the resize handler uses: renderVals
+      // rebuilds the roster tiles and the story-archive lists on every render regardless of tab,
+      // and a full-screen card drag is long enough for a raw per-pointermove setState to redo all
+      // of that several times a frame.
+      if (this.flipDragRaf) return;
+      this.flipDragRaf = requestAnimationFrame(() => {
+        this.flipDragRaf = 0;
+        this.setState({ flipDX: dx, flipDY: dy, flipDragging: true });
+      });
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      if (this.flipDragRaf) { cancelAnimationFrame(this.flipDragRaf); this.flipDragRaf = 0; }
+
+      // A press that never moved is a tap: open this character's sheet.
+      if (!moved) {
+        this.setState({ flipDX: 0, flipDY: 0, flipDragging: false });
+        this.flipOpenDetail();
+        return;
+      }
+      // Down = skip, but only when it clearly dominates — a lazy diagonal should still read as a
+      // like/dislike, which is what a thumb actually produces.
+      if (dy > FLIP_THRESHOLD_Y && dy > Math.abs(dx) * 1.2) return this.flipCommit('skip');
+      if (dx > FLIP_THRESHOLD_X) return this.flipCommit('like');
+      if (dx < -FLIP_THRESHOLD_X) return this.flipCommit('dislike');
+      this.setState({ flipDX: 0, flipDY: 0, flipDragging: false }); // under threshold: snap back
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  flipCommit(kind) {
+    const card = this.flipTopCard();
+    if (!card || this.state.flipFlying) return;
+    this.setState({ flipFlying: kind, flipDragging: false });
+    this.sendArtVote(card.key, kind);
+    this.flipFlyTimer = setTimeout(() => {
+      this.flipFlyTimer = 0;
+      // flipSnap drops the (reused) card element onto the peek's exact transform with no
+      // transition, so the next card is just there rather than flying in from where this one left.
+      this.setState(s => ({
+        flipIndex: s.flipIndex + 1, flipFlying: null, flipDX: 0, flipDY: 0,
+        flipSnap: true, flipRising: true
+      }));
+      // Double rAF, not single: the transition can only be restored once the browser has actually
+      // painted the card on the peek. With one rAF both DOM writes can land before a single style
+      // recalc, and the browser would then see transform 620->0 with the transition still live and
+      // animate exactly what flipSnap exists to prevent. (Same reason restoreUnitsScroll doubles.)
+      this.flipSnapRaf = requestAnimationFrame(() => {
+        this.flipSnapRaf = requestAnimationFrame(() => {
+          this.flipSnapRaf = 0;
+          // Transition back on, transform back to rest: this is the float-up.
+          this.setState({ flipSnap: false });
+          this.flipRiseTimer = setTimeout(() => {
+            this.flipRiseTimer = 0;
+            this.setState({ flipRising: false });
+          }, FLIP_RISE_MS);
+        });
+      });
+      this.prefetchFlip();
+    }, FLIP_FLY_MS);
+  }
+
+  clearFlipTimers() {
+    if (this.flipFlyTimer) { clearTimeout(this.flipFlyTimer); this.flipFlyTimer = 0; }
+    if (this.flipDragRaf) { cancelAnimationFrame(this.flipDragRaf); this.flipDragRaf = 0; }
+    // Leaving mid-swap would otherwise strand flipSnap true, and the next card you ever drag
+    // wouldn't animate; a stranded flipRising would pace the next fly-out like a float-up.
+    if (this.flipSnapRaf) { cancelAnimationFrame(this.flipSnapRaf); this.flipSnapRaf = 0; }
+    if (this.flipRiseTimer) { clearTimeout(this.flipRiseTimer); this.flipRiseTimer = 0; }
+    this.setState({
+      flipFlying: null, flipDX: 0, flipDY: 0, flipDragging: false,
+      flipSnap: false, flipRising: false
+    });
+  }
+
+  flipOpenDetail() {
+    const card = this.flipTopCard();
+    if (!card) return;
+    // goDetail sets tab directly rather than going through go(), so it doesn't get go()'s
+    // fly-out cleanup for free.
+    this.clearFlipTimers();
+    this.goDetail(card.char);
+  }
+
+  // Every artwork's counts plus this visitor's own votes, in one call, once. ~855 rows / ~35KB —
+  // per-key reads would leave the count pill blank under the user's thumb on every swipe. Kicked
+  // from both go('flip') and goDetail, since the detail hero's pills work without ever opening
+  // Flip.
+  loadArtStats() {
+    if (this.state.flipStats || this.state.flipStatsLoading) return;
+    if (!this.supabaseConfigured()) { this.setState({ flipStats: {} }); return; }
+    this.setState({ flipStatsLoading: true });
+    this.supabaseRpc('art_stats_all', { vid: this.visitorId() }).then(rows => {
+      const map = {};
+      (Array.isArray(rows) ? rows : []).forEach(r => {
+        map[r.art_key] = {
+          likes: Number(r.likes) || 0,
+          dislikes: Number(r.dislikes) || 0,
+          skips: Number(r.skips) || 0,
+          my_vote: r.my_vote == null ? null : Number(r.my_vote)
+        };
+      });
+      this.setState({ flipStats: map, flipStatsLoading: false });
+    });
+  }
+
+  sendArtVote(artKey, kind) {
+    const v = kind === 'like' ? 1 : kind === 'dislike' ? -1 : 0;
+    const bucket = f => (f === 1 ? 'likes' : f === -1 ? 'dislikes' : 'skips');
+
+    // Move the count locally first, so the pill is already right when the card flies out — the
+    // round-trip is far slower than the 260ms animation, and the server's answer overwrites this
+    // when it lands. Re-voting the same way is -1 then +1 on the same bucket = no change, which
+    // matches vote_art's own `if prev is distinct from v` no-op: the two sides agree by
+    // construction.
+    this.setState(s => {
+      const stats = { ...(s.flipStats || {}) };
+      const cur = stats[artKey] || { likes: 0, dislikes: 0, skips: 0, my_vote: null };
+      const next = { ...cur };
+      if (cur.my_vote != null) next[bucket(cur.my_vote)] = Math.max(0, next[bucket(cur.my_vote)] - 1);
+      next[bucket(v)] = next[bucket(v)] + 1;
+      next.my_vote = v;
+      stats[artKey] = next;
+      return { flipStats: stats };
+    });
+
+    if (!this.supabaseWritable()) return;
+    this.supabaseRpc('vote_art', { vid: this.visitorId(), akey: artKey, v: v }).then(data => {
+      const row = Array.isArray(data) ? data[0] : data;
+      if (!row || row.likes == null) return; // failed call: the optimistic value stands
+      this.setState(s => ({ flipStats: { ...(s.flipStats || {}), [artKey]: {
+        likes: Number(row.likes), dislikes: Number(row.dislikes), skips: Number(row.skips),
+        my_vote: row.my_vote == null ? null : Number(row.my_vote)
+      } } }));
+    });
   }
 
   // --- Units filter (ported from miaowm5's dialog/filterCharacter.svelte) ------------------
@@ -1698,6 +2165,9 @@ class Component extends DCLogic {
     this.clearAnimTimers();
     this.stopMusic();
     this.stopVoice();
+    // The hero art's vote pills read the same shared map the Flip deck does, and this screen is
+    // reachable without ever opening Flip — so kick the (once-per-session) fetch here too.
+    this.loadArtStats();
     const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
     this.setState({
       tab: 'detail', menuOpen: false,
@@ -2153,6 +2623,17 @@ class Component extends DCLogic {
       ? (emotionFaces.find(e => e.name === 'normal') || emotionFaces[0] || null)
       : null;
 
+    // The hero's Flip vote counts, read out of the same shared map the deck uses. The key tracks
+    // the awaken toggle, because base and awakened are separate artworks with separate votes.
+    // A dash until art_stats_all resolves, matching the top bar's pv/uv convention.
+    const detailArtKey = selectedChar
+      ? selectedChar.devName + ':' + (bustOnly ? 'bust' : this.state.artIndex)
+      : '';
+    const detailArtStat = (detailArtKey && this.state.flipStats) ? this.state.flipStats[detailArtKey] : null;
+    const detailArtNum = k => (this.state.flipStats && selectedChar)
+      ? String(detailArtStat ? detailArtStat[k] : 0)
+      : '—';
+
     // The encyclopedia's profile blocks, minus anything the bilibili wiki already says (the
     // pipeline de-dupes those), shown under the character-story intro.
     const wikiInfoBlocks = (wikiData && wikiData.info) || [];
@@ -2276,6 +2757,40 @@ class Component extends DCLogic {
       });
     const arcTabBg = id => (arcTab === id ? accent : '#F0F3F7');
 
+    // --- Flip (弹弹) --------------------------------------------------------------------------
+    const flipCard = this.flipDeck ? (this.flipDeck[this.state.flipIndex] || null) : null;
+    const flipNext = this.flipDeck ? (this.flipDeck[this.state.flipIndex + 1] || null) : null;
+    const flipDeckLen = this.flipDeck ? this.flipDeck.length : 0;
+    // Same resolution the detail hero uses for bustOnly characters, against the deck's own rolling
+    // cache rather than state.wikiData. Until the fetch lands the card shows the pixel sprite.
+    const flipEmotions = flipCard ? this.flipEmotionCache.get(flipCard.dev) : undefined;
+    const flipFace = (flipCard && flipCard.variant === 'bust' && Array.isArray(flipEmotions))
+      ? ((flipEmotions.filter(e => !isEmotionOverlay(e.name)).find(e => e.name === 'normal'))
+         || flipEmotions.filter(e => !isEmotionOverlay(e.name))[0] || null)
+      : null;
+    const flipEmotionDir = flipCard ? flipCard.folderUrl + '/emotion/' : '';
+    const flipShowBust = !!flipFace;
+    const flipStat = (flipCard && this.state.flipStats) ? this.state.flipStats[flipCard.key] : null;
+    const flipMyVote = flipStat ? flipStat.my_vote : null;
+    // A dash until art_stats_all resolves, matching the top bar's pv/uv convention.
+    const flipNum = k => (this.state.flipStats && flipCard)
+      ? String(flipStat ? flipStat[k] : 0)
+      : '—';
+
+    const fly = this.state.flipFlying;
+    let flipTX = this.state.flipDX, flipTY = this.state.flipDY;
+    let flipRot = this.state.flipDX / 18, flipOp = 1, flipScale = 1;
+    if (fly === 'like') { flipTX = 620; flipTY = 0; flipRot = 24; flipOp = 0; }
+    if (fly === 'dislike') { flipTX = -620; flipTY = 0; flipRot = -24; flipOp = 0; }
+    if (fly === 'skip') { flipTX = 0; flipTY = 900; flipRot = 0; flipOp = 0; }
+    // The swap frame (transition suppressed): sit exactly on top of the peek card, matching its
+    // transform. The card that just left is gone, and the incoming one is pixel-for-pixel where it
+    // already appeared to be — nothing moves. Clearing flipSnap next frame then restores the
+    // transition and this returns to scale 1 at y 0, which is the whole float-up: the card rises
+    // into place out of the stack instead of popping to full size.
+    if (this.state.flipSnap) { flipTX = 0; flipTY = FLIP_PEEK_Y; flipRot = 0; flipOp = 1; flipScale = FLIP_PEEK_SCALE; }
+    const clamp01 = n => Math.max(0, Math.min(1, n));
+
     const vals = {
       cardScaleTransform: 'scale(' + this.state.scale + ')',
       // Filling means the card's height is the viewport's, expressed in design px so the scale
@@ -2289,10 +2804,86 @@ class Component extends DCLogic {
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',
-      // 'story' has its own real screen now (the story archive), so it drops out of the
-      // under-construction placeholder that still backs art/music/arms.
-      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story',
+      // 'story' and 'flip' have their own real screens now (the story archive and the art-voting
+      // deck), so they drop out of the under-construction placeholder that still backs
+      // art/music/arms.
+      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story' && tab !== 'flip',
       isStory: tab === 'story',
+
+      // Flip (弹弹): the art-voting deck.
+      isFlip: tab === 'flip',
+      flipScreenTitle: this.t('flipScreenTitle'),
+      flipHintText: this.t('flipHint'),
+      flipTapHintText: this.t('flipTapHint'),
+      flipLoadingText: this.t('flipLoading'),
+      flipDoneText: this.t('flipDone'),
+      flipReshuffleText: this.t('flipReshuffle'),
+      // Three states, exactly one true: still waiting on the roster, out of cards, or a live card.
+      flipLoading: !this.flipDeck,
+      flipDone: !!this.flipDeck && !flipCard,
+      flipHasCard: !!flipCard,
+      flipProgressText: flipCard ? (flipDeckLen - this.state.flipIndex) + this.t('flipProgressSuffix') : '',
+      flipCardName: flipCard
+        ? ((this.state.lang === 'zh' && flipCard.char.zhName) ? flipCard.char.zhName : flipCard.char.enName)
+        : '',
+      flipCardRarityUrl: flipCard ? flipCard.char.rarityUrl : '',
+      flipCardRarityLabel: flipCard ? flipCard.char.rarityLabel : '',
+      flipCardVariantLabel: flipCard
+        ? (flipCard.variant === 'bust' ? this.t('flipVariantBust')
+           : flipCard.variant === '1' ? this.t('artAwakened') : this.t('artBase'))
+        : '',
+      // A bust card paints with the pixel sprite it already has, then swaps to the stacked bust
+      // once ensureFlipBust's wiki_zh.json fetch lands.
+      flipShowFullShot: !!(flipCard && flipCard.url),
+      flipFullShotUrl: flipCard ? flipCard.url : '',
+      flipShowBust: flipShowBust,
+      flipHasBustBase: !!(flipFace && flipFace.base),
+      flipBustBaseUrl: flipFace && flipFace.base ? flipEmotionDir + flipFace.base : '',
+      flipHasBustFront: !!(flipFace && flipFace.front),
+      flipBustFrontUrl: flipFace && flipFace.front ? flipEmotionDir + flipFace.front : '',
+      flipShowBustFallback: !!(flipCard && flipCard.variant === 'bust' && !flipShowBust),
+      flipBustFallbackUrl: flipCard ? flipCard.char.thumbUrl : '',
+      flipCardTransform: 'translate(' + flipTX + 'px, ' + flipTY + 'px) rotate(' + flipRot + 'deg) scale(' + flipScale + ')',
+      // Same idiom as sheetTransition: no transition while the finger owns it, an eased one
+      // otherwise — plus flipSnap, the one frame that drops the next card onto the peek without
+      // animating it (see the state field). The frame after that is the float-up, and it gets its
+      // own shorter duration: a 10px rise paced like a 620px fly-out would feel like a stall.
+      flipCardTransition: (this.state.flipDragging || this.state.flipSnap)
+        ? 'none'
+        : this.state.flipRising
+          ? 'transform ' + FLIP_RISE_MS + 'ms ease-out, opacity ' + FLIP_RISE_MS + 'ms ease-out'
+          : 'transform ' + FLIP_FLY_MS + 'ms ease-out, opacity ' + FLIP_FLY_MS + 'ms ease-out',
+      flipCardOpacity: flipOp,
+      flipLikeBadgeOpacity: clamp01(this.state.flipDX / FLIP_THRESHOLD_X),
+      flipDislikeBadgeOpacity: clamp01(-this.state.flipDX / FLIP_THRESHOLD_X),
+      flipSkipBadgeOpacity: clamp01(this.state.flipDY / FLIP_THRESHOLD_Y),
+      // The card behind, revealed as the top one leaves. Static — two cards in the DOM, never more.
+      // Built from the same constants the swap frame uses, so the two can't drift apart.
+      flipHasNext: !!(flipNext && flipNext.url),
+      flipNextFullShotUrl: flipNext ? flipNext.url : '',
+      flipPeekTransform: 'translate(0px, ' + FLIP_PEEK_Y + 'px) rotate(0deg) scale(' + FLIP_PEEK_SCALE + ')',
+      flipLikeCount: flipNum('likes'),
+      flipDislikeCount: flipNum('dislikes'),
+      flipSkipCount: flipNum('skips'),
+      flipLikeTitle: this.t('flipLike'),
+      flipDislikeTitle: this.t('flipDislike'),
+      flipSkipTitle: this.t('flipSkip'),
+      // The fallback buttons double as the "what did I pick" indicator, using the same
+      // accent-vs-#F0F3F7 pair the music and action pills use.
+      flipLikeBtnBg: flipMyVote === 1 ? accent : '#FFFFFF',
+      flipLikeBtnColor: flipMyVote === 1 ? '#FFFFFF' : '#F0526E',
+      flipDislikeBtnBg: flipMyVote === -1 ? accent : '#FFFFFF',
+      flipDislikeBtnColor: flipMyVote === -1 ? '#FFFFFF' : '#8A93A5',
+      flipSkipBtnBg: flipMyVote === 0 ? accent : '#FFFFFF',
+      flipSkipBtnColor: flipMyVote === 0 ? '#FFFFFF' : '#8A93A5',
+      flipPointerDown: (e) => this.flipPointerDown(e),
+      flipVoteLike: () => this.flipCommit('like'),
+      flipVoteDislike: () => this.flipCommit('dislike'),
+      flipVoteSkip: () => this.flipCommit('skip'),
+      flipOpenDetail: () => this.flipOpenDetail(),
+      flipReshuffle: () => this.reshuffleFlipDeck(),
+      goFlip: () => this.go('flip'),
+      navFlipLabel: this.t('navFlip'),
 
       // Story archive: list view
       arcShowList: !arcStory,
@@ -2386,7 +2977,6 @@ class Component extends DCLogic {
       navAboutLabel: this.t('navAbout'),
       navStoryLabel: this.t('navStory'),
       navGalleryLabel: this.t('navGallery'),
-      navCharactersLabel: this.t('navCharacters'),
       navMusicLabel: this.t('navMusic'),
       unitsScreenTitle: this.t('unitsScreenTitle'),
       loadingRosterText: this.t('loadingRoster'),
@@ -2454,6 +3044,16 @@ class Component extends DCLogic {
       bustBaseUrl: heroFace && heroFace.base ? emotionDir + heroFace.base : '',
       hasBustFront: !!(heroFace && heroFace.front),
       bustFrontUrl: heroFace && heroFace.front ? emotionDir + heroFace.front : '',
+      // Flip vote counts for whichever illustration the hero is showing (see detailArtStat above).
+      detailShowArtCounts: !!selectedChar,
+      // Clear of the awaken toggle + its label; bustOnly has neither, so the stack takes their y.
+      detailArtCountsTop: bustOnly ? 14 : 82,
+      detailArtLikeCount: detailArtNum('likes'),
+      detailArtDislikeCount: detailArtNum('dislikes'),
+      detailArtSkipCount: detailArtNum('skips'),
+      detailArtLikeTitle: this.t('flipLike'),
+      detailArtDislikeTitle: this.t('flipDislike'),
+      detailArtSkipTitle: this.t('flipSkip'),
       platformUrl0: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[0]) : '',
       platformUrl1: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[1]) : '',
       platformUrl2: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[2]) : '',
