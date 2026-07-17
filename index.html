@@ -224,14 +224,12 @@
             </sc-if>
           </div>
 
-          <!-- Filter button, at the list's top-left straddling the banner's bottom edge — the
-               same corner upstream puts it in (its ListBanner slot is left/bottom).
-               The position is wedged into the one gap that's actually free: the banner's section
-               icon ends at y=68 and the grid's first tile starts at y=101 with its portrait art
-               from x=38, so a 38px circle at (4,66) clears both. Moving or resizing it much in
-               any direction lands on the icon above or the first portrait below. -->
+          <!-- Filter button, top-right, pulled in from the edge so it sits over the screen area just
+               past the banner's slanted right corner. Its bottom edge (top:42 + 38px = y:80) lines up
+               with the white banner block's bottom edge (the banner spans y:14–80). The banner is only
+               82% wide and its right side is clipped inward, so this position stays clear of it. -->
           <sc-if value="{{ showFilterButton }}" hint-placeholder-val="{{ true }}">
-            <div onClick="{{ openFilter }}" style="position: absolute; left: 4px; top: 66px; z-index: 3; width: 38px; height: 38px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 0 rgba(62,68,80,0.25), 0 2px 8px rgba(30,80,110,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(1px);">
+            <div onClick="{{ openFilter }}" style="position: absolute; right: 10px; top: 42px; z-index: 3; width: 38px; height: 38px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 0 rgba(62,68,80,0.25), 0 2px 8px rgba(30,80,110,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(1px);">
               <img src="icons/filer.jpg" alt="{{ filterTitleText }}" style="width: 19px; height: 19px; object-fit: contain; mix-blend-mode: multiply;">
               <sc-if value="{{ hasFilterCount }}" hint-placeholder-val="{{ false }}">
                 <div style="position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; border-radius: 8px; background: #F0526E; color: #FFFFFF; font-size: 9px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 0 rgba(62,68,80,0.25);">{{ filterCount }}</div>
@@ -744,8 +742,24 @@
           <div style="width: 78%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding-right: 0;">
             <sc-for list="{{ menuItems }}" as="mi" hint-placeholder-count="6">
               <button onClick="{{ mi.onClick }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 999px 0 0 999px; padding: 10px 14px 10px 10px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 0 rgba(30,50,70,0.2); font-family: inherit; text-align: left; margin-left: 18px;" style-hover="transform: translateX(-6px);">
+                <!-- Each entry's own white pixel icon (mirrors its bottom-nav glyph), so the
+                     menu isn't five copies of the same drawing. -->
                 <div style="width: 46px; height: 46px; flex: none; border-radius: 50%; background: {{ mi.color }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
-                  <svg width="22" height="22" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="1" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="2" y="4" width="4" height="2" fill="#FFFFFF"></rect><rect x="3" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
+                  <sc-if value="{{ mi.isUnits }}" hint-placeholder-val="{{ true }}">
+                    <svg width="22" height="22" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="3" y="1" width="4" height="4" fill="#FFFFFF"></rect><rect x="2" y="6" width="6" height="3" fill="#FFFFFF"></rect></svg>
+                  </sc-if>
+                  <sc-if value="{{ mi.isArms }}" hint-placeholder-val="{{ false }}">
+                    <svg width="22" height="22" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="8" width="1" height="1" fill="#FFFFFF"></rect><rect x="2" y="8" width="1" height="1" fill="#FFFFFF"></rect><rect x="2" y="7" width="1" height="1" fill="#FFFFFF"></rect><rect x="3" y="7" width="1" height="1" fill="#FFFFFF"></rect><rect x="3" y="6" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="6" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="5" width="1" height="1" fill="#FFFFFF"></rect><rect x="5" y="5" width="1" height="1" fill="#FFFFFF"></rect><rect x="6" y="3" width="1" height="1" fill="#FFFFFF"></rect><rect x="7" y="2" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="3" width="1" height="1" fill="#FFFFFF"></rect><rect x="5" y="4" width="1" height="1" fill="#FFFFFF"></rect><rect x="6" y="5" width="1" height="1" fill="#FFFFFF"></rect><rect x="8" y="1" width="1" height="1" fill="#FFFFFF"></rect></svg>
+                  </sc-if>
+                  <sc-if value="{{ mi.isStory }}" hint-placeholder-val="{{ false }}">
+                    <svg width="22" height="22" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="2" width="3" height="6" fill="#FFFFFF"></rect><rect x="6" y="2" width="3" height="6" fill="#FFFFFF"></rect><rect x="4" y="3" width="2" height="4" fill="#FFFFFF"></rect></svg>
+                  </sc-if>
+                  <sc-if value="{{ mi.isArt }}" hint-placeholder-val="{{ false }}">
+                    <svg width="22" height="22" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="1" width="8" height="1" fill="#FFFFFF"></rect><rect x="1" y="8" width="8" height="1" fill="#FFFFFF"></rect><rect x="1" y="2" width="1" height="6" fill="#FFFFFF"></rect><rect x="8" y="2" width="1" height="6" fill="#FFFFFF"></rect><rect x="6" y="3" width="1" height="1" fill="#FFFFFF"></rect><rect x="4" y="5" width="2" height="2" fill="#FFFFFF"></rect><rect x="3" y="6" width="1" height="1" fill="#FFFFFF"></rect><rect x="6" y="6" width="1" height="1" fill="#FFFFFF"></rect></svg>
+                  </sc-if>
+                  <sc-if value="{{ mi.isMusic }}" hint-placeholder-val="{{ false }}">
+                    <svg width="22" height="22" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="5" y="1" width="2" height="6" fill="#FFFFFF"></rect><rect x="3" y="6" width="3" height="3" fill="#FFFFFF"></rect><rect x="7" y="1" width="2" height="2" fill="#FFFFFF"></rect></svg>
+                  </sc-if>
                 </div>
                 <div style="flex: 1;">
                   <div style="font-size: 16px; font-weight: 900; color: #3E4450;">{{ mi.label }}</div>
@@ -769,7 +783,9 @@
         <span style="font-size: 10px; font-weight: 800;">{{ tabUnitsLabel }}</span>
       </button>
       <button onClick="{{ goArms }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgArms }}; color: {{ tabColArms }};">
-        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="6" y="1" width="3" height="1" fill="currentColor"></rect><rect x="7" y="1" width="1" height="4" fill="currentColor"></rect><rect x="1" y="6" width="2" height="1" fill="currentColor"></rect><rect x="2" y="5" width="5" height="3" fill="currentColor"></rect><rect x="6" y="4" width="2" height="2" fill="currentColor"></rect></svg>
+        <!-- Pixel sword (🗡), tilted: 2px-wide blade tip low-left → hilt high-right. currentColor
+             blade + grip, gold crossguard quillons + pommel. -->
+        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="8" width="1" height="1" fill="currentColor"></rect><rect x="2" y="8" width="1" height="1" fill="currentColor"></rect><rect x="2" y="7" width="1" height="1" fill="currentColor"></rect><rect x="3" y="7" width="1" height="1" fill="currentColor"></rect><rect x="3" y="6" width="1" height="1" fill="currentColor"></rect><rect x="4" y="6" width="1" height="1" fill="currentColor"></rect><rect x="4" y="5" width="1" height="1" fill="currentColor"></rect><rect x="5" y="5" width="1" height="1" fill="currentColor"></rect><rect x="6" y="3" width="1" height="1" fill="currentColor"></rect><rect x="7" y="2" width="1" height="1" fill="currentColor"></rect><rect x="4" y="3" width="1" height="1" fill="#FFD35C"></rect><rect x="5" y="4" width="1" height="1" fill="#FFD35C"></rect><rect x="6" y="5" width="1" height="1" fill="#FFD35C"></rect><rect x="8" y="1" width="1" height="1" fill="#FFD35C"></rect></svg>
         <span style="font-size: 10px; font-weight: 800;">{{ tabArmsLabel }}</span>
       </button>
       <button onClick="{{ goStory }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgStory }}; color: {{ tabColStory }};">
@@ -2001,6 +2017,11 @@ class Component extends DCLogic {
       toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
       closeMenu: () => this.setState({ menuOpen: false }),
       menuItems: menuOrder.map(id => ({
+        isUnits: id === 'units',
+        isArms:  id === 'arms',
+        isStory: id === 'story',
+        isArt:   id === 'art',
+        isMusic: id === 'music',
         label: this.sections[id].label,
         sub: this.sections[id].desc,
         color: this.sections[id].color,
