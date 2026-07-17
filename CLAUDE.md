@@ -11,8 +11,8 @@ browser.
 
 ## Data pipelines (dev-only scripts)
 
-Two sources feed `Character Assets/`: the bilibili wiki (text) and miaowm5 (art + extra data).
-Rules that apply across both:
+Two sources feed `Character Assets/`: the bilibili wiki (text) and miaowm5 (art + extra data —
+both the per-character pipeline and the main-story pipeline). Rules that apply across all of them:
 
 - **Byte-stability.** All writes go through `writeIfChanged`/`writeJsonIfChanged`; a no-op re-run
   produces zero diff. Nothing carries a per-run timestamp (`story_zh.json`'s `generatedAt` is
@@ -43,8 +43,15 @@ matched by `enName` into `wiki_en.json`.
 miaowm5 is an open-source Svelte SPA (github.com/miaowm5/wf-encyclopedia) serving structured JSON
 from public CDNs, keyed by `devName` — the same key `roster.json` uses, so matching is exact.
 **No HTML scraping**: `scripts/fetch-miaowm5.mjs` fetches the site's own JSON and decodes it with
-ports of the site's parsing logic (`scripts/lib/miaowm5-common.mjs`). When changing a decoder,
-check it against the upstream source, not the raw columns.
+ports of the site's parsing logic (`scripts/lib/miaowm5-common.mjs` for CDNs/atlas/canvas helpers,
+`scripts/lib/miaowm5-story.mjs` for the story decoders shared with the main-story pipeline). When
+changing a decoder, check it against the upstream source, not the raw columns.
+
+Four CDN hosts, and the alias names deliberately don't match the host numbers (that mapping is read
+off the deployed bundle, so keep the names and values together in `miaowm5-common.mjs`): `CDN_A` =
+cdn4 host (`res/*` atlases, `ui/`, header backgrounds), `CDN_B` = cdn host (pixel/head atlases,
+`orb/`, `gallery/`), `CDN_C` = cdn2 host (`orderedmap/*` tables — `ORDEREDMAP`), `CDN_D` = cdn3 host
+(`filelist.json` + the BGM mp3s it lists).
 
 `npm run fetch:miaowm5` (flags: `--force`, `--limit=N`, `--only=devName,...`, `--new-chars`) is
 resumable: HTTP responses cache under `scripts/.miaowm5-cache/` (gitignored), per-character
@@ -126,12 +133,61 @@ them; it resolves paths relative to `Character Assets/`). Same delete-before-reg
 - `circle.png` — the magic-circle backdrop, written by `buildMagicCircle`: a standalone file on
   `CDN_A` (`ui/circle.png`), copied byte-for-byte, no atlas decoding.
 
+### main-story pipeline (`scripts/fetch-main-story.mjs`)
+
+`npm run fetch:story` (flags: `--force`, `--limit=N`, `--only=slug,...`, `--skip-bgm`) is the same
+source and the same rules as above, but iterates **stories** rather than characters, so it's a
+separate script with no per-target resume manifest — the disk cache + skip-if-exists are the resume
+mechanism. It writes everything under `Character Assets/story/` (all of it ships to R2) and drives
+the Story tab. Current scrape: 42 stories, ~18.5k dialogue lines, 708 BGM mp3s — **~970MB total,
+~900MB of it BGM**, which is what `--skip-bgm` exists for (a metadata-only iteration takes ~1 min
+against a warm cache; the mp3 pull is the slow part and the R2 storage cost).
+
+Everything it needs is keyed off two tables: `encyclopedia.json` (story entries: `[4]` = 3 main /
+4 event / 5 prologue, `[13]` picks the event's quest bucket, `[12]`/`[14]` the storyID, `[16]` the
+header art, `[1]` the eventID) and `quest/normal_quest.json` (the episode list, `{title:[0],
+desc:[1], path:[4]}`). Traps worth knowing:
+
+- **`extra_quest.json` stories are a second list.** Upstream's /story page = encyclopedia stories
+  (key order) **then** `advent_event_quest` **then** `story_event_single_quest`; it doesn't dedupe.
+  Extras carry no encyclopedia info blocks, so they have **no info tab** and open on the episode
+  list — that's upstream's own behaviour, not a gap. Their slugs are `extra_adv_<id>` /
+  `extra_single_<id>`; encyclopedia stories use their `eventID` as the slug.
+- **Episodes are stored per quest bucket, not per story** (`story/episodes/<qkey>/<id>/<n>.json`,
+  `qkey` ∈ `main_quest|event_world|event_single|event_adv`), because an encyclopedia event and its
+  extra-quest twin resolve to the same bucket+id and should share one set of files.
+- **Prologue is the scenario decoder's special case.** `main_chapter_00` files store *one row per
+  index key* instead of an array of rows; `buildStoryDialogs`'s `opts.special` wraps them (upstream
+  does the same via `parse(config[path], true)`). Miss it and the prologue silently decodes empty.
+  Both that flag and `opts.captureBgm` default **off** so the character pipeline's existing
+  `story_zh.json` files stay byte-identical.
+- **`equipment.json` is not double-wrapped** like `encyclopedia` — its value *is* the row array, so
+  the chapter orb card is `equipment[100000+chapter][<firstIdx>]`, name `[1]` / desc `[5]`. Indexing
+  one level deeper silently yields single characters of the first column.
+- **BGM buckets** (ported from upstream's `music_list` handler): world tracks group by their top
+  folder (`world_grass`), event tracks by `event/<id>/` (advent by the *third* segment). A story's
+  tracks = `bgmRule.story[eventID] || [eventID]`, resolved against `world[ids[0]]` for main/prologue
+  and concatenated `event[id]` for events. mp3 URL = `CDN_D + <filelist path>`.
+- `bgmRule.json` / `extraGallery.json` are **fetched from the upstream repo** at scrape time
+  (raw.githubusercontent, through the disk cache) rather than vendored — they gain entries with
+  every new event.
+- `category` (`main`/`event`/`collab`) is stamped per story for the Story tab's filter: main +
+  prologue → `main`, eventID matching `/collabo?/i` → `collab`, else `event`. Verified against live
+  data (all 8 collabs match, no regular event does); `CATEGORY_OVERRIDES` in the script is the
+  escape hatch if a future event misclassifies.
+- **Story-only NPC portraits are shared with the character pipeline.** `buildStoryHeads` /
+  `collectStorySpeakers` live in `scripts/lib/miaowm5-story.mjs` and scan **both**
+  `rarityN/*/story_zh.json` and `story/episodes/**/*.json` off disk, so whichever pipeline runs last
+  writes the union and neither shrinks `story_heads.json` (61 NPCs currently). ~13% of story lines
+  are spoken by devs with no sprite in the `head` atlas (`alk_smr21`, `stella_copy_name`, …) — the
+  game's own data; they keep a plain name plate.
+
 ## Commands
 
 - `npm run upload:assets` — uploads `Character Assets/` to Cloudflare R2 (`wf-assets`) via
   `scripts/upload-to-r2.mjs`. Needs `npx wrangler login` once (or `CLOUDFLARE_API_TOKEN` /
   `CLOUDFLARE_ACCOUNT_ID`). Ships only `roster.json`, `story_heads.json`, `rarityN/`,
-  `story_heads/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`); dev-only files are excluded.
+  `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`); dev-only files are excluded.
   Resumes via `scripts/.r2-upload-manifest.json`; `--force` re-uploads everything.
 - No lint/test/build commands exist.
 
@@ -183,6 +239,38 @@ The **Units** tab fetches `roster.json` once (`componentDidMount`), **sorts** it
 then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `devName` — the
 file's own order is just append history), and paginates client-side (`ROSTER_BATCH` = 60 per
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view.
+
+`isSection` is the under-construction placeholder that still backs art/music/arms; `units`,
+`detail` and `story` are excluded from it because they have real screens.
+
+#### Story tab (the story archive)
+
+A port of miaowm5's `/story`, fed by the main-story pipeline above. Everything is `arc`-prefixed
+(state, handlers, `renderVals` keys) so none of it collides with the **character sheet's own story
+panel**, which is a different feature — read the prefix before assuming which one a key belongs to.
+
+- **Navigation** is state, not a router: `arcStory` null = the banner list, set = the detail;
+  `arcTab` (`info|story|gallery|bgm`) picks the panel; `arcEpisodeIndex` non-null = the reader
+  rather than the episode list. Back goes reader → episodes → detail → list.
+- **Three lazy fetch tiers**, each cached and each guarded against navigating away mid-flight:
+  `story/index.json` once on first `go('story')`, `story/detail/<slug>.json` per story
+  (`arcDetailCache`), one episode file per episode (`arcEpisodeCache`). Episode dialogue is the
+  bulk of the data, so it never loads until an episode is actually opened.
+- **Tab icons are the committed `icons/small-*.png`** (profile → info, story-book → episodes, book
+  → gallery, speaker → BGM), *not* upstream's atlas sprites — a deliberate choice. Tabs render
+  conditionally: no info tab without `desc` (extras), no gallery without orb/images, no BGM without
+  tracks.
+- **The reader has no "viewed character"**, so unlike the character sheet's dialogue rows every
+  speaker resolves through `headUrlForSpeaker()` (roster `head.png` → `story_heads/` → plain name
+  plate) and no emotion art is used. Both readers share that helper. The avatar is a rounded square,
+  not a circle — `head.png`'s corner badge would be clipped.
+- `{marker:'bgm'}` rows are filtered out of the reader (data-only for now, kept for a future
+  "now playing" feature).
+- **BGM plays through the same single `this.audio`** as the character theme pills, so the two can
+  never overlap — which is why `go()`, `goDetail()` and `closeArcStory()` all stop it and clear
+  `arcBgmPlaying`, and the `ended` handler clears both playing flags.
+- The category chip row (全部/主线/活动/联动) filters on the `category` the pipeline stamps;
+  single-select, `all` inert. `ARC_CATEGORIES` is the table.
 
 #### Units filter
 
@@ -291,8 +379,11 @@ suffix convention (`enName`/`jpName`/`zhName`), not nesting.
 `ASSET_BASE` switches on how the page is served: `file://`/`localhost` → local
 `Character Assets/`; anything else → the public Cloudflare R2 bucket. **Check both branches when
 changing asset references.** `Character Assets/`, `WF OST/`, and `node_modules/` are gitignored;
-only `roster.json`, `story_heads.json`, `rarityN/*`, and `story_heads/*` reach R2 — any new asset
-type must be added to `upload-to-r2.mjs`'s include rules or it silently never ships.
+only `roster.json`, `story_heads.json`, `rarityN/*`, `story_heads/*`, and `story/*` reach R2 — any
+new asset type must be added to `upload-to-r2.mjs`'s include rules or it silently never ships.
+Every path inside `story/index.json` and `story/detail/*.json` is stored relative to
+`Character Assets/` (i.e. it mirrors the R2 key), so `ASSET_BASE + '/' + p` resolves on both
+branches with no per-branch special-casing.
 
 `roster.json` entries carry `devName`, `enName`, `jpName`, `rarity`, `attribute`, `thumb`,
 optional `music` (mp3 filenames, ~150 characters), `hasHead` (the `head.png` URL is derived from

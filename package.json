@@ -6,7 +6,8 @@
     "upload:assets": "node scripts/upload-to-r2.mjs",
     "scrape:wiki-zh": "node scripts/scrape-wiki-zh.mjs",
     "match:wiki-zh": "node scripts/match-wiki-to-roster.mjs",
-    "fetch:miaowm5": "node scripts/fetch-miaowm5.mjs"
+    "fetch:miaowm5": "node scripts/fetch-miaowm5.mjs",
+    "fetch:story": "node scripts/fetch-main-story.mjs"
   },
   "devDependencies": {
     "cheerio": "^1.2.0",

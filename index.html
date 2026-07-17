@@ -709,6 +709,219 @@
         </div>
       </sc-if>
 
+      <!-- ===== STORY ARCHIVE (main / event / collab story browser, ported from miaowm5's
+           /story). List of banner tiles -> per-story detail with four round tab buttons. ===== -->
+      <sc-if value="{{ isStory }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column;">
+
+          <!-- ---- Story list ---- -->
+          <sc-if value="{{ arcShowList }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+              <!-- Section banner, same strip the placeholder screens use -->
+              <div style="flex: none; position: relative; margin: 14px 0 0 -6px; width: 82%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12); display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; flex: none; background: {{ sectionColor }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+                  <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="6" height="8" fill="#FFFFFF"></rect><rect x="3" y="3" width="4" height="1" fill="{{ sectionColor }}"></rect><rect x="3" y="5" width="4" height="1" fill="{{ sectionColor }}"></rect></svg>
+                </div>
+                <div>
+                  <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">{{ sectionLabel }}</div>
+                  <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ sectionDesc }}</div>
+                </div>
+              </div>
+
+              <!-- Category chips: 全部 / 主线 / 活动 / 联动 -->
+              <div style="flex: none; display: flex; gap: 6px; padding: 12px 14px 6px;">
+                <sc-for list="{{ arcCategoryChips }}" as="ac" hint-placeholder-count="4">
+                  <button onClick="{{ ac.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ ac.bg }}; border-radius: 999px; padding: 7px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ ac.label }}</button>
+                </sc-for>
+              </div>
+
+              <div id="story-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px 20px;">
+                <sc-if value="{{ arcIndexLoading }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcLoadingIndexText }}</div>
+                </sc-if>
+                <sc-if value="{{ arcIndexError }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcIndexErrorText }}</div>
+                </sc-if>
+                <sc-if value="{{ arcNoStories }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcNoStoriesText }}</div>
+                </sc-if>
+                <sc-for list="{{ arcStoryItems }}" as="si" hint-placeholder-count="4">
+                  <div onClick="{{ si.onClick }}" style="cursor: pointer; margin-bottom: 12px; border: 4px solid #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 1px 1px 5px rgba(0,0,0,0.5);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
+                    <!-- Banner sprite when the atlas had one; otherwise a text tile, upstream's
+                         own fallback for events whose banner art was never shipped. -->
+                    <sc-if value="{{ si.hasBanner }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ si.bannerUrl }}" alt="{{ si.title }}" loading="lazy" style="display: block; width: 100%; aspect-ratio: 1000 / 184; object-fit: cover; background: #EAEAEA;">
+                    </sc-if>
+                    <sc-if value="{{ si.noBanner }}" hint-placeholder-val="{{ false }}">
+                      <div style="width: 100%; aspect-ratio: 1000 / 184; background: #EAEAEA; display: flex; align-items: center; justify-content: center; padding: 0 12px;">
+                        <span style="font-size: 13px; font-weight: 900; color: #3E4450; text-align: center;">{{ si.title }}</span>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ---- Story detail ---- -->
+          <sc-if value="{{ arcShowDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+              <!-- Header band: the encyclopedia header art, with the title over it. Extras have
+                   no header art and fall back to the section colour. -->
+              <div style="flex: none; position: relative; height: 132px; background-color: {{ sectionColor }}; background-image: {{ arcHeaderUrl }}; background-size: cover; background-position: center 60%;">
+                <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45) 100%);"></div>
+                <button onClick="{{ arcBackToStoriesBtn }}" style="position: absolute; left: 10px; top: 10px; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #3E4450; background: rgba(255,255,255,0.92); border-radius: 999px; padding: 6px 12px; box-shadow: 0 2px 0 rgba(62,68,80,0.25);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.25);">‹ {{ arcBackToStoriesLabel }}</button>
+                <div style="position: absolute; left: 12px; right: 12px; bottom: 10px; font-size: 17px; font-weight: 900; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.6);">{{ arcTitle }}</div>
+              </div>
+
+              <!-- Panel switcher: info / episodes / gallery / BGM -->
+              <div style="flex: none; display: flex; justify-content: flex-end; gap: 7px; padding: 8px 12px 4px;">
+                <sc-if value="{{ arcHasInfoTab }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ setArcInfoTab }}" style="border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ arcTabInfoBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                    <img src="icons/small-profile.png" alt="{{ arcTabInfoLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated;">
+                  </button>
+                </sc-if>
+                <button onClick="{{ setArcStoryTab }}" style="border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ arcTabStoryBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                  <img src="icons/small-story-book.png" alt="{{ arcTabStoryLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated;">
+                </button>
+                <sc-if value="{{ arcHasGalleryTab }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ setArcGalleryTab }}" style="border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ arcTabGalleryBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                    <img src="icons/small-book.png" alt="{{ arcTabGalleryLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated;">
+                  </button>
+                </sc-if>
+                <sc-if value="{{ arcHasBgmTab }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ setArcBgmTab }}" style="border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: {{ arcTabBgmBg }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                    <img src="icons/small-speaker.png" alt="{{ arcTabBgmLabel }}" style="width: 28px; height: 28px; image-rendering: pixelated;">
+                  </button>
+                </sc-if>
+              </div>
+
+              <div id="story-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 24px;">
+                <sc-if value="{{ arcDetailLoading }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcLoadingDetailText }}</div>
+                </sc-if>
+
+                <!-- info: 情报 + 关联角色 + 关键词 -->
+                <sc-if value="{{ arcShowInfo }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ arcInfoTitleLabel }}</div>
+                    <sc-for list="{{ arcInfoBlocks }}" as="ab" hint-placeholder-count="2">
+                      <div style="background: #FFFFFF; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.6;">{{ ab.text }}</div>
+                    </sc-for>
+
+                    <sc-if value="{{ arcHasRelatedChars }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top: 16px;">
+                        <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ relatedCharsTitleLabel }}</div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                          <sc-for list="{{ arcRelatedChars }}" as="ar" hint-placeholder-count="4">
+                            <div onClick="{{ ar.onClick }}" style="width: 64px; cursor: {{ ar.cursor }}; opacity: {{ ar.opacity }}; text-align: center;">
+                              <sc-if value="{{ ar.hasThumb }}" hint-placeholder-val="{{ true }}">
+                                <img src="{{ ar.thumbUrl }}" alt="{{ ar.name }}" loading="lazy" style="width: 64px; height: 64px; border-radius: 12px; object-fit: cover; background: #F0F3F7;">
+                              </sc-if>
+                              <sc-if value="{{ ar.noThumb }}" hint-placeholder-val="{{ false }}">
+                                <div style="width: 64px; height: 64px; border-radius: 12px; background: #F0F3F7; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; color: #D8DEE8;">?</div>
+                              </sc-if>
+                              <div style="font-size: 10px; font-weight: 700; color: #3E4450; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ ar.name }}</div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ arcHasRelatedKeywords }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-top: 16px;">
+                        <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ relatedKeywordsTitleLabel }}</div>
+                        <sc-for list="{{ arcRelatedKeywords }}" as="ak" hint-placeholder-count="2">
+                          <div style="background: #F7F9FC; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; margin-bottom: 2px;">{{ ak.title }}</div>
+                            <div style="font-size: 11px; font-weight: 600; color: #8A93A5; white-space: pre-line; line-height: 1.45;">{{ ak.desc }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <!-- episodes list -->
+                <sc-if value="{{ arcShowEpisodes }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ arcEpisodesTitleLabel }}</div>
+                    <sc-if value="{{ arcHasEpisodes }}" hint-placeholder-val="{{ true }}">
+                      <sc-for list="{{ arcEpisodeItems }}" as="ae" hint-placeholder-count="3">
+                        <div onClick="{{ ae.onClick }}" style="cursor: pointer; background: #F7F9FC; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
+                          <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; margin-bottom: 2px;">{{ ae.title }}</div>
+                          <div style="font-size: 11px; font-weight: 600; color: #8A93A5; white-space: pre-line; line-height: 1.45;">{{ ae.desc }}</div>
+                        </div>
+                      </sc-for>
+                    </sc-if>
+                    <sc-if value="{{ arcHasNoEpisodes }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ arcNoEpisodesText }}</div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <!-- episode reader -->
+                <sc-if value="{{ arcShowReader }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                      <button onClick="{{ arcBackToEpisodesBtn }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #3E4450; background: #F0F3F7; border-radius: 999px; padding: 6px 12px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">‹ {{ arcBackLabel }}</button>
+                      <div style="flex: 1; min-width: 0; font-size: 12.5px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ arcReaderTitle }}</div>
+                    </div>
+                    <sc-if value="{{ arcEpisodeLoading }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ arcLoadingEpisodeText }}</div>
+                    </sc-if>
+                    <!-- The avatar is a rounded square, not a circle: head.png carries its element
+                         badge in a corner, which a circle would clip. -->
+                    <sc-for list="{{ arcDialogRows }}" as="ad" hint-placeholder-count="4">
+                      <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px;">
+                        <sc-if value="{{ ad.hasAvatar }}" hint-placeholder-val="{{ true }}">
+                          <img src="{{ ad.headUrl }}" alt="{{ ad.speaker }}" loading="lazy" style="flex: none; width: 40px; height: 40px; border-radius: 8px; object-fit: contain; background: #F0F3F7;">
+                        </sc-if>
+                        <div style="flex: 1; min-width: 0;">
+                          <span style="display: inline-block; font-size: 10.5px; font-weight: 900; color: #FFFFFF; background: {{ ad.color }}; border-radius: 999px; padding: 2px 10px; margin-bottom: 3px;">{{ ad.speaker }}</span>
+                          <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.5;">{{ ad.text }}</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                    <button onClick="{{ arcBackToEpisodesBtn }}" style="width: 100%; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 12px; color: #3E4450; background: #F0F3F7; border-radius: 12px; padding: 11px 12px; margin-top: 6px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">‹ {{ arcBackToEpisodesLabel }}</button>
+                  </div>
+                </sc-if>
+
+                <!-- gallery: chapter orb art + its name/desc card, then the event image set -->
+                <sc-if value="{{ arcShowGallery }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ arcGalleryTitleLabel }}</div>
+                    <sc-if value="{{ arcHasOrb }}" hint-placeholder-val="{{ true }}">
+                      <div style="margin-bottom: 10px;">
+                        <img src="{{ arcOrbUrl }}" alt="{{ arcOrbName }}" loading="lazy" style="display: block; width: 100%; border-radius: 12px; background: #EAEAEA;">
+                        <div style="background: #FFFFFF; border-radius: 12px; padding: 10px 12px; margin-top: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);">
+                          <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; margin-bottom: 2px;">{{ arcOrbName }}</div>
+                          <div style="font-size: 11px; font-weight: 600; color: #8A93A5; white-space: pre-line; line-height: 1.45;">{{ arcOrbDesc }}</div>
+                        </div>
+                      </div>
+                    </sc-if>
+                    <sc-for list="{{ arcGalleryImages }}" as="ag" hint-placeholder-count="2">
+                      <img src="{{ ag.url }}" alt="{{ arcTitle }}" loading="lazy" style="display: block; width: 100%; border-radius: 12px; margin-bottom: 10px; background: #EAEAEA;">
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <!-- BGM pills -->
+                <sc-if value="{{ arcShowBgm }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ arcBgmTitleLabel }}</div>
+                    <sc-for list="{{ arcBgmTracks }}" as="at" hint-placeholder-count="3">
+                      <button onClick="{{ at.onClick }}" style="display: block; width: 100%; text-align: left; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ at.bg }}; border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">{{ at.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
       <!-- ===== SECTION SCREENS (nav shell placeholders) ===== -->
       <sc-if value="{{ isSection }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto;">
@@ -1006,6 +1219,26 @@ const STRINGS = {
   overlaySunglass: { en: 'Sunglasses', zh: '墨镜' },
   overlayEffect: { en: 'Effect', zh: '特效' },
   storyBackToList: { en: 'Back to episode list', zh: '返回剧情列表' },
+  // Story archive (the Story tab: main/event/collab story browser)
+  arcLoadingIndex: { en: 'Loading stories…', zh: '剧情加载中…' },
+  arcIndexError: { en: 'Failed to load stories', zh: '剧情加载失败' },
+  arcNoStories: { en: 'No stories match this filter', zh: '没有符合条件的剧情' },
+  arcFilterAll: { en: 'All', zh: '全部' },
+  arcFilterMain: { en: 'Main', zh: '主线' },
+  arcFilterEvent: { en: 'Event', zh: '活动' },
+  arcFilterCollab: { en: 'Collab', zh: '联动' },
+  arcTabInfo: { en: 'Info', zh: '情报' },
+  arcTabStory: { en: 'Episodes', zh: '剧情' },
+  arcTabGallery: { en: 'Gallery', zh: '画廊' },
+  arcTabBgm: { en: 'Music', zh: '音乐' },
+  arcInfoTitle: { en: 'Info', zh: '情报' },
+  arcEpisodesTitle: { en: 'Episodes', zh: '剧情' },
+  arcGalleryTitle: { en: 'Gallery', zh: '画廊' },
+  arcBgmTitle: { en: 'Music', zh: '相关音乐' },
+  arcLoadingDetail: { en: 'Loading…', zh: '加载中…' },
+  arcLoadingEpisode: { en: 'Loading episode…', zh: '剧情加载中…' },
+  arcNoEpisodes: { en: 'No episodes available yet.', zh: '暂无剧情数据。' },
+  arcBackToStories: { en: 'Stories', zh: '剧情列表' },
   actionIntoCoffin: { en: 'Down', zh: '倒下' },
   actionGhostRaise: { en: 'Ghost', zh: '化灵' },
   actionGhostNeutral: { en: 'Spirit', zh: '灵体' },
@@ -1015,6 +1248,16 @@ const STRINGS = {
     zh: '剧情 / 表情 / 像素数据来源：worldflipper.miaowm5.com'
   }
 };
+
+// The Story tab's category filter. Every story in story/index.json carries a `category` stamped
+// by fetch-main-story.mjs: main = the numbered chapters + prologue, collab = the tie-in events,
+// event = everything else. Single-select; 'all' is the inert default.
+const ARC_CATEGORIES = [
+  { id: 'all', labelKey: 'arcFilterAll' },
+  { id: 'main', labelKey: 'arcFilterMain' },
+  { id: 'event', labelKey: 'arcFilterEvent' },
+  { id: 'collab', labelKey: 'arcFilterCollab' }
+];
 
 // Pixel actions the site has always shipped (rendered by the stage + the Skill/Special
 // buttons); anything else in wiki_zh.json's `pixelActions` is an extra the miaowm5 pipeline
@@ -1097,6 +1340,13 @@ class Component extends DCLogic {
     wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
     storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
     emotionOverlays: [],
+    // Story archive (the Story tab). `arc` prefix throughout so none of it collides with the
+    // character sheet's own story panel above. arcStory null = the list view; arcEpisodeIndex
+    // non-null = the reader rather than the episode list.
+    arcIndex: null, arcIndexLoading: false, arcIndexError: null, arcCategory: 'all',
+    arcStory: null, arcDetail: null, arcDetailLoading: false, arcTab: 'info',
+    arcEpisodeIndex: null, arcEpisode: null, arcEpisodeLoading: false,
+    arcBgmIndex: 0, arcBgmPlaying: false,
     // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
     // where we deliberately don't count) — renderVals shows a dash in that case.
     pv: null, uv: null,
@@ -1116,6 +1366,12 @@ class Component extends DCLogic {
   // for these speakers just appear a beat later. Only devs the pipeline actually exported a
   // portrait for are present, so a hit is safe to render without a broken-image guard.
   storyHeads = {};
+
+  // Story-archive fetch caches, keyed by slug / episode file path. Revisiting a story or an
+  // episode is then instant, and the three-tier lazy fetch (index → detail → episode) never
+  // re-requests what it already has.
+  arcDetailCache = new Map();
+  arcEpisodeCache = new Map();
 
   loadLang() {
     try {
@@ -1271,7 +1527,9 @@ class Component extends DCLogic {
     window.addEventListener('orientationchange', onResize);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', onResize);
 
-    this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false }));
+    // One audio element serves both the character theme pills and the story-archive BGM pills,
+    // so a finished track has to clear whichever "playing" flag is showing.
+    this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false, arcBgmPlaying: false }));
     this.voiceAudio.addEventListener('ended', () => this.setState({ voicePlaying: false }));
 
     // The units strip scrolls on its x axis only, and a mouse wheel emits deltaY, which
@@ -1301,8 +1559,12 @@ class Component extends DCLogic {
 
   go(tab) {
     if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopMusic(); this.stopVoice(); }
-    this.setState({ tab: tab, menuOpen: false });
+    // The story archive plays its BGM through the same audio element, so leaving it must stop
+    // the track rather than let it follow you into another tab.
+    if (this.state.tab === 'story' && tab !== 'story') this.stopMusic();
+    this.setState({ tab: tab, menuOpen: false, arcBgmPlaying: false });
     if (tab === 'units') this.restoreUnitsScroll();
+    if (tab === 'story') this.loadArcIndex();
   }
 
   // --- Units filter (ported from miaowm5's dialog/filterCharacter.svelte) ------------------
@@ -1388,7 +1650,9 @@ class Component extends DCLogic {
       musicIndex: 0, musicPlaying: false,
       wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
       storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
-      emotionOverlays: []
+      emotionOverlays: [],
+      // A story-archive related chip lands here, and stopMusic() above killed its BGM.
+      arcBgmPlaying: false
     });
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
@@ -1517,6 +1781,116 @@ class Component extends DCLogic {
 
   openStory(i) { this.setState({ storyIndex: i }); this.scrollSheetBodyTop(); }
   closeStory() { this.setState({ storyIndex: null }); this.scrollSheetBodyTop(); }
+
+  // --- Story archive (the Story tab; ported from miaowm5's /story) --------------------------
+  // Three lazy fetch tiers matching the UI: story/index.json once when the tab opens,
+  // story/detail/<slug>.json when a story opens, and one episode file when an episode opens.
+  // Each tier caches, and each guards against the user navigating away mid-flight.
+
+  loadArcIndex() {
+    if (this.state.arcIndex || this.state.arcIndexLoading) return;
+    this.setState({ arcIndexLoading: true, arcIndexError: null });
+    fetch(ASSET_BASE + '/story/index.json')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => this.setState({ arcIndex: (data && data.stories) || [], arcIndexLoading: false }))
+      .catch(err => {
+        console.error('[story] failed to load story/index.json', err);
+        this.setState({ arcIndexLoading: false, arcIndexError: String(err && err.message || err) });
+      });
+  }
+
+  setArcCategory(category) { this.setState({ arcCategory: category }); this.scrollArcTop(); }
+
+  // Extra/collab stories carry no encyclopedia info blocks, so they have no info tab and open
+  // straight on the episode list — the same fallback upstream's tab logic makes.
+  defaultArcTab(detail) { return (detail && detail.desc && detail.desc.length) ? 'info' : 'story'; }
+
+  openArcStory(story) {
+    const cached = this.arcDetailCache.get(story.slug);
+    this.setState({
+      arcStory: story,
+      arcDetail: cached || null,
+      arcDetailLoading: !cached,
+      arcTab: this.defaultArcTab(cached),
+      arcEpisodeIndex: null, arcEpisode: null
+    });
+    this.scrollArcTop();
+    if (cached) return;
+    fetch(ASSET_BASE + '/story/detail/' + story.slug + '.json')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        if (!this.state.arcStory || this.state.arcStory.slug !== story.slug) return;
+        if (data) this.arcDetailCache.set(story.slug, data);
+        this.setState({ arcDetail: data, arcDetailLoading: false, arcTab: this.defaultArcTab(data) });
+      });
+  }
+
+  closeArcStory() {
+    this.stopMusic();
+    this.setState({
+      arcStory: null, arcDetail: null, arcEpisodeIndex: null, arcEpisode: null, arcBgmPlaying: false
+    });
+    this.scrollArcTop();
+  }
+
+  setArcTab(tab) { this.setState({ arcTab: tab }); this.scrollArcTop(); }
+
+  openArcEpisode(i) {
+    const detail = this.state.arcDetail;
+    const ep = detail && detail.episodes && detail.episodes[i];
+    if (!ep) return;
+    const cached = this.arcEpisodeCache.get(ep.file);
+    this.setState({ arcEpisodeIndex: i, arcEpisode: cached || null, arcEpisodeLoading: !cached });
+    this.scrollArcTop();
+    if (cached) return;
+    fetch(ASSET_BASE + '/' + ep.file)
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        if (this.state.arcEpisodeIndex !== i) return;
+        if (data) this.arcEpisodeCache.set(ep.file, data);
+        this.setState({ arcEpisode: data || { dialogs: [] }, arcEpisodeLoading: false });
+      });
+  }
+
+  closeArcEpisode() { this.setState({ arcEpisodeIndex: null, arcEpisode: null }); this.scrollArcTop(); }
+
+  // Story BGM plays through the same single audio element as the character theme music, so the
+  // two can never overlap — and leaving the tab (go/closeArcStory) stops it.
+  toggleArcBgm(i) {
+    const bgm = this.state.arcDetail && this.state.arcDetail.bgm;
+    if (!bgm || !bgm[i]) return;
+    const sameTrack = i === this.state.arcBgmIndex;
+    if (sameTrack && this.state.arcBgmPlaying) {
+      this.audio.pause();
+      this.setState({ arcBgmPlaying: false });
+      return;
+    }
+    if (!sameTrack) this.audio.src = ASSET_BASE + '/' + bgm[i].file;
+    this.audio.play().catch(() => {});
+    this.setState({ arcBgmIndex: i, arcBgmPlaying: true });
+  }
+
+  // Switching story/tab/episode swaps the scroller's content while its offset stays put, which
+  // would drop you into the middle of the next view — same reset as scrollSheetBodyTop.
+  scrollArcTop() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('story-scroll');
+      if (el) el.scrollTop = 0;
+    });
+  }
+
+  // Story speakers resolve to a portrait in two tiers: a roster character uses their own framed
+  // head.png; a story-only speaker (Light, Stella, recurring NPCs, bosses) uses the story_heads
+  // portrait the pipeline exported for them. Anything left keeps a plain name plate. `speakerDev`
+  // is a storyId, but it agrees with devName for every roster character, so it looks up directly.
+  headUrlForSpeaker(dev) {
+    if (!dev) return '';
+    const c = this.rosterByDev.get(dev);
+    if (c) return c.headUrl || '';
+    return this.storyHeads[dev] ? ASSET_BASE + '/' + this.storyHeads[dev] : '';
+  }
 
   // The cycler walks faces only; overlays are toggled separately and stack on top.
   emotionFaces() {
@@ -1777,16 +2151,8 @@ class Component extends DCLogic {
       const art = (selectedChar && d.speakerDev === selectedChar.devName && d.emotion)
         ? resolveEmotionStack(d.emotion)
         : null;
-      // `speakerDev` is a storyId, but it agrees with devName for every roster character, so it
-      // looks up directly. A roster speaker uses their own framed head.png; a story-only speaker
-      // (Light, Stella, recurring NPCs) uses the story_heads portrait the pipeline exported for
-      // them, if any. Whatever's left — one-off NPCs with no head sprite — stays a name plate.
-      let headUrl = '';
-      if (!art && d.speakerDev) {
-        const other = this.rosterByDev.get(d.speakerDev);
-        if (other) headUrl = other.headUrl || '';
-        else if (this.storyHeads[d.speakerDev]) headUrl = ASSET_BASE + '/' + this.storyHeads[d.speakerDev];
-      }
+      // Everyone but the viewed character falls back to a portrait (see headUrlForSpeaker).
+      const headUrl = art ? '' : this.headUrlForSpeaker(d.speakerDev);
       return {
         speaker: d.speaker,
         color: d.color,
@@ -1800,12 +2166,145 @@ class Component extends DCLogic {
       };
     }) : [];
 
+    // --- Story archive -----------------------------------------------------------------------
+    // The list is filtered by the single-select category chip row; 'all' is inert. Stories whose
+    // banner sprite the atlas didn't have render as a text tile instead (as upstream does).
+    const arcCategory = this.state.arcCategory;
+    const arcStoryItems = (this.state.arcIndex || [])
+      .filter(s => arcCategory === 'all' || s.category === arcCategory)
+      .map(s => ({
+        title: s.title,
+        hasBanner: !!s.banner,
+        noBanner: !s.banner,
+        bannerUrl: s.banner ? ASSET_BASE + '/' + s.banner : '',
+        onClick: () => this.openArcStory(s)
+      }));
+    const arcCategoryChips = ARC_CATEGORIES.map(c => ({
+      label: this.t(c.labelKey),
+      // #ffcf8f is upstream's own active-chip colour, same as the Units filter's chips.
+      bg: arcCategory === c.id ? '#ffcf8f' : '#FAFAFA',
+      onClick: () => this.setArcCategory(c.id)
+    }));
+
+    const arcStory = this.state.arcStory;
+    const arcDetail = this.state.arcDetail;
+    const arcTab = this.state.arcTab;
+    const arcInReader = this.state.arcEpisodeIndex !== null;
+    const arcEpisodes = (arcDetail && arcDetail.episodes) || [];
+    const arcOpenedEpisode = arcInReader ? arcEpisodes[this.state.arcEpisodeIndex] : null;
+    const arcRelated = (arcDetail && arcDetail.related) || null;
+    // Same resolution as the character sheet's related panel: a chip that lands on a roster
+    // character navigates into their detail view; anything else keeps a dimmed placeholder tile.
+    const arcRelatedChars = (arcRelated && arcRelated.characters ? arcRelated.characters : []).map(rc => {
+      const target = rc.devName ? this.rosterByDev.get(rc.devName) : null;
+      return {
+        name: (this.state.lang === 'zh' || !target) ? rc.zhName : (target.enName || rc.zhName),
+        thumbUrl: target ? (target.headUrl || target.thumbUrl) : '',
+        hasThumb: !!target,
+        noThumb: !target,
+        opacity: target ? 1 : 0.55,
+        cursor: target ? 'pointer' : 'default',
+        onClick: () => { if (target) this.goDetail(target); }
+      };
+    });
+    const arcRelatedKeywords = (arcRelated && arcRelated.keywords ? arcRelated.keywords : []).map(k => ({
+      title: k.title, desc: k.desc || ''
+    }));
+    // The reader has no "viewed character", so unlike the character sheet's dialogue rows every
+    // speaker resolves to a portrait; `marker` rows (BGM change points) are data-only for now.
+    const arcDialogRows = ((this.state.arcEpisode && this.state.arcEpisode.dialogs) || [])
+      .filter(d => !d.marker)
+      .map(d => {
+        const headUrl = this.headUrlForSpeaker(d.speakerDev);
+        return { speaker: d.speaker, color: d.color, text: d.text, hasAvatar: !!headUrl, headUrl };
+      });
+    const arcTabBg = id => (arcTab === id ? accent : '#F0F3F7');
+
     const vals = {
       cardScaleTransform: 'scale(' + this.state.scale + ')',
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',
-      isSection: !!sec && tab !== 'units' && tab !== 'detail',
+      // 'story' has its own real screen now (the story archive), so it drops out of the
+      // under-construction placeholder that still backs art/music/arms.
+      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story',
+      isStory: tab === 'story',
+
+      // Story archive: list view
+      arcShowList: !arcStory,
+      arcShowDetail: !!arcStory,
+      arcIndexLoading: this.state.arcIndexLoading,
+      arcIndexError: !!this.state.arcIndexError,
+      arcLoadingIndexText: this.t('arcLoadingIndex'),
+      arcIndexErrorText: this.t('arcIndexError'),
+      arcStoryItems: arcStoryItems,
+      arcCategoryChips: arcCategoryChips,
+      arcNoStories: !this.state.arcIndexLoading && !this.state.arcIndexError && !!this.state.arcIndex && arcStoryItems.length === 0,
+      arcNoStoriesText: this.t('arcNoStories'),
+
+      // Story archive: detail header + tab switcher
+      arcTitle: arcStory ? arcStory.title : '',
+      arcHeaderUrl: (arcDetail && arcDetail.header) ? 'url("' + ASSET_BASE + '/' + arcDetail.header + '")' : 'none',
+      arcBackToStoriesLabel: this.t('arcBackToStories'),
+      arcBackToStoriesBtn: () => this.closeArcStory(),
+      arcHasInfoTab: !!(arcDetail && arcDetail.desc && arcDetail.desc.length),
+      arcHasGalleryTab: !!(arcDetail && (arcDetail.orb || (arcDetail.gallery && arcDetail.gallery.length))),
+      arcHasBgmTab: !!(arcDetail && arcDetail.bgm && arcDetail.bgm.length),
+      arcTabInfoBg: arcTabBg('info'),
+      arcTabStoryBg: arcTabBg('story'),
+      arcTabGalleryBg: arcTabBg('gallery'),
+      arcTabBgmBg: arcTabBg('bgm'),
+      arcTabInfoLabel: this.t('arcTabInfo'),
+      arcTabStoryLabel: this.t('arcTabStory'),
+      arcTabGalleryLabel: this.t('arcTabGallery'),
+      arcTabBgmLabel: this.t('arcTabBgm'),
+      setArcInfoTab: () => this.setArcTab('info'),
+      setArcStoryTab: () => this.setArcTab('story'),
+      setArcGalleryTab: () => this.setArcTab('gallery'),
+      setArcBgmTab: () => this.setArcTab('bgm'),
+      arcDetailLoading: this.state.arcDetailLoading,
+      arcLoadingDetailText: this.t('arcLoadingDetail'),
+
+      // Story archive: panels
+      arcShowInfo: !!arcDetail && arcTab === 'info',
+      arcShowEpisodes: !!arcDetail && arcTab === 'story' && !arcInReader,
+      arcShowReader: !!arcDetail && arcTab === 'story' && arcInReader,
+      arcShowGallery: !!arcDetail && arcTab === 'gallery',
+      arcShowBgm: !!arcDetail && arcTab === 'bgm',
+      arcInfoTitleLabel: this.t('arcInfoTitle'),
+      arcInfoBlocks: ((arcDetail && arcDetail.desc) || []).map(text => ({ text })),
+      arcRelatedChars: arcRelatedChars,
+      arcHasRelatedChars: arcRelatedChars.length > 0,
+      arcRelatedKeywords: arcRelatedKeywords,
+      arcHasRelatedKeywords: arcRelatedKeywords.length > 0,
+      arcEpisodesTitleLabel: this.t('arcEpisodesTitle'),
+      arcEpisodeItems: arcEpisodes.map((ep, i) => ({
+        title: ep.title, desc: ep.desc || '', onClick: () => this.openArcEpisode(i)
+      })),
+      arcHasEpisodes: arcEpisodes.length > 0,
+      arcHasNoEpisodes: !!arcDetail && arcEpisodes.length === 0,
+      arcNoEpisodesText: this.t('arcNoEpisodes'),
+      arcEpisodeLoading: this.state.arcEpisodeLoading,
+      arcLoadingEpisodeText: this.t('arcLoadingEpisode'),
+      arcReaderTitle: arcOpenedEpisode ? arcOpenedEpisode.title : '',
+      arcDialogRows: arcDialogRows,
+      arcBackToEpisodesBtn: () => this.closeArcEpisode(),
+      arcBackLabel: this.t('storyBack'),
+      arcBackToEpisodesLabel: this.t('storyBackToList'),
+      arcGalleryTitleLabel: this.t('arcGalleryTitle'),
+      arcHasOrb: !!(arcDetail && arcDetail.orb),
+      arcOrbUrl: (arcDetail && arcDetail.orb) ? ASSET_BASE + '/' + arcDetail.orb.file : '',
+      arcOrbName: (arcDetail && arcDetail.orb) ? arcDetail.orb.name : '',
+      arcOrbDesc: (arcDetail && arcDetail.orb) ? arcDetail.orb.desc : '',
+      arcGalleryImages: ((arcDetail && arcDetail.gallery) || []).map(p => ({ url: ASSET_BASE + '/' + p })),
+      arcHasGalleryImages: !!(arcDetail && arcDetail.gallery && arcDetail.gallery.length),
+      arcBgmTitleLabel: this.t('arcBgmTitle'),
+      arcBgmTracks: ((arcDetail && arcDetail.bgm) || []).map((tr, i) => ({
+        label: (this.state.arcBgmPlaying && this.state.arcBgmIndex === i ? '❚❚  ' : '▶  ') + tr.name,
+        bg: (this.state.arcBgmPlaying && this.state.arcBgmIndex === i) ? accent : '#F7F9FC',
+        onClick: () => this.toggleArcBgm(i)
+      })),
+
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,
       // Visit counters: total page views (left, Mana) and unique visitors (right, Lodestar Bead).

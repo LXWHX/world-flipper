@@ -39,20 +39,25 @@ import {
   PIXEL_SPEED_MS,
   BATTLE_VOICE_MAP,
   Spritesheet,
-  blit,
   cachedFetchBuffer,
   cachedFetchJson,
   createFrame,
-  createRgba,
   createTimeline,
   decodeScenarioText,
   encodeGif,
   encodePng,
-  scaleBilinear,
   scaleNearest,
   writeIfChanged,
   writeJsonIfChanged,
 } from './lib/miaowm5-common.mjs';
+import {
+  ELEMENT_ICONS,
+  buildStoryDialogs,
+  buildStoryHeads,
+  composeHeadIcon,
+  parseEncyclopedia,
+  parseStoryCharacter,
+} from './lib/miaowm5-story.mjs';
 
 const ASSETS_DIR = path.resolve('Character Assets');
 // Shared UI art (the rarity strips) is served with the site, not from R2, so it lands here.
@@ -146,55 +151,6 @@ function flushR2Invalidations() {
 // ---------------------------------------------------------------------------
 // Phase 0: global tables
 // ---------------------------------------------------------------------------
-
-// Port of the upstream `encyclopedia` database handler: each entry is a sub-map whose values'
-// [0] is the row; [4] is the entry type, [17] the title, [19] a CSV of related entry ids, and
-// each row's [20] contributes one description block.
-function parseEncyclopedia(raw) {
-  const out = {};
-  for (const key of Object.keys(raw)) {
-    const rows = Object.keys(raw[key]).map((k) => raw[key][k][0]);
-    const first = rows[0];
-    if (!first) continue;
-    const entry = { type: 'normal', title: first[17], related: [], desc: [] };
-    if (first[4] === '0' || first[4] === '1') {
-      entry.type = 'character';
-      entry.characterID = first[5];
-      entry.storyID = first[6];
-    } else if (first[4] === '2') {
-      entry.type = 'npc';
-      entry.storyID = first[6];
-    } else if (first[4] === '3' || first[4] === '4' || first[4] === '5') {
-      entry.type = 'story';
-    }
-    entry.related = first[19] ? String(first[19]).split(',') : [];
-    entry.desc = rows.map((r) => decodeScenarioText(String(r[20] ?? '')));
-    out[key] = entry;
-  }
-  return out;
-}
-
-// Port of the upstream `story_character` handler: [0] display name, [1] 0xRRGGBB colour,
-// [3]/[4]/[5] are parallel CSVs of emotion name / back sprite / front sprite.
-function parseStoryCharacter(raw) {
-  const out = {};
-  for (const key of Object.keys(raw)) {
-    const row = raw[key][0];
-    if (!row) continue;
-    const names = String(row[3] ?? '').split(',');
-    const backs = String(row[4] ?? '').split(',');
-    const fronts = String(row[5] ?? '').split(',');
-    const emotions = {};
-    names.forEach((name, i) => {
-      if (!name) return;
-      const back = (backs[i] || '(None)') === '(None)' ? null : backs[i];
-      const front = (fronts[i] || '(None)') === '(None)' ? null : fronts[i];
-      emotions[name] = { back, front };
-    });
-    out[key] = { name: row[0], color: row[1], emotions };
-  }
-  return out;
-}
 
 // Port of the upstream `character_quest` handler: rows grouped by gameId ([0]), carrying
 // title [3], synopsis [123] and the scenario path [126].
@@ -458,48 +414,8 @@ async function buildPixelGifs(storyId, charDir, g, sheets) {
 // (f) The 212x212 framed square portrait miaowm5's own character list shows. The head sprite is
 // keyed by devName — NOT storyId — because upstream's list passes character.json's row[0]
 // straight through (characterList.svelte: `file={data.extra[0]}` -> headIcon.svelte:
-// spriteSheet('head', file)).
-//
-// This is a port of headIcon.svelte's canvas composite, with its exact offsets: the portrait is
-// inset to 184x184 at (14,14) so the frame's white border rings it, and the element badge lands
-// in the notch the frame leaves open at the top right. Upstream also stamps the rarity strip at
-// (0,177); we skip it, because the Units grid renders that strip on the pedestal instead (see
-// buildRarityStrips) at a size where it's actually legible.
-//
-// The portrait carries its own background, so unlike the emotion layers there's nothing to
-// stack — the frame and badge are the only overlays.
-const ELEMENT_ICONS = [
-  'element_red_medium', // 0 Fire
-  'element_blue_medium', // 1 Water
-  'element_yellow_medium', // 2 Thunder
-  'element_green_medium', // 3 Wind
-  'element_white_medium', // 4 Light
-  'element_black_medium', // 5 Dark
-];
-
-// The 212x212 composite itself, shared by buildHeadIcon (roster characters) and buildStoryHeads
-// (story-only NPCs). A character with no element — every pure NPC, since they carry no
-// character.json row — gets the frame whose corner isn't notched and no badge.
-async function composeHeadIcon(portrait, elementIndex, sheets) {
-  const canvas = createRgba(212, 212);
-  const inset = scaleBilinear(portrait, 184, 184);
-  blit(canvas, inset, 0, 0, inset.w, inset.h, 14, 14);
-
-  const elementName = ELEMENT_ICONS[elementIndex];
-  const frame = await sheets.icon.getSprite(
-    elementName ? 'character_face_frame' : 'character_face_empty_frame'
-  );
-  if (frame) blit(canvas, frame, 0, 0, frame.w, frame.h, 0, 0);
-  if (elementName) {
-    const badge = await sheets.icon.getSprite(elementName);
-    if (badge) {
-      const b = scaleBilinear(badge, 48, 48);
-      blit(canvas, b, 0, 0, b.w, b.h, 154, 10);
-    }
-  }
-  return canvas;
-}
-
+// spriteSheet('head', file)). composeHeadIcon (the shared canvas composite) and ELEMENT_ICONS
+// live in ./lib/miaowm5-story.mjs so buildStoryHeads can reuse them.
 async function buildHeadIcon(devName, charDir, elementIndex, sheets) {
   const dest = path.join(charDir, 'head.png');
   // As in buildEmotions: an existing file means the sprite resolved on an earlier run, so the
@@ -596,99 +512,11 @@ async function buildMagicCircle() {
   return writeIfChanged(dest, buf) ? 1 : 0;
 }
 
-// Every speaker that appears in any already-written story_zh.json. Read off disk rather than
-// accumulated in the per-character loop so the set stays complete under --only/--limit (a partial
-// run still sees every prior run's story files), which is what keeps the manifest below from
-// dropping icons other characters' stories still reference.
-function collectStorySpeakers() {
-  const speakers = new Set();
-  for (const entry of readdirSync(ASSETS_DIR, { withFileTypes: true })) {
-    if (!entry.isDirectory() || !/^rarity\d+$/.test(entry.name)) continue;
-    const rarityDir = path.join(ASSETS_DIR, entry.name);
-    for (const sub of readdirSync(rarityDir, { withFileTypes: true })) {
-      if (!sub.isDirectory()) continue;
-      const storyPath = path.join(rarityDir, sub.name, 'story_zh.json');
-      if (!existsSync(storyPath)) continue;
-      try {
-        const data = JSON.parse(readFileSync(storyPath, 'utf8'));
-        for (const st of data.stories || []) {
-          for (const d of st.dialogs || []) if (d.speakerDev) speakers.add(d.speakerDev);
-        }
-      } catch {
-        // a corrupt/half-written story file just contributes no speakers
-      }
-    }
-  }
-  return speakers;
-}
-
-// Portraits for the story-only NPCs. A roster character already has their own head.png, so this
-// covers exactly the speakers the front-end can't resolve through the roster — the protagonists
-// (Light, Stella) and recurring NPCs. Same 212x212 composite as buildHeadIcon, but with no element
-// (these carry no character.json row), so they all get the un-notched empty frame. Writes a flat
-// devName->path map the front-end loads once, mirroring `hasHead`: the UI trusts the manifest, not
-// the bare path, so a speaker with no head sprite keeps its plain name plate instead of a 404.
-async function buildStoryHeads(g, roster, sheets) {
-  const rosterDevs = new Set(roster.characters.map((c) => c.devName));
-  const speakers = [...collectStorySpeakers()].filter((d) => !rosterDevs.has(d)).sort();
-  const manifest = {};
-  let wrote = 0;
-  for (const dev of speakers) {
-    const dest = path.join(STORY_HEADS_DIR, `${dev}.png`);
-    if (!FORCE && existsSync(dest)) {
-      manifest[dev] = `story_heads/${dev}.png`;
-      continue;
-    }
-    const portrait = await sheets.head.getSprite(dev);
-    if (!portrait) continue; // NPC with dialogue but no head sprite — stays a name plate
-    const rec = g.byDevName.get(dev); // almost always absent; -1 -> empty frame, no badge
-    const canvas = await composeHeadIcon(portrait, rec ? Number(rec.row[3]) : -1, sheets);
-    if (!existsSync(STORY_HEADS_DIR)) mkdirSync(STORY_HEADS_DIR, { recursive: true });
-    if (writeIfChanged(dest, encodePng(canvas))) {
-      invalidateR2(dest);
-      wrote++;
-    }
-    manifest[dev] = `story_heads/${dev}.png`;
-  }
-  if (writeJsonIfChanged(STORY_HEADS_MANIFEST, manifest)) invalidateR2(STORY_HEADS_MANIFEST);
-  return { wrote, count: Object.keys(manifest).length };
-}
-
-// (g) Full story dialogue. One fetch per character returns every one of their stories, keyed
-// by the same scenario path character_quest gave us.
+// (g) Full story dialogue. One fetch per character returns every one of their stories, keyed by
+// the same scenario path character_quest gave us. The scenario command interpreter
+// (buildStoryDialogs) and the story-only-NPC portraits (buildStoryHeads / collectStorySpeakers)
+// are shared with the main-story pipeline and live in ./lib/miaowm5-story.mjs.
 //
-// Emotion state is tracked per speaker, not per on-screen slot: type 6 (face) introduces a
-// character with an emotion, but type 12 (face-change) later updates it by devName alone, and
-// it's by far the more common command — keying off the slot would show a stale emotion.
-function buildStoryDialogs(rows, g) {
-  const emotionByChar = new Map();
-  const dialogs = [];
-  for (const key of Object.keys(rows)) {
-    for (const item of rows[key]) {
-      const type = item[0];
-      if (type === '6') {
-        if (item[12]) emotionByChar.set(item[12], item[14] || null);
-      } else if (type === '12') {
-        if (item[19]) emotionByChar.set(item[19], item[20] || null);
-      } else if (type === '8') {
-        emotionByChar.clear();
-      } else if (type === '0') {
-        const dev = item[4] || '';
-        const sc = g.storyChar[dev];
-        const color = sc?.color ? `#${String(sc.color).slice(2)}` : '#3E4450';
-        dialogs.push({
-          speakerDev: dev,
-          speaker: sc?.name || dev,
-          color,
-          emotion: emotionByChar.get(dev) || null,
-          text: decodeScenarioText(String(item[5] ?? '')),
-        });
-      }
-    }
-  }
-  return dialogs;
-}
-
 // The scenario JSON lives at .../character_story_quest/<base>.json, where <base> is the quest
 // path's folder minus its _NNN suffix (mirrors upstream getUrl); the file is keyed by the
 // full original path.
@@ -720,7 +548,7 @@ async function buildStories(gameId, g) {
     const data = byUrl.get(url);
     const rows = data && data[q.path];
     if (!rows) continue;
-    const dialogs = buildStoryDialogs(rows, g);
+    const dialogs = buildStoryDialogs(rows, g.storyChar);
     if (!dialogs.length) continue;
     stories.push({
       id: `${i + 1}`,
@@ -995,7 +823,13 @@ async function main() {
   }
 
   // After every story_zh.json is written, so the speaker scan is complete.
-  const storyHeads = await buildStoryHeads(g, roster, sheets);
+  const storyHeads = await buildStoryHeads(g, roster, sheets, {
+    assetsDir: ASSETS_DIR,
+    storyHeadsDir: STORY_HEADS_DIR,
+    manifestPath: STORY_HEADS_MANIFEST,
+    force: FORCE,
+    invalidateR2,
+  });
   console.log(
     `\nStory-participant heads: ${storyHeads.count} NPC portrait(s) (${storyHeads.wrote} written this run)`
   );

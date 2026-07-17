@@ -16,9 +16,10 @@ const { GIFEncoder, quantize, applyPalette } = gifenc;
 // CDN names mirror the upstream bundle's `cdn`/`cdn2`/`cdn3` keys, NOT the repo's .env
 // ordering (the deployed bundle maps them differently — these values are read off the
 // deployed bundle, so keep the mapping and the alias names together).
-export const CDN_A = 'https://worldflipper-cdn4.miaowm5.com/'; // bundle `cdn`  — character/story atlas (emotion art)
-export const CDN_B = 'https://worldflipper-cdn.miaowm5.com/'; // bundle `cdn2` — pixel.json + pixel_normal/special atlases
+export const CDN_A = 'https://worldflipper-cdn4.miaowm5.com/'; // bundle `cdn`  — character/story atlas (emotion art), res/*, ui/*, header backgrounds
+export const CDN_B = 'https://worldflipper-cdn.miaowm5.com/'; // bundle `cdn2` — pixel.json + pixel_normal/special atlases, head, orb/, gallery/
 export const CDN_C = 'https://worldflipper-cdn2.miaowm5.com/'; // bundle `cdn3` — orderedmap/* tables + common/voiceLine
+export const CDN_D = 'https://worldflipper-cdn3.miaowm5.com/'; // bundle `cdn4` — filelist.json + the BGM mp3s it lists
 
 export const ORDEREDMAP = `${CDN_C}orderedmap/`;
 
@@ -79,6 +80,17 @@ export async function cachedFetchJson(url) {
   } catch (err) {
     throw new Error(`Bad JSON from ${url}: ${err.message}`);
   }
+}
+
+// Download a binary asset (mp3, image) straight to its final path, skipping the fetch entirely
+// when the file already exists — the same skip-if-exists rule as the composited images, so a
+// re-run doesn't re-pull ~1GB of BGM. Unlike cachedFetchBuffer it keeps no second copy in the
+// scrape cache: media is large and already lives at its destination. Returns true when the file
+// was written/changed (so the caller can invalidate its R2 key).
+export async function fetchToFile(url, destPath, { force = false } = {}) {
+  if (!force && existsSync(destPath)) return false;
+  const buf = await fetchWithRetry(url);
+  return writeIfChanged(destPath, buf);
 }
 
 // Scenario/encyclopedia text stores newlines as the two literal characters \ and n.
