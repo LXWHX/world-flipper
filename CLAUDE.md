@@ -393,9 +393,9 @@ A player over the two music libraries the site already ships: the roster's `musi
 (character themes, ~150 characters, `head.png` as row art) and the world/event BGM albums in
 `story/music_index.json` (see the music-index pipeline above; one album per story, the story
 banner as cover). Two views — the library (section chips 角色主题曲/世界原声 + search + lists) and
-an open album — plus a now-playing bar with play/pause, prev/next, seek and queue auto-advance.
-Everything is `room`-prefixed: `music*` is the character sheet's theme pills and `arc*` the story
-archive, same hazard the Flip section describes.
+an open album — plus a now-playing bar with play/pause, prev/next, seek, a play-mode toggle and
+queue auto-advance. Everything is `room`-prefixed: `music*` is the character sheet's theme pills
+and `arc*` the story archive, same hazard the Flip section describes.
 
 - **`audioOwner` is the coexistence rule.** The shared `this.audio` has one owner at a time
   (`null | 'detail' | 'story' | 'room'`, an instance field — every mutation is paired with a
@@ -407,11 +407,37 @@ archive, same hazard the Flip section describes.
   `toggleMusicTrack`/`toggleArcBgm` re-set `src` whenever they *weren't* the last owner — their
   `sameTrack` index check can't see that the element holds someone else's track.
 - **`roomQueue` is whatever list the tapped track belonged to** — a character's tracks, an album,
-  a search result's owning album — so auto-advance continues through what the user was looking
-  at. It persists across tabs; the bar (music tab only — no mini-player elsewhere, the canvas has
-  no spare room) picks it back up, and its play button re-claims a stolen audio by replaying the
+  a search result's owning album, or a whole-library playlist (see below) — so auto-advance
+  continues through what the user was looking at. It persists across tabs; the full now-playing bar
+  (music tab only) picks it back up, and its play button re-claims a stolen audio by replaying the
   current entry from 0:00 (losing the paused position to a theme-pill detour is the accepted
   trade).
+- **Off the music tab, a compact draggable mini-player** (`悬浮窗`) carries a short title +
+  play/next, so room playback stays controllable while you browse (`roomMiniOn` = queue loaded,
+  not on `music`, menu closed). It's **draggable** via `roomMiniDown` (the sheetPointerDown
+  convention — window listeners, deltas ÷ `state.scale`, `touch-action: none`), and a press that
+  never moves is a **tap → `go('music')`**; the play/next buttons `stopPropagation` on pointerdown
+  (`roomMiniBtnStop`) so they don't start a drag, and the title block is `pointer-events: none` so
+  the whole body is one drag surface. Drop it against either side edge and it **collapses to an
+  arrow tab** (`roomMiniCollapsed` + `roomMiniSide`) that taps back open (`expandRoomMini`).
+  Position is `roomMiniPos` `{x,y}` in **design px** (null = the default bottom-right anchor,
+  rendered via `right/bottom` rather than `left/top`); the drag clamps to the screen area measured
+  off `el.offsetParent` (untransformed layout px = design px). It sits at `z-index: 45` so it rides
+  **over the detail sheet** (z 9/10) — deliberately shown on `detail` now, unlike the first cut —
+  and is hidden under the menu overlay (40) only because `roomMiniOn` drops it while `menuOpen`. It
+  shows **no progress bar on purpose**: `timeupdate` is gated to `tab === 'music'`, so `roomPos` is
+  stale off-tab and a live bar would freeze (relaxing that gate would re-render the whole tree every
+  second for the mini alone).
+- **Play mode** (`roomMode`, cycled by the bar's mode pill through `ROOM_MODES` = order → shuffle
+  → repeat) only changes what happens next, never the current track: `roomAdvance` (the `ended`
+  route) does repeat = replay, shuffle = a random other position (`roomRandomPos`), order = next or
+  stop at the end; the manual prev/next (`roomStep`) always moves — forward-in-shuffle jumps
+  random, otherwise it **wraps** either end (changed from the old clamp-and-replay).
+- **Whole-library playlists** (`playRoomLibrary('char'|'world'|'all')`, the library's 播放全部 row)
+  build one big queue from `roomAllCharTracks()` / `roomAllWorldTracks()` and start it (shuffle
+  mode starts at a random index). World/all need `roomAlbums` loaded — that only fetches when the
+  world section is opened, so the handler kicks `loadRoomAlbums()` and, for a `world`-only request,
+  bails until it lands (an `all` request still starts the character half immediately).
 - **The `timeupdate` setState is floored to whole seconds *and* gated to `tab === 'music'`** —
   renderVals rebuilds the roster tiles on every render, so an ungated 4Hz tick would re-render
   the tree for nobody. `roomPlay` sets `audioOwner` *before* `audio.src`, or the new track's

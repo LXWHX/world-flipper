@@ -1099,6 +1099,14 @@
                 <input type="text" value="{{ roomSearchValue }}" onChange="{{ setRoomSearch }}" placeholder="{{ roomSearchHint }}" style="width: 100%; border: 2px solid #DCDCDC; border-radius: 4px; padding: 7px; background: #FAFAFA; font-size: 12px; font-family: inherit; color: #3E4450; box-sizing: border-box;">
               </div>
 
+              <!-- "Play all" playlist builders: character themes / world tracks / everything -->
+              <div style="flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 14px 2px;">
+                <span style="flex: none; font-size: 10.5px; font-weight: 800; color: #8A93A5;">{{ roomPlaylistLabel }}</span>
+                <button onClick="{{ roomPlayChar }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #FFFFFF; background: {{ sectionColor }}; border-radius: 999px; padding: 6px 4px; box-shadow: 0 2px 0 rgba(62,68,80,0.25);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.25);">▶ {{ roomPlaylistChar }}</button>
+                <button onClick="{{ roomPlayWorld }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #FFFFFF; background: {{ sectionColor }}; border-radius: 999px; padding: 6px 4px; box-shadow: 0 2px 0 rgba(62,68,80,0.25);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.25);">▶ {{ roomPlaylistWorld }}</button>
+                <button onClick="{{ roomPlayAll }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #FFFFFF; background: {{ sectionColor }}; border-radius: 999px; padding: 6px 4px; box-shadow: 0 2px 0 rgba(62,68,80,0.25);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.25);">▶ {{ roomPlaylistAll }}</button>
+              </div>
+
               <div id="music-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px 12px;">
                 <!-- Character themes: one row per roster character with music -->
                 <sc-if value="{{ roomShowChars }}" hint-placeholder-val="{{ true }}">
@@ -1197,6 +1205,8 @@
                   <div style="font-size: 12px; font-weight: 800; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowTitle }}</div>
                   <div style="font-size: 10px; font-weight: 700; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowSub }} · {{ roomTimeText }}</div>
                 </div>
+                <!-- Play mode: 顺序 / 随机 / 单曲循环, cycles on tap -->
+                <button onClick="{{ cycleRoomMode }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 10.5px; color: {{ sectionColor }}; background: #F0F3F7; border-radius: 999px; padding: 6px 10px; box-shadow: 0 2px 0 rgba(62,68,80,0.15);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.15);">{{ roomModeGlyph }} {{ roomModeLabel }}</button>
                 <button onClick="{{ roomPrev }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
                   <svg width="14" height="14" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="0" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="8" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="6" y="2" width="2" height="6" fill="#3E4450"></rect><rect x="4" y="3" width="2" height="4" fill="#3E4450"></rect></svg>
                 </button>
@@ -1271,6 +1281,29 @@
             </sc-for>
           </div>
         </div>
+      </sc-if>
+
+      <!-- ===== Floating mini-player (悬浮窗) ===== -->
+      <!-- Draggable now-playing widget, shown off the music tab whenever a queue is loaded. Tap it
+           to open the Music Room, drag it anywhere, and drop it against a side edge to collapse it
+           to the arrow tab below. Sits at z-index 45 so it rides over the detail sheet; hidden while
+           the menu overlay (40) is open (see roomMiniOn). -->
+      <sc-if value="{{ roomMiniExpanded }}" hint-placeholder-val="{{ false }}">
+        <div id="room-mini" onPointerDown="{{ roomMiniDown }}" style="position: absolute; {{ roomMiniPosStyle }} width: 166px; z-index: 45; background: #FFFFFF; border-radius: 12px; box-shadow: 0 5px 16px rgba(40,45,60,0.32); border-left: 3px solid {{ sectionColor }}; padding: 6px 6px 6px 9px; display: flex; align-items: center; gap: 5px; cursor: grab; touch-action: none; transition: {{ roomMiniTransition }};">
+          <div style="flex: 1; min-width: 0; pointer-events: none;">
+            <div style="font-size: 11px; font-weight: 800; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">♪ {{ roomNowTitle }}</div>
+            <div style="font-size: 9px; font-weight: 700; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowSub }}</div>
+          </div>
+          <button onClick="{{ roomTogglePlay }}" onPointerDown="{{ roomMiniBtnStop }}" style="flex: none; border: none; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; background: {{ sectionColor }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 rgba(62,68,80,0.28); font-family: inherit; color: #FFFFFF; font-size: 11px; font-weight: 800;" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.28);">{{ roomPlayGlyph }}</button>
+          <button onClick="{{ roomNext }}" onPointerDown="{{ roomMiniBtnStop }}" style="flex: none; border: none; cursor: pointer; width: 26px; height: 26px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">
+            <svg width="11" height="11" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="0" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="2" y="2" width="2" height="6" fill="#3E4450"></rect><rect x="4" y="3" width="2" height="4" fill="#3E4450"></rect><rect x="8" y="1" width="2" height="8" fill="#3E4450"></rect></svg>
+          </button>
+        </div>
+      </sc-if>
+
+      <!-- Collapsed state: an arrow tab hugging the edge it was dropped on; tap to pop back open. -->
+      <sc-if value="{{ roomMiniArrowShow }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ expandRoomMini }}" style="position: absolute; {{ roomMiniArrowStyle }} width: 20px; height: 40px; z-index: 45; background: {{ sectionColor }}; box-shadow: 0 3px 10px rgba(40,45,60,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; font-size: 15px; font-weight: 900;" style-active="transform: translateY(1px);">{{ roomMiniArrowGlyph }}</div>
       </sc-if>
     </div>
 
@@ -1574,6 +1607,13 @@ const STRINGS = {
   roomNoResults: { en: 'No matching tracks.', zh: '没有符合条件的曲目。' },
   roomBack: { en: 'Music Room', zh: '音乐室' },
   roomTracksSuffix: { en: ' tracks', zh: ' 首' },
+  roomModeOrder: { en: 'In order', zh: '顺序' },
+  roomModeShuffle: { en: 'Shuffle', zh: '随机' },
+  roomModeRepeat: { en: 'Repeat one', zh: '单曲循环' },
+  roomPlaylistLabel: { en: 'Play all', zh: '播放全部' },
+  roomPlaylistChar: { en: 'Characters', zh: '人物音乐' },
+  roomPlaylistWorld: { en: 'World', zh: '世界音乐' },
+  roomPlaylistAll: { en: 'Everything', zh: '全部' },
   actionIntoCoffin: { en: 'Down', zh: '倒下' },
   actionGhostRaise: { en: 'Ghost', zh: '化灵' },
   actionGhostNeutral: { en: 'Spirit', zh: '灵体' },
@@ -1602,6 +1642,11 @@ const ROOM_SECTIONS = [
   { id: 'char', labelKey: 'roomSectionChar' },
   { id: 'world', labelKey: 'roomSectionWorld' }
 ];
+// Now-playing modes, cycled by the bar's mode button. Order matters — cycleRoomMode steps through
+// this list. `order` plays through and stops; `shuffle` picks a random next; `repeat` loops one.
+const ROOM_MODES = ['order', 'shuffle', 'repeat'];
+const ROOM_MODE_LABEL = { order: 'roomModeOrder', shuffle: 'roomModeShuffle', repeat: 'roomModeRepeat' };
+const ROOM_MODE_GLYPH = { order: '→', shuffle: '⇄', repeat: '↻' };
 
 // Pixel actions the site has always shipped (rendered by the stage + the Skill/Special
 // buttons); anything else in wiki_zh.json's `pixelActions` is an extra the miaowm5 pipeline
@@ -1727,6 +1772,13 @@ class Component extends DCLogic {
     roomSection: 'char', roomSearch: '', roomOpenAlbum: null,
     roomQueue: [], roomQueuePos: 0, roomPlaying: false,
     roomPos: 0, roomDur: 0, // whole seconds — floored so timeupdate re-renders at ~1/s, not 4/s
+    // Playback mode for auto-advance and prev/next (see ROOM_MODES): order = play through and
+    // stop; shuffle = random next; repeat = loop the current track.
+    roomMode: 'order',
+    // The off-tab floating mini-player. roomMiniPos is its {x,y} top-left in design px (null = the
+    // default bottom-right anchor); dragging it against either side edge collapses it to a small
+    // arrow tab on roomMiniSide, which taps back open. roomMiniDragging suppresses its transition.
+    roomMiniPos: null, roomMiniCollapsed: false, roomMiniSide: 'right', roomMiniDragging: false,
     // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
     // where we deliberately don't count) — renderVals shows a dash in that case.
     pv: null, uv: null,
@@ -2693,6 +2745,101 @@ class Component extends DCLogic {
     });
   }
 
+  // Drag the floating mini-player. Follows the sheetPointerDown convention — window-level pointer
+  // listeners so the drag survives the pointer leaving the element, deltas divided by state.scale
+  // (the whole canvas is CSS-scaled), touch-action:none on the widget. A press that never moves is
+  // a tap → open the Music Room; dropping it against either side edge collapses it to an arrow tab.
+  roomMiniDown(e) {
+    e.preventDefault();
+    const el = document.getElementById('room-mini');
+    const parent = el && el.offsetParent;
+    if (!el || !parent) return;
+    const scale = this.state.scale || 1;
+    const maxX = Math.max(0, parent.clientWidth - el.offsetWidth);
+    const maxY = Math.max(0, parent.clientHeight - el.offsetHeight);
+    const start = this.state.roomMiniPos || { x: maxX - 10, y: maxY - 10 };
+    const sx = e.clientX, sy = e.clientY;
+    let curX = start.x, curY = start.y, moved = false, raf = 0;
+    const onMove = (ev) => {
+      curX = Math.max(0, Math.min(maxX, start.x + (ev.clientX - sx) / scale));
+      curY = Math.max(0, Math.min(maxY, start.y + (ev.clientY - sy) / scale));
+      if (!moved && Math.abs(curX - start.x) + Math.abs(curY - start.y) > 4) moved = true;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        this.setState({ roomMiniPos: { x: curX, y: curY }, roomMiniDragging: true });
+      });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (!moved) { this.setState({ roomMiniDragging: false }); this.go('music'); return; }
+      const EDGE = 20;
+      if (curX <= EDGE) this.setState({ roomMiniCollapsed: true, roomMiniSide: 'left', roomMiniPos: { x: 0, y: curY }, roomMiniDragging: false });
+      else if (curX >= maxX - EDGE) this.setState({ roomMiniCollapsed: true, roomMiniSide: 'right', roomMiniPos: { x: maxX, y: curY }, roomMiniDragging: false });
+      else this.setState({ roomMiniPos: { x: curX, y: curY }, roomMiniDragging: false });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  expandRoomMini(e) {
+    if (e) e.stopPropagation();
+    this.setState({ roomMiniCollapsed: false });
+  }
+
+  // Cycle order → shuffle → repeat. Only the auto-advance rule changes; the current track keeps
+  // playing.
+  cycleRoomMode() {
+    const i = ROOM_MODES.indexOf(this.state.roomMode);
+    this.setState({ roomMode: ROOM_MODES[(i + 1) % ROOM_MODES.length] });
+  }
+
+  // A random queue position other than the one playing (unless the queue has a single track).
+  roomRandomPos() {
+    const n = this.state.roomQueue.length;
+    if (n <= 1) return this.state.roomQueuePos;
+    let p;
+    do { p = Math.floor(Math.random() * n); } while (p === this.state.roomQueuePos);
+    return p;
+  }
+
+  // Build a queue from a whole library and start it: 'char' = every roster character's theme
+  // tracks, 'world' = every album's tracks, 'all' = both. World/all need the album index loaded
+  // (only fetched once the world section is opened), so kick that off and bail if it isn't ready.
+  playRoomLibrary(kind) {
+    const q = [];
+    if (kind === 'char' || kind === 'all') q.push(...this.roomAllCharTracks());
+    if (kind === 'world' || kind === 'all') {
+      if (!this.state.roomAlbums) { this.loadRoomAlbums(); if (kind === 'world') return; }
+      else q.push(...this.roomAllWorldTracks());
+    }
+    if (!q.length) return;
+    this.roomPlay(q, this.state.roomMode === 'shuffle' ? Math.floor(Math.random() * q.length) : 0);
+  }
+
+  roomAllCharTracks() {
+    const out = [];
+    for (const c of this.state.roster) {
+      if (!c.music.length) continue;
+      const name = (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName;
+      const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
+      c.music.forEach((f, i) => out.push({
+        url: folderUrl + '/music/' + f, label: this.trackLabel(f, i + 1), sub: name
+      }));
+    }
+    return out;
+  }
+
+  roomAllWorldTracks() {
+    const out = [];
+    for (const a of (this.state.roomAlbums || [])) out.push(...this.roomAlbumQueue(a));
+    return out;
+  }
+
   roomToggleTrack(queue, pos) {
     const tr = queue[pos];
     if (!tr) return;
@@ -2728,15 +2875,24 @@ class Component extends DCLogic {
     this.setState({ roomPlaying: true });
   }
 
+  // The bar's prev/next buttons. Manual, so they always move (unlike auto-advance, which can stop):
+  // a forward step in shuffle mode jumps to a random track, otherwise it wraps around either end.
   roomStep(delta) {
     const queue = this.state.roomQueue;
     if (!queue.length) return;
-    const next = Math.max(0, Math.min(queue.length - 1, this.state.roomQueuePos + delta));
-    this.roomPlay(queue, next); // at either end this replays the boundary track from 0:00
+    if (delta > 0 && this.state.roomMode === 'shuffle') { this.roomPlay(queue, this.roomRandomPos()); return; }
+    const n = queue.length;
+    this.roomPlay(queue, (this.state.roomQueuePos + delta + n) % n);
   }
 
+  // Auto-advance when a track ends (routed here from the shared audio's `ended` listener while the
+  // room owns it). repeat = replay the same track; shuffle = a random other track; order = the next
+  // track, or stop at the end of the queue.
   roomAdvance() {
     const queue = this.state.roomQueue;
+    if (!queue.length) return;
+    if (this.state.roomMode === 'repeat') { this.roomPlay(queue, this.state.roomQueuePos); return; }
+    if (this.state.roomMode === 'shuffle') { this.roomPlay(queue, this.roomRandomPos()); return; }
     const next = this.state.roomQueuePos + 1;
     if (next < queue.length) { this.roomPlay(queue, next); return; }
     this.setState({ roomPlaying: false, roomPos: 0 });
@@ -3131,6 +3287,9 @@ class Component extends DCLogic {
     const roomSearchText = this.state.roomSearch.trim().toLowerCase();
     const roomCurrent = this.state.roomQueue[this.state.roomQueuePos] || null;
     const roomIsPlaying = url => this.state.roomPlaying && !!roomCurrent && roomCurrent.url === url;
+    // Floating mini-player visibility + its dragged position (see the roomMini* bindings below).
+    const roomMiniOn = this.state.roomQueue.length > 0 && tab !== 'music' && !this.state.menuOpen;
+    const roomMiniPos = this.state.roomMiniPos;
     const roomCharRows = roomOnTab ? this.state.roster
       .filter(c => c.music.length && (!roomSearchText ||
         [c.enName, c.zhName, c.jpName, c.devName].filter(Boolean).join(' ').toLowerCase().includes(roomSearchText)))
@@ -3446,6 +3605,37 @@ class Component extends DCLogic {
       roomPrev: () => this.roomStep(-1),
       roomNext: () => this.roomStep(1),
       roomSeekDown: (e) => this.roomSeekDown(e),
+      // Play mode (顺序/随机/单曲循环) — a glyph + label pill that cycles on tap.
+      roomModeGlyph: ROOM_MODE_GLYPH[this.state.roomMode],
+      roomModeLabel: this.t(ROOM_MODE_LABEL[this.state.roomMode]),
+      cycleRoomMode: () => this.cycleRoomMode(),
+
+      // Music Room: "play all" playlist builders (library view)
+      roomPlaylistLabel: this.t('roomPlaylistLabel'),
+      roomPlaylistChar: this.t('roomPlaylistChar'),
+      roomPlaylistWorld: this.t('roomPlaylistWorld'),
+      roomPlaylistAll: this.t('roomPlaylistAll'),
+      roomPlayChar: () => this.playRoomLibrary('char'),
+      roomPlayWorld: () => this.playRoomLibrary('world'),
+      roomPlayAll: () => this.playRoomLibrary('all'),
+
+      // Floating mini-player: draggable now-playing controls, shown off the music tab whenever a
+      // queue is loaded. Tap = open the Music Room, drag = reposition, drop against a side edge =
+      // collapse to an arrow tab. Hidden while the menu is open (which sits above it).
+      roomMiniExpanded: roomMiniOn && !this.state.roomMiniCollapsed,
+      roomMiniArrowShow: roomMiniOn && this.state.roomMiniCollapsed,
+      roomMiniPosStyle: roomMiniPos
+        ? 'left: ' + roomMiniPos.x + 'px; top: ' + roomMiniPos.y + 'px;'
+        : 'right: 10px; bottom: 10px;',
+      roomMiniTransition: this.state.roomMiniDragging ? 'none' : 'left 0.16s ease, top 0.16s ease',
+      roomMiniArrowStyle: (this.state.roomMiniSide === 'left'
+        ? 'left: 0; border-radius: 0 12px 12px 0;'
+        : 'right: 0; border-radius: 12px 0 0 12px;')
+        + (roomMiniPos ? ' top: ' + roomMiniPos.y + 'px;' : ' bottom: 90px;'),
+      roomMiniArrowGlyph: this.state.roomMiniSide === 'left' ? '›' : '‹',
+      roomMiniDown: (e) => this.roomMiniDown(e),
+      roomMiniBtnStop: (e) => e.stopPropagation(),
+      expandRoomMini: (e) => this.expandRoomMini(e),
 
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,
