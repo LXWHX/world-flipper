@@ -182,6 +182,17 @@ desc:[1], path:[4]}`). Traps worth knowing:
   are spoken by devs with no sprite in the `head` atlas (`alk_smr21`, `stella_copy_name`, …) — the
   game's own data; they keep a plain name plate.
 
+### music index (`scripts/build-music-index.mjs`)
+
+`npm run build:music-index` derives `Character Assets/story/music_index.json` — the Music Room's
+world-music album list (one album per story in `index.json` order: slug/title/category/banner plus
+the detail's `bgm` copied verbatim; empty-bgm and missing-detail stories skipped) — from
+`story/index.json` + `story/detail/*.json`. Local files only, no network; **re-run it after any
+`fetch:story` run** or the index goes stale. Same byte-stable write + R2-manifest invalidation
+rules as the fetchers, and the `story/` include prefix ships it to R2 automatically. The one
+duplicated track (the anniversary countdown, in 5 albums) is legitimate album membership, not a
+bug to dedupe.
+
 ## Commands
 
 - `npm run upload:assets` — uploads `Character Assets/` to Cloudflare R2 (`wf-assets`) via
@@ -275,8 +286,8 @@ then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `de
 file's own order is just append history), and paginates client-side (`ROSTER_BATCH` = 60 per
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view.
 
-`isSection` is the under-construction placeholder that still backs art/music/arms; `units`,
-`detail`, `story` and `flip` are excluded from it because they have real screens.
+`isSection` is the under-construction placeholder that still backs art/arms; `units`,
+`detail`, `story`, `flip` and `music` are excluded from it because they have real screens.
 
 The home screen's centre red button opens **`flip`**, not `units` — Units keeps its bottom-tab-bar
 button and its menu entry, which is the only reason repointing it strands nothing.
@@ -375,6 +386,46 @@ it reuses art that already ships.
   related-character chip navigates detail → detail, so `goDetail` keeps the existing
   `detailReturnTab` in that case rather than recording `'detail'`; everything that isn't Flip still
   goes back to the Units grid.
+
+#### Music Room (the music tab)
+
+A player over the two music libraries the site already ships: the roster's `music` mp3s
+(character themes, ~150 characters, `head.png` as row art) and the world/event BGM albums in
+`story/music_index.json` (see the music-index pipeline above; one album per story, the story
+banner as cover). Two views — the library (section chips 角色主题曲/世界原声 + search + lists) and
+an open album — plus a now-playing bar with play/pause, prev/next, seek and queue auto-advance.
+Everything is `room`-prefixed: `music*` is the character sheet's theme pills and `arc*` the story
+archive, same hazard the Flip section describes.
+
+- **`audioOwner` is the coexistence rule.** The shared `this.audio` has one owner at a time
+  (`null | 'detail' | 'story' | 'room'`, an instance field — every mutation is paired with a
+  setState of the owner's own playing flag, which is what renderVals reads). A feature stops the
+  audio only if it owns it; starting playback anywhere claims ownership and clears the other
+  flags. That is what lets room playback deliberately keep playing across tabs (unlike
+  detail/story audio): `go()`, `goDetail()` and `closeArcStory()` check the owner before
+  `stopMusic()`, the `ended` listener routes to `roomAdvance()` when the room owns it, and
+  `toggleMusicTrack`/`toggleArcBgm` re-set `src` whenever they *weren't* the last owner — their
+  `sameTrack` index check can't see that the element holds someone else's track.
+- **`roomQueue` is whatever list the tapped track belonged to** — a character's tracks, an album,
+  a search result's owning album — so auto-advance continues through what the user was looking
+  at. It persists across tabs; the bar (music tab only — no mini-player elsewhere, the canvas has
+  no spare room) picks it back up, and its play button re-claims a stolen audio by replaying the
+  current entry from 0:00 (losing the paused position to a theme-pill detour is the accepted
+  trade).
+- **The `timeupdate` setState is floored to whole seconds *and* gated to `tab === 'music'`** —
+  renderVals rebuilds the roster tiles on every render, so an ungated 4Hz tick would re-render
+  the tree for nobody. `roomPlay` sets `audioOwner` *before* `audio.src`, or the new track's
+  `durationchange` is dropped by its own guard. Seeking is a ratio along the bar
+  (`(clientX − rect.left) / rect.width`): the canvas scale multiplies both terms and cancels, so
+  unlike the sheet/flip drags there is **no** `/state.scale` here.
+- World search flattens to cross-album track rows (capped at 60) — being able to search 708
+  tracks without loading anything is the reason `music_index.json` exists instead of lazily
+  reading the 42 detail files. Track titles are prettified filenames (`roomTrackTitle`); the data
+  has nothing better. An album-title match surfaces that album's whole track list.
+- The library and album views take turns owning `#music-scroll` (they never coexist), the same
+  arrangement as the story tab's two `#story-scroll` views. The library view-models only build in
+  renderVals while the tab is showing — the character list walks the whole roster, which is more
+  than the always-built arc lists do.
 
 #### Units filter
 

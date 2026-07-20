@@ -1069,6 +1069,148 @@
         </div>
       </sc-if>
 
+      <!-- ===== MUSIC ROOM SCREEN (the music tab) ===== -->
+      <sc-if value="{{ isMusic }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column;">
+
+          <!-- ---- Library: section chips + search + the two lists ---- -->
+          <sc-if value="{{ roomShowMain }}" hint-placeholder-val="{{ true }}">
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+              <!-- Section banner, same strip the placeholder screens use -->
+              <div style="flex: none; position: relative; margin: 14px 0 0 -6px; width: 82%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12); display: flex; align-items: center; gap: 12px;">
+                <div style="width: 42px; height: 42px; border-radius: 50%; flex: none; background: {{ sectionColor }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+                  <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="6" height="1" fill="#FFFFFF"></rect><rect x="2" y="2" width="1" height="5" fill="#FFFFFF"></rect><rect x="7" y="2" width="1" height="4" fill="#FFFFFF"></rect><rect x="0" y="6" width="3" height="2" fill="#FFFFFF"></rect><rect x="5" y="5" width="3" height="2" fill="#FFFFFF"></rect></svg>
+                </div>
+                <div>
+                  <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">{{ sectionLabel }}</div>
+                  <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ sectionDesc }}</div>
+                </div>
+              </div>
+
+              <!-- Library chips: 角色主题曲 / 世界原声 -->
+              <div style="flex: none; display: flex; gap: 6px; padding: 12px 14px 0;">
+                <sc-for list="{{ roomSectionChips }}" as="rc" hint-placeholder-count="2">
+                  <button onClick="{{ rc.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ rc.bg }}; border-radius: 999px; padding: 7px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ rc.label }}</button>
+                </sc-for>
+              </div>
+
+              <!-- Search (same controlled-input pattern as the Units filter; see that comment) -->
+              <div style="flex: none; padding: 8px 14px 2px;">
+                <input type="text" value="{{ roomSearchValue }}" onChange="{{ setRoomSearch }}" placeholder="{{ roomSearchHint }}" style="width: 100%; border: 2px solid #DCDCDC; border-radius: 4px; padding: 7px; background: #FAFAFA; font-size: 12px; font-family: inherit; color: #3E4450; box-sizing: border-box;">
+              </div>
+
+              <div id="music-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px 12px;">
+                <!-- Character themes: one row per roster character with music -->
+                <sc-if value="{{ roomShowChars }}" hint-placeholder-val="{{ true }}">
+                  <div>
+                    <sc-for list="{{ roomCharRows }}" as="cr" hint-placeholder-count="3">
+                      <div style="background: #FFFFFF; border-radius: 12px; padding: 8px 10px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); display: flex; align-items: center; gap: 10px;">
+                        <!-- Rounded square, not a circle: head.png carries a corner badge a circle would clip -->
+                        <img src="{{ cr.headUrl }}" alt="{{ cr.name }}" loading="lazy" style="width: 40px; height: 40px; border-radius: 8px; flex: none; object-fit: contain; background: #F4F6F9;">
+                        <div style="flex: 1; min-width: 0;">
+                          <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ cr.name }}</div>
+                          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
+                            <sc-for list="{{ cr.pills }}" as="cp" hint-placeholder-count="1">
+                              <button onClick="{{ cp.onClick }}" style="border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ cp.color }}; background: {{ cp.bg }}; border-radius: 999px; padding: 5px 12px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ cp.label }}</button>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <!-- World & event albums -->
+                <sc-if value="{{ roomShowWorld }}" hint-placeholder-val="{{ false }}">
+                  <div>
+                    <sc-if value="{{ roomAlbumsLoading }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ roomLoadingText }}</div>
+                    </sc-if>
+                    <sc-if value="{{ roomAlbumsError }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ roomErrorText }}</div>
+                    </sc-if>
+                    <!-- No search: the album cards (story banner art). Searching: flat track rows. -->
+                    <sc-if value="{{ roomShowAlbumGrid }}" hint-placeholder-val="{{ true }}">
+                      <div>
+                        <sc-for list="{{ roomAlbumItems }}" as="ra" hint-placeholder-count="3">
+                          <div onClick="{{ ra.onClick }}" style="cursor: pointer; margin-bottom: 12px; border: 4px solid #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 1px 1px 5px rgba(0,0,0,0.5);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
+                            <sc-if value="{{ ra.hasBanner }}" hint-placeholder-val="{{ true }}">
+                              <img src="{{ ra.bannerUrl }}" alt="{{ ra.title }}" loading="lazy" style="display: block; width: 100%; aspect-ratio: 1000 / 184; object-fit: cover; background: #EAEAEA;">
+                            </sc-if>
+                            <sc-if value="{{ ra.noBanner }}" hint-placeholder-val="{{ false }}">
+                              <div style="width: 100%; aspect-ratio: 1000 / 184; background: #EAEAEA; display: flex; align-items: center; justify-content: center; padding: 0 12px;">
+                                <span style="font-size: 13px; font-weight: 900; color: #3E4450; text-align: center;">{{ ra.title }}</span>
+                              </div>
+                            </sc-if>
+                            <div style="display: flex; justify-content: flex-end; background: #FFFFFF; padding: 3px 4px 0; font-size: 10px; font-weight: 800; color: #8A93A5;">♪ {{ ra.countText }}</div>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ roomShowTrackResults }}" hint-placeholder-val="{{ false }}">
+                      <div>
+                        <sc-for list="{{ roomTrackResults }}" as="rt" hint-placeholder-count="3">
+                          <button onClick="{{ rt.onClick }}" style="display: block; width: 100%; text-align: left; border: none; cursor: pointer; font-family: inherit; background: {{ rt.bg }}; border-radius: 12px; padding: 9px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
+                            <div style="font-weight: 800; font-size: 11.5px; color: {{ rt.color }}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ rt.label }}</div>
+                            <div style="font-weight: 700; font-size: 10px; color: #8A93A5; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ rt.sub }}</div>
+                          </button>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ roomNoResults }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ roomNoResultsText }}</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ---- Album view: banner header + track list ---- -->
+          <sc-if value="{{ roomShowAlbum }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+              <div style="flex: none; position: relative; height: 96px; background-color: {{ sectionColor }}; background-image: {{ roomAlbumBannerCss }}; background-size: cover; background-position: center;">
+                <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 45%, rgba(0,0,0,0.45) 100%);"></div>
+                <button onClick="{{ roomBackBtn }}" style="position: absolute; left: 10px; top: 10px; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11px; color: #3E4450; background: rgba(255,255,255,0.92); border-radius: 999px; padding: 6px 12px; box-shadow: 0 2px 0 rgba(62,68,80,0.25);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.25);">‹ {{ roomBackLabel }}</button>
+                <div style="position: absolute; left: 12px; right: 12px; bottom: 8px; font-size: 16px; font-weight: 900; color: #FFFFFF; text-shadow: 0 2px 4px rgba(0,0,0,0.6);">{{ roomAlbumTitle }}</div>
+              </div>
+              <div id="music-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 10px 14px 12px;">
+                <sc-for list="{{ roomAlbumTracks }}" as="rat" hint-placeholder-count="3">
+                  <button onClick="{{ rat.onClick }}" style="display: block; width: 100%; text-align: left; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: {{ rat.color }}; background: {{ rat.bg }}; border-radius: 12px; padding: 11px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">{{ rat.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ---- Now-playing bar (persists across library/album views) ---- -->
+          <sc-if value="{{ roomBarVisible }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: none; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px;">
+              <!-- Seek: a ratio along the bar, so the canvas scale cancels (see roomSeekDown) -->
+              <div onPointerDown="{{ roomSeekDown }}" style="padding: 8px 0 6px; cursor: pointer; touch-action: none;">
+                <div style="height: 6px; background: #EAEAEA; border-radius: 999px; overflow: hidden;">
+                  <div style="height: 100%; width: {{ roomProgressPct }}; background: {{ sectionColor }}; border-radius: 999px;"></div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowTitle }}</div>
+                  <div style="font-size: 10px; font-weight: 700; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowSub }} · {{ roomTimeText }}</div>
+                </div>
+                <button onClick="{{ roomPrev }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                  <svg width="14" height="14" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="0" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="8" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="6" y="2" width="2" height="6" fill="#3E4450"></rect><rect x="4" y="3" width="2" height="4" fill="#3E4450"></rect></svg>
+                </button>
+                <button onClick="{{ roomTogglePlay }}" style="flex: none; border: none; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; background: {{ sectionColor }}; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.3); font-family: inherit; color: #FFFFFF; font-size: 13px; font-weight: 800;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.3);">{{ roomPlayGlyph }}</button>
+                <button onClick="{{ roomNext }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                  <svg width="14" height="14" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="0" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="2" y="2" width="2" height="6" fill="#3E4450"></rect><rect x="4" y="3" width="2" height="4" fill="#3E4450"></rect><rect x="8" y="1" width="2" height="8" fill="#3E4450"></rect></svg>
+                </button>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>
+
       <!-- ===== SECTION SCREENS (nav shell placeholders) ===== -->
       <sc-if value="{{ isSection }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto;">
@@ -1424,6 +1566,14 @@ const STRINGS = {
   arcLoadingEpisode: { en: 'Loading episode…', zh: '剧情加载中…' },
   arcNoEpisodes: { en: 'No episodes available yet.', zh: '暂无剧情数据。' },
   arcBackToStories: { en: 'Stories', zh: '剧情列表' },
+  roomSectionChar: { en: 'Character Themes', zh: '角色主题曲' },
+  roomSectionWorld: { en: 'World & Events', zh: '世界原声' },
+  roomSearchHint: { en: 'Search music…', zh: '搜索音乐…' },
+  roomLoading: { en: 'Loading music…', zh: '音乐加载中…' },
+  roomLoadError: { en: 'Failed to load the music index.', zh: '音乐索引加载失败。' },
+  roomNoResults: { en: 'No matching tracks.', zh: '没有符合条件的曲目。' },
+  roomBack: { en: 'Music Room', zh: '音乐室' },
+  roomTracksSuffix: { en: ' tracks', zh: ' 首' },
   actionIntoCoffin: { en: 'Down', zh: '倒下' },
   actionGhostRaise: { en: 'Ghost', zh: '化灵' },
   actionGhostNeutral: { en: 'Spirit', zh: '灵体' },
@@ -1442,6 +1592,15 @@ const ARC_CATEGORIES = [
   { id: 'main', labelKey: 'arcFilterMain' },
   { id: 'event', labelKey: 'arcFilterEvent' },
   { id: 'collab', labelKey: 'arcFilterCollab' }
+];
+
+// The Music Room's two libraries: character theme tracks (the roster's `music` arrays) and the
+// world/event BGM albums (story/music_index.json, one album per story). The room can't use the
+// global `accent` (that's the Units orange), so its section colour doubles as its accent.
+const MUSIC_ACCENT = '#A66FE0';
+const ROOM_SECTIONS = [
+  { id: 'char', labelKey: 'roomSectionChar' },
+  { id: 'world', labelKey: 'roomSectionWorld' }
 ];
 
 // Pixel actions the site has always shipped (rendered by the stage + the Skill/Special
@@ -1559,6 +1718,15 @@ class Component extends DCLogic {
     arcStory: null, arcDetail: null, arcDetailLoading: false, arcTab: 'info',
     arcEpisodeIndex: null, arcEpisode: null, arcEpisodeLoading: false,
     arcBgmIndex: 0, arcBgmPlaying: false,
+    // Music Room (the music tab). `room` prefix throughout — `music*` already means the character
+    // sheet's theme pills and `arc*` the story archive, so an unprefixed name here would quietly
+    // rewire one of them. roomQueue is the current playlist ({url, label, sub} per track): a
+    // character's tracks, an album's tracks, whatever the tapped row belonged to. It survives tab
+    // switches on purpose — room playback keeps going while you browse (see audioOwner).
+    roomAlbums: null, roomAlbumsLoading: false, roomAlbumsError: null,
+    roomSection: 'char', roomSearch: '', roomOpenAlbum: null,
+    roomQueue: [], roomQueuePos: 0, roomPlaying: false,
+    roomPos: 0, roomDur: 0, // whole seconds — floored so timeupdate re-renders at ~1/s, not 4/s
     // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
     // where we deliberately don't count) — renderVals shows a dash in that case.
     pv: null, uv: null,
@@ -1603,6 +1771,14 @@ class Component extends DCLogic {
   arcDetailCache = new Map();
   arcEpisodeCache = new Map();
 
+  // Which feature the single shared this.audio currently belongs to: null | 'detail' | 'story' |
+  // 'room'. A feature stops the audio only if it owns it, and starting playback anywhere claims
+  // ownership — that's what lets Music Room playback survive a trip through a detail or story
+  // page (nothing played there, so nothing stops it) while a theme pill or BGM pill naturally
+  // replaces it. Instance field, not state: every mutation is accompanied by a setState of the
+  // owner's own "playing" flag, which is what renderVals actually reads.
+  audioOwner = null;
+
   // Memoized by visitorId(); see there for why it's the same id the visit counter uses.
   _vid = '';
 
@@ -1644,7 +1820,7 @@ class Component extends DCLogic {
       art:   { label: this.t('sectionArtLabel'),   desc: this.t('sectionArtDesc'),   color: '#F0526E' },
       units: { label: this.t('sectionUnitsLabel'), desc: this.t('sectionUnitsDesc'), color: '#FFA726' },
       story: { label: this.t('sectionStoryLabel'), desc: this.t('sectionStoryDesc'), color: '#3FA6DD' },
-      music: { label: this.t('sectionMusicLabel'), desc: this.t('sectionMusicDesc'), color: '#A66FE0' },
+      music: { label: this.t('sectionMusicLabel'), desc: this.t('sectionMusicDesc'), color: MUSIC_ACCENT },
       arms:  { label: this.t('sectionArmsLabel'),  desc: this.t('sectionArmsDesc'),  color: '#35C8B4' }
     };
   }
@@ -1813,9 +1989,26 @@ class Component extends DCLogic {
       document.addEventListener(type, e => e.preventDefault(), { passive: false });
     });
 
-    // One audio element serves both the character theme pills and the story-archive BGM pills,
-    // so a finished track has to clear whichever "playing" flag is showing.
-    this.audio.addEventListener('ended', () => this.setState({ musicPlaying: false, arcBgmPlaying: false }));
+    // One audio element serves the character theme pills, the story-archive BGM pills and the
+    // Music Room, so a finished track has to clear whichever "playing" flag is showing — except
+    // the room, which queues tracks and advances instead.
+    this.audio.addEventListener('ended', () => {
+      if (this.audioOwner === 'room') { this.roomAdvance(); return; }
+      this.setState({ musicPlaying: false, arcBgmPlaying: false });
+    });
+    // The room's progress bar. Positions are floored to whole seconds and gated to the music tab,
+    // so this re-renders at most once a second there and never anywhere else (renderVals rebuilds
+    // the roster tiles on every render — a 4Hz timeupdate would be pure waste on other tabs).
+    this.audio.addEventListener('timeupdate', () => {
+      if (this.audioOwner !== 'room' || this.state.tab !== 'music') return;
+      const pos = Math.floor(this.audio.currentTime || 0);
+      if (pos !== this.state.roomPos) this.setState({ roomPos: pos });
+    });
+    this.audio.addEventListener('durationchange', () => {
+      if (this.audioOwner !== 'room') return;
+      const dur = isFinite(this.audio.duration) ? Math.floor(this.audio.duration) : 0;
+      if (dur !== this.state.roomDur) this.setState({ roomDur: dur });
+    });
     this.voiceAudio.addEventListener('ended', () => this.setState({ voicePlaying: false }));
 
     // The units strip scrolls on its x axis only, and a mouse wheel emits deltaY, which
@@ -1846,16 +2039,17 @@ class Component extends DCLogic {
   }
 
   go(tab) {
-    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopMusic(); this.stopVoice(); }
-    // The story archive plays its BGM through the same audio element, so leaving it must stop
-    // the track rather than let it follow you into another tab.
-    if (this.state.tab === 'story' && tab !== 'story') this.stopMusic();
+    // Leaving detail/story stops *their* audio, but only theirs: Music Room playback deliberately
+    // follows you across tabs (it's a music room), so an audio the room owns rides through here.
+    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); if (this.audioOwner === 'detail') this.stopMusic(); this.stopVoice(); }
+    if (this.state.tab === 'story' && tab !== 'story' && this.audioOwner === 'story') this.stopMusic();
     // A fly-out timer that outlives the screen would advance a deck nobody's looking at.
     if (this.state.tab === 'flip' && tab !== 'flip') this.clearFlipTimers();
     this.setState({ tab: tab, menuOpen: false, arcBgmPlaying: false });
     if (tab === 'units') this.restoreUnitsScroll();
     if (tab === 'story') this.loadArcIndex();
     if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
+    if (tab === 'music') this.loadRoomAlbums();
   }
 
   // --- Flip (弹弹): the art-voting swipe deck ------------------------------------------------
@@ -2172,7 +2366,9 @@ class Component extends DCLogic {
 
   goDetail(c) {
     this.clearAnimTimers();
-    this.stopMusic();
+    // Stops the previous character's theme / a story BGM on chip navigation — but not the Music
+    // Room, whose playback rides through detail pages (see audioOwner).
+    if (this.audioOwner !== 'room') this.stopMusic();
     this.stopVoice();
     // The hero art's vote pills read the same shared map the Flip deck does, and this screen is
     // reachable without ever opening Flip — so kick the (once-per-session) fetch here too.
@@ -2243,17 +2439,21 @@ class Component extends DCLogic {
       this.setState({ musicPlaying: false });
       return;
     }
-    if (!sameTrack) {
+    // The index alone can't prove the src is right: if another feature owned the audio last, the
+    // element still holds *its* track even when the index matches.
+    if (!sameTrack || this.audioOwner !== 'detail') {
       this.audio.src = selectedChar.folderUrl + '/music/' + selectedChar.music[index];
     }
+    this.audioOwner = 'detail';
     this.audio.play().catch(() => {});
-    this.setState({ musicIndex: index, musicPlaying: true });
+    this.setState({ musicIndex: index, musicPlaying: true, roomPlaying: false });
   }
 
   stopMusic() {
     this.audio.pause();
     this.audio.currentTime = 0;
     this.audio.removeAttribute('src');
+    this.audioOwner = null;
   }
 
   toggleVoiceTrack(index) {
@@ -2367,7 +2567,7 @@ class Component extends DCLogic {
   }
 
   closeArcStory() {
-    this.stopMusic();
+    if (this.audioOwner === 'story') this.stopMusic();
     this.setState({
       arcStory: null, arcDetail: null, arcEpisodeIndex: null, arcEpisode: null, arcBgmPlaying: false
     });
@@ -2396,8 +2596,8 @@ class Component extends DCLogic {
 
   closeArcEpisode() { this.setState({ arcEpisodeIndex: null, arcEpisode: null }); this.scrollArcTop(); }
 
-  // Story BGM plays through the same single audio element as the character theme music, so the
-  // two can never overlap — and leaving the tab (go/closeArcStory) stops it.
+  // Story BGM plays through the same single audio element as the character theme music and the
+  // Music Room, so none of them can ever overlap — and leaving the tab (go/closeArcStory) stops it.
   toggleArcBgm(i) {
     const bgm = this.state.arcDetail && this.state.arcDetail.bgm;
     if (!bgm || !bgm[i]) return;
@@ -2407,9 +2607,12 @@ class Component extends DCLogic {
       this.setState({ arcBgmPlaying: false });
       return;
     }
-    if (!sameTrack) this.audio.src = ASSET_BASE + '/' + bgm[i].file;
+    // Same src caveat as toggleMusicTrack: a matching index doesn't mean a matching src when
+    // another feature owned the audio last.
+    if (!sameTrack || this.audioOwner !== 'story') this.audio.src = ASSET_BASE + '/' + bgm[i].file;
+    this.audioOwner = 'story';
     this.audio.play().catch(() => {});
-    this.setState({ arcBgmIndex: i, arcBgmPlaying: true });
+    this.setState({ arcBgmIndex: i, arcBgmPlaying: true, roomPlaying: false });
   }
 
   // Switching story/tab/episode swaps the scroller's content while its offset stays put, which
@@ -2419,6 +2622,152 @@ class Component extends DCLogic {
       const el = document.getElementById('story-scroll');
       if (el) el.scrollTop = 0;
     });
+  }
+
+  // --- Music Room (the music tab) ------------------------------------------------------------
+  // A player over the two libraries the site already ships: the roster's character theme mp3s and
+  // the world/event BGM albums in story/music_index.json (one album per story, derived from the
+  // story details by scripts/build-music-index.mjs). Playback goes through the shared this.audio
+  // under the 'room' owner (see audioOwner) and — unlike detail/story audio — keeps playing when
+  // you leave the tab; the now-playing bar picks the queue back up on return.
+
+  loadRoomAlbums() {
+    if (this.state.roomAlbums || this.state.roomAlbumsLoading) return;
+    this.setState({ roomAlbumsLoading: true, roomAlbumsError: null });
+    fetch(ASSET_BASE + '/story/music_index.json')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => this.setState({ roomAlbums: (data && data.albums) || [], roomAlbumsLoading: false }))
+      .catch(err => {
+        console.error('[music] failed to load story/music_index.json', err);
+        this.setState({ roomAlbumsLoading: false, roomAlbumsError: String(err && err.message || err) });
+      });
+  }
+
+  setRoomSection(id) { this.setState({ roomSection: id }); this.scrollRoomTop(); }
+
+  setRoomSearch(e) {
+    const roomSearch = e.target.value;
+    this.setState({ roomSearch });
+    this.scrollRoomTop();
+  }
+
+  openRoomAlbum(album) { this.setState({ roomOpenAlbum: album }); this.scrollRoomTop(); }
+  closeRoomAlbum() { this.setState({ roomOpenAlbum: null }); this.scrollRoomTop(); }
+
+  // Same content-swap reset as scrollArcTop; the library and the album view take turns owning the
+  // #music-scroll id (they never coexist), exactly like the story tab's two #story-scroll views.
+  scrollRoomTop() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('music-scroll');
+      if (el) el.scrollTop = 0;
+    });
+  }
+
+  // BGM filenames are the only name the data has (`light_field_normal` — see build-music-index);
+  // language-neutral prettifying, so no STRINGS involvement.
+  roomTrackTitle(name) {
+    return name.split('_').map(w => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(' ');
+  }
+
+  roomAlbumQueue(album) {
+    return album.tracks.map(t => ({
+      url: ASSET_BASE + '/' + t.file,
+      label: this.roomTrackTitle(t.name),
+      sub: album.title
+    }));
+  }
+
+  roomFmtTime(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+  roomPlay(queue, pos) {
+    const tr = queue[pos];
+    if (!tr) return;
+    // Owner before src: setting src fires durationchange for the new track, and the listener
+    // drops it unless the room already owns the audio.
+    this.audioOwner = 'room';
+    this.audio.src = tr.url;
+    this.audio.play().catch(() => {});
+    this.setState({
+      roomQueue: queue, roomQueuePos: pos, roomPlaying: true, roomPos: 0, roomDur: 0,
+      musicPlaying: false, arcBgmPlaying: false
+    });
+  }
+
+  roomToggleTrack(queue, pos) {
+    const tr = queue[pos];
+    if (!tr) return;
+    const current = this.state.roomQueue[this.state.roomQueuePos];
+    if (this.audioOwner === 'room' && current && current.url === tr.url) {
+      if (this.state.roomPlaying) {
+        this.audio.pause();
+        this.setState({ roomPlaying: false });
+        return;
+      }
+      // Resuming adopts the tapped row's queue — same track, but auto-advance should continue
+      // through the list the user is looking at now.
+      this.audio.play().catch(() => {});
+      this.setState({ roomQueue: queue, roomQueuePos: pos, roomPlaying: true });
+      return;
+    }
+    this.roomPlay(queue, pos);
+  }
+
+  // The now-playing bar's button. If another feature took the audio since (or a reload left the
+  // element empty), re-claim by replaying the current queue entry from the top — simplest rule,
+  // and losing the paused position to a theme-pill detour is a fair trade.
+  roomTogglePlay() {
+    const current = this.state.roomQueue[this.state.roomQueuePos];
+    if (!current) return;
+    if (this.audioOwner !== 'room') { this.roomPlay(this.state.roomQueue, this.state.roomQueuePos); return; }
+    if (this.state.roomPlaying) {
+      this.audio.pause();
+      this.setState({ roomPlaying: false });
+      return;
+    }
+    this.audio.play().catch(() => {});
+    this.setState({ roomPlaying: true });
+  }
+
+  roomStep(delta) {
+    const queue = this.state.roomQueue;
+    if (!queue.length) return;
+    const next = Math.max(0, Math.min(queue.length - 1, this.state.roomQueuePos + delta));
+    this.roomPlay(queue, next); // at either end this replays the boundary track from 0:00
+  }
+
+  roomAdvance() {
+    const queue = this.state.roomQueue;
+    const next = this.state.roomQueuePos + 1;
+    if (next < queue.length) { this.roomPlay(queue, next); return; }
+    this.setState({ roomPlaying: false, roomPos: 0 });
+  }
+
+  // Seek by tap or scrub. Third consumer of the sheetPointerDown convention's window-level
+  // listeners — but NOT of its scale division: a seek is a *ratio* along the bar, and the canvas
+  // scale multiplies clientX offset and rect.width alike, so it cancels.
+  roomSeekDown(e) {
+    if (this.audioOwner !== 'room') return;
+    const duration = this.audio.duration;
+    if (!isFinite(duration) || !duration) return;
+    e.preventDefault();
+    const bar = e.currentTarget;
+    const seekTo = clientX => {
+      const rect = bar.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      this.audio.currentTime = frac * duration;
+      const pos = Math.floor(this.audio.currentTime);
+      if (pos !== this.state.roomPos) this.setState({ roomPos: pos });
+    };
+    seekTo(e.clientX);
+    const onMove = ev => seekTo(ev.clientX);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
   }
 
   // Story speakers resolve to a portrait in two tiers: a roster character uses their own framed
@@ -2771,6 +3120,72 @@ class Component extends DCLogic {
       });
     const arcTabBg = id => (arcTab === id ? accent : '#F0F3F7');
 
+    // --- Music Room ---------------------------------------------------------------------------
+    // The list view-models only build while the tab is showing: unlike the arc block's fixed 42
+    // stories this walks the whole roster, and renderVals runs on every render regardless of tab.
+    // The now-playing keys below are always live — they're cheap strings, and the queue persists
+    // across tabs by design.
+    const roomOnTab = tab === 'music';
+    const roomAlbum = this.state.roomOpenAlbum;
+    const roomAlbums = this.state.roomAlbums || [];
+    const roomSearchText = this.state.roomSearch.trim().toLowerCase();
+    const roomCurrent = this.state.roomQueue[this.state.roomQueuePos] || null;
+    const roomIsPlaying = url => this.state.roomPlaying && !!roomCurrent && roomCurrent.url === url;
+    const roomCharRows = roomOnTab ? this.state.roster
+      .filter(c => c.music.length && (!roomSearchText ||
+        [c.enName, c.zhName, c.jpName, c.devName].filter(Boolean).join(' ').toLowerCase().includes(roomSearchText)))
+      .map(c => {
+        const name = (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName;
+        const folderUrl = c.thumbUrl.slice(0, c.thumbUrl.lastIndexOf('/'));
+        const queue = c.music.map((f, i) => ({
+          url: folderUrl + '/music/' + f, label: this.trackLabel(f, i + 1), sub: name
+        }));
+        return {
+          headUrl: c.headUrl || c.thumbUrl,
+          name,
+          pills: queue.map((tr, i) => ({
+            label: (roomIsPlaying(tr.url) ? '❚❚ ' : '▶ ') + tr.label,
+            bg: roomIsPlaying(tr.url) ? MUSIC_ACCENT : '#F0F3F7',
+            color: roomIsPlaying(tr.url) ? '#FFFFFF' : '#3E4450',
+            onClick: () => this.roomToggleTrack(queue, i)
+          }))
+        };
+      }) : [];
+    const roomAlbumItems = (roomOnTab && !roomAlbum && !roomSearchText) ? roomAlbums.map(a => ({
+      title: a.title,
+      hasBanner: !!a.banner,
+      noBanner: !a.banner,
+      bannerUrl: a.banner ? ASSET_BASE + '/' + a.banner : '',
+      countText: a.tracks.length + this.t('roomTracksSuffix'),
+      onClick: () => this.openRoomAlbum(a)
+    })) : [];
+    // Search in the world section flattens to cross-album track rows (the index is what makes
+    // that possible without loading anything). Album-title matches surface the whole album.
+    const roomTrackResults = [];
+    if (roomOnTab && !roomAlbum && roomSearchText && this.state.roomSection === 'world') {
+      outer: for (const a of roomAlbums) {
+        const albumHit = a.title.toLowerCase().includes(roomSearchText);
+        for (let i = 0; i < a.tracks.length; i++) {
+          const t = a.tracks[i];
+          if (!albumHit && !t.name.toLowerCase().replace(/_/g, ' ').includes(roomSearchText.replace(/_/g, ' '))) continue;
+          roomTrackResults.push({
+            label: (roomIsPlaying(ASSET_BASE + '/' + t.file) ? '❚❚  ' : '▶  ') + this.roomTrackTitle(t.name),
+            sub: a.title,
+            bg: roomIsPlaying(ASSET_BASE + '/' + t.file) ? MUSIC_ACCENT : '#F7F9FC',
+            color: roomIsPlaying(ASSET_BASE + '/' + t.file) ? '#FFFFFF' : '#3E4450',
+            onClick: () => this.roomToggleTrack(this.roomAlbumQueue(a), i)
+          });
+          if (roomTrackResults.length >= 60) break outer;
+        }
+      }
+    }
+    const roomAlbumTracks = (roomOnTab && roomAlbum) ? this.roomAlbumQueue(roomAlbum).map((tr, i, queue) => ({
+      label: (roomIsPlaying(tr.url) ? '❚❚  ' : '▶  ') + tr.label,
+      bg: roomIsPlaying(tr.url) ? MUSIC_ACCENT : '#F7F9FC',
+      color: roomIsPlaying(tr.url) ? '#FFFFFF' : '#3E4450',
+      onClick: () => this.roomToggleTrack(queue, i)
+    })) : [];
+
     // --- Flip (弹弹) --------------------------------------------------------------------------
     const flipCard = this.flipDeck ? (this.flipDeck[this.state.flipIndex] || null) : null;
     const flipNext = this.flipDeck ? (this.flipDeck[this.state.flipIndex + 1] || null) : null;
@@ -2819,10 +3234,10 @@ class Component extends DCLogic {
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',
-      // 'story' and 'flip' have their own real screens now (the story archive and the art-voting
-      // deck), so they drop out of the under-construction placeholder that still backs
-      // art/music/arms.
-      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story' && tab !== 'flip',
+      // 'story', 'flip' and 'music' have their own real screens now (the story archive, the
+      // art-voting deck and the music room), so they drop out of the under-construction
+      // placeholder that still backs art/arms.
+      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story' && tab !== 'flip' && tab !== 'music',
       isStory: tab === 'story',
 
       // Flip (弹弹): the art-voting deck.
@@ -2980,6 +3395,57 @@ class Component extends DCLogic {
         bg: (this.state.arcBgmPlaying && this.state.arcBgmIndex === i) ? accent : '#F7F9FC',
         onClick: () => this.toggleArcBgm(i)
       })),
+
+      // Music Room: library view (section chips + search + the two lists)
+      isMusic: roomOnTab,
+      roomShowMain: !roomAlbum,
+      roomShowAlbum: !!roomAlbum,
+      roomSectionChips: ROOM_SECTIONS.map(sn => ({
+        label: this.t(sn.labelKey),
+        // The music tint of the arc chips' #ffcf8f active state.
+        bg: this.state.roomSection === sn.id ? '#E8D9F8' : '#FAFAFA',
+        onClick: () => this.setRoomSection(sn.id)
+      })),
+      roomSearchValue: this.state.roomSearch,
+      roomSearchHint: this.t('roomSearchHint'),
+      setRoomSearch: (e) => this.setRoomSearch(e),
+      roomShowChars: this.state.roomSection === 'char',
+      roomCharRows: roomCharRows,
+      roomShowWorld: this.state.roomSection === 'world',
+      roomAlbumsLoading: this.state.roomAlbumsLoading,
+      roomAlbumsError: !!this.state.roomAlbumsError,
+      roomLoadingText: this.t('roomLoading'),
+      roomErrorText: this.t('roomLoadError'),
+      roomShowAlbumGrid: !roomSearchText,
+      roomAlbumItems: roomAlbumItems,
+      roomShowTrackResults: !!roomSearchText,
+      roomTrackResults: roomTrackResults,
+      roomNoResults: roomOnTab && !roomAlbum && !!roomSearchText && (
+        this.state.roomSection === 'char'
+          ? roomCharRows.length === 0
+          : (!!this.state.roomAlbums && roomTrackResults.length === 0)),
+      roomNoResultsText: this.t('roomNoResults'),
+
+      // Music Room: album view
+      roomAlbumTitle: roomAlbum ? roomAlbum.title : '',
+      roomAlbumBannerCss: (roomAlbum && roomAlbum.banner) ? 'url("' + ASSET_BASE + '/' + roomAlbum.banner + '")' : 'none',
+      roomBackLabel: this.t('roomBack'),
+      roomBackBtn: () => this.closeRoomAlbum(),
+      roomAlbumTracks: roomAlbumTracks,
+
+      // Music Room: now-playing bar (queue survives tab switches, so these stay live)
+      roomBarVisible: this.state.roomQueue.length > 0,
+      roomNowTitle: roomCurrent ? roomCurrent.label : '',
+      roomNowSub: roomCurrent ? roomCurrent.sub : '',
+      roomPlayGlyph: this.state.roomPlaying ? '❚❚' : '▶',
+      roomProgressPct: this.state.roomDur
+        ? Math.min(100, this.state.roomPos / this.state.roomDur * 100) + '%'
+        : '0%',
+      roomTimeText: this.roomFmtTime(this.state.roomPos) + ' / ' + this.roomFmtTime(this.state.roomDur),
+      roomTogglePlay: () => this.roomTogglePlay(),
+      roomPrev: () => this.roomStep(-1),
+      roomNext: () => this.roomStep(1),
+      roomSeekDown: (e) => this.roomSeekDown(e),
 
       menuOpen: this.state.menuOpen,
       showCounters: this.props.showCounters ?? true,

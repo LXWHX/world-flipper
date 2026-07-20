@@ -7,7 +7,8 @@
     "scrape:wiki-zh": "node scripts/scrape-wiki-zh.mjs",
     "match:wiki-zh": "node scripts/match-wiki-to-roster.mjs",
     "fetch:miaowm5": "node scripts/fetch-miaowm5.mjs",
-    "fetch:story": "node scripts/fetch-main-story.mjs"
+    "fetch:story": "node scripts/fetch-main-story.mjs",
+    "build:music-index": "node scripts/build-music-index.mjs"
   },
   "devDependencies": {
     "cheerio": "^1.2.0",
