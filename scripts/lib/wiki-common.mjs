@@ -13,18 +13,20 @@ export function sleep(ms) {
 
 // Polite fetch: single in-flight request per caller, small delay after every request (even
 // failures) so retries don't hammer the server, a couple of retries for transient network blips.
-export async function politeFetch(url, { delayMs = 1000, retries = 2 } = {}) {
+export async function politeFetch(url, { delayMs = 1000, retries = 2, headers = {} } = {}) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT, ...headers } });
       if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
       const text = await res.text();
       await sleep(delayMs);
       return text;
     } catch (err) {
       lastErr = err;
-      await sleep(delayMs);
+      // Back off on retry — biligame answers a bare/bot-looking request with HTTP 567, and a
+      // longer pause plus the browser-like headers callers pass is what clears it.
+      await sleep(delayMs * (attempt + 1));
     }
   }
   throw lastErr;

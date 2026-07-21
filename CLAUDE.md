@@ -38,6 +38,35 @@ pages to `roster.json` by `jpName`, downloads voice mp3s, writes `wiki_zh.json`,
 `Character Assets/_unmatched_wiki_report.md`). A future English source can follow the same shape,
 matched by `enName` into `wiki_en.json`.
 
+### weapons pipeline (wiki.biligame.com/worldflipper/装备)
+
+`npm run scrape:weapons` (`scripts/scrape-weapons.mjs`, flags `--force`/`--limit=N`) scrapes the
+bilibili wiki's equipment (装备) into the **top-level `Weapons/` folder** (a sibling of
+`Character Assets/`, not under it — see the R2 note below), feeding the Armaments tab's 武器库
+library + 武器详情 detail. Same source, HTTP-manners, disk-cache resume
+(`scripts/.weapons-scrape-cache/`, gitignored) and byte-stable `writeIfChanged` rules as the
+character wiki pipeline; reuses `scripts/lib/wiki-common.mjs`. Current scrape: 384 weapons.
+
+- **The list page carries rarity + element in a CSS class.** Each tile is a
+  `div.unit-icon unit-icon-{rarity}-{element}` (element ∈ `fire|water|thunder|wind|light|dark|none`,
+  mapped onto the site's `ELEMENT_ORDER` + a non-elemental `None` bucket) — so the grid's rarity and
+  element come straight off the list, no per-page parse. The icon `<img>` src is upgraded from its
+  `/thumb/…/NNpx-` thumbnail to the original; the patchwiki `<hash>` becomes the icon filename
+  (`Weapons/icons/<hash>.png`, skip-if-exists), stable and CJK-free.
+- **The detail page is one `table.wikitable`** (bespoke `模板:装备图鉴展示`, not the character
+  pages' `mw-headline`/section layout). Its caption holds name/alt/rarity/element + a `<p>` flavor
+  line; body rows are label→value (`能力`/`限制`/`体系` → role/limit/system, `获取方式`,
+  `效果`/`最大效果`), with `初始`/`满级` header rows switching the HP/ATK phase between base and
+  max. Parsing anchors on the label text, so a missing field degrades gracefully — e.g. 宝珠 (orb)
+  entries legitimately have only max stats + `最大效果`, no base row.
+- **biligame answers a bot-shaped request with HTTP 567.** The scraper sends a clean browser UA +
+  `Accept`/`Accept-Language`/`Referer` (via `politeFetch`'s `headers` option) and backs off on
+  retry; that's what turns it back into a 200.
+- **`Weapons/weapons.json`** is the index the front-end reads (`WEAPON_BASE + '/weapons.json'`):
+  one lean record per weapon (`href` merge-key, `nameZh`, `rarity`, `element`, `role`/`limit`/
+  `system`, `icon`, base/max `hp`/`atk`, `effect`/`maxEffect`, `flavor`, `acquisition` — empty/null
+  fields pruned). Partial `--limit` runs merge into the existing file rather than dropping entries.
+
 ### miaowm5 pipeline (worldflipper.miaowm5.com)
 
 miaowm5 is an open-source Svelte SPA (github.com/miaowm5/wf-encyclopedia) serving structured JSON
@@ -198,8 +227,10 @@ bug to dedupe.
 - `npm run upload:assets` — uploads `Character Assets/` to Cloudflare R2 (`wf-assets`) via
   `scripts/upload-to-r2.mjs`. Needs `npx wrangler login` once (or `CLOUDFLARE_API_TOKEN` /
   `CLOUDFLARE_ACCOUNT_ID`). Ships only `roster.json`, `story_heads.json`, `rarityN/`,
-  `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`); dev-only files are excluded.
-  Resumes via `scripts/.r2-upload-manifest.json`; `--force` re-uploads everything.
+  `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`) **plus the top-level
+  `Weapons/` folder under a `Weapons/` key prefix** (matching the front-end's `WEAPON_BASE`);
+  dev-only files are excluded. Resumes via `scripts/.r2-upload-manifest.json`; `--force` re-uploads
+  everything.
 - No lint/test/build commands exist.
 
 ## Architecture
@@ -286,11 +317,40 @@ then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `de
 file's own order is just append history), and paginates client-side (`ROSTER_BATCH` = 60 per
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view.
 
-`isSection` is the under-construction placeholder that still backs art/arms; `units`,
-`detail`, `story`, `flip` and `music` are excluded from it because they have real screens.
+`isSection` is the under-construction placeholder that now backs only **art**; `units`, `detail`,
+`story`, `flip`, `music` and `arms` are excluded from it because they have real screens.
 
 The home screen's centre red button opens **`flip`**, not `units` — Units keeps its bottom-tab-bar
 button and its menu entry, which is the only reason repointing it strands nothing.
+
+#### Armaments tab (武器库 / 武器详情) — the weapon library
+
+A port of the Units grid/filter over `Weapons/weapons.json` (see the weapons pipeline above).
+Everything is **`arm`-prefixed** (state/handlers/`renderVals` keys) so none of it collides with the
+Units roster/filter — same discipline the story archive's `arc` and Flip's `flip` prefixes exist
+for; note `isArms`/`goArms`/`arms` (the section identifiers) predate this and mean the tab itself.
+
+- **`state.armDetail` is the navigation:** null = the 武器库 library grid, set = a 武器详情 page.
+  `go('arms')` resets it to null (so the nav button always lands on the library) and calls
+  `loadWeapons()` (fetch-once, guarded by `armLoaded`/`armLoading`).
+- **The library mirrors the Units screen** exactly: the same banner, the same horizontal
+  `repeat(5, 116px)` grid + pedestal tile (weapon icon on an element-tinted `PEDESTAL` with the
+  rarity stars, element badge top-right), `ROSTER_BATCH` pagination via `handleArmScroll`, and the
+  round filter button. `filteredWeapons()` is the single source for both `renderVals` and pagination
+  (like `filteredRoster()`).
+- **The filter dialog is a port of the Units filter** with three groups — rarity, element (the six
+  elements + a 无/`None` chip), and **role (能力)**. Role chips are derived from the loaded data
+  (a weapon's `role` can be comma-joined, split by `armRoleTokens`), not a hardcoded table.
+  `armFilter` applied / `armDraftFilter` working copy, same OR-within/AND-across + draft/commit
+  semantics as the Units filter (`cloneArmFilter`).
+- **The detail is a plain screen, not the character sheet's draggable bottom sheet** — weapons are
+  simpler. It's transparent (no own `.wf-circle` — it lets the screen area's shared circle through)
+  with a big icon hero on the pedestal, then white cards for 属性 (base vs 满级 HP/ATK), 效果 +
+  最大效果, 获取方式, and the 图鉴描述 flavor, each gated on the field being present (orbs have no
+  base stats). Back = `closeArmDetail()`.
+- **Weapons have only a Chinese name** (the source is a CN wiki), so the tile/detail show `nameZh`
+  regardless of `state.lang`; only the UI chrome localizes. Icons are self-hosted under
+  `WEAPON_BASE` (`Weapons/` locally, the R2 `Weapons/` prefix live — see Asset loading below).
 
 #### Story tab (the story archive)
 
@@ -594,6 +654,13 @@ new asset type must be added to `upload-to-r2.mjs`'s include rules or it silentl
 Every path inside `story/index.json` and `story/detail/*.json` is stored relative to
 `Character Assets/` (i.e. it mirrors the R2 key), so `ASSET_BASE + '/' + p` resolves on both
 branches with no per-branch special-casing.
+
+**`WEAPON_BASE` is the parallel switch for the weapons library**, defined right next to
+`ASSET_BASE`: `file://`/`localhost` → local `Weapons/`; else → the same R2 root with a `/Weapons`
+suffix. It can't ride `ASSET_BASE` because `Weapons/` is a **sibling** of `Character Assets/`, not
+under it — `upload-to-r2.mjs` collects that top-level folder separately and uploads it under a
+`Weapons/` key prefix that matches this. `weapons.json` stores icon paths relative to `WEAPON_BASE`
+(`icons/<hash>.png`), same as the story paths mirror their R2 key.
 
 `roster.json` entries carry `devName`, `enName`, `jpName`, `rarity`, `attribute`, `thumb`,
 optional `music` (mp3 filenames, ~150 characters), `hasHead` (the `head.png` URL is derived from

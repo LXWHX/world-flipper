@@ -15,6 +15,10 @@ const BUCKET = 'wf-assets';
 // ----------------------------------------------
 
 const SOURCE_DIR = path.resolve('Character Assets');
+// The weapons library (武器库) lives in a top-level Weapons/ folder — a sibling of Character
+// Assets/, not under it — so it's collected separately and uploaded under a Weapons/ key prefix
+// (matching the front-end's WEAPON_BASE). weapons.json + icons/*.png.
+const WEAPONS_DIR = path.resolve('Weapons');
 const MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
 // Each upload spawns its own `wrangler` process, so throughput is dominated by process
 // startup rather than bandwidth — the workers spend most of their time waiting. 8 keeps the
@@ -59,10 +63,21 @@ function buildFileList() {
     }
   }
 
-  return files.map((abs) => ({
+  const out = files.map((abs) => ({
     abs,
     key: path.relative(SOURCE_DIR, abs).split(path.sep).join('/'),
   }));
+
+  // The top-level Weapons/ folder, keyed under a Weapons/ prefix so live URLs are
+  // <r2-root>/Weapons/… — exactly what WEAPON_BASE points at.
+  if (existsSync(WEAPONS_DIR)) {
+    const weaponFiles = collectFiles(WEAPONS_DIR, WEAPONS_DIR, []);
+    for (const abs of weaponFiles) {
+      out.push({ abs, key: 'Weapons/' + path.relative(WEAPONS_DIR, abs).split(path.sep).join('/') });
+    }
+  }
+
+  return out;
 }
 
 function loadManifest() {

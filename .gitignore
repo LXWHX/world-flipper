@@ -1,4 +1,5 @@
 Character Assets/
+Weapons/
 WF OST/
 node_modules/
 # Third-party reference only, not part of the site: worldflipper.miaowm5.com's deployed
@@ -10,3 +11,5 @@ scripts/.wiki-scrape-cache/
 scripts/.wiki-scrape-manifest.json
 scripts/.miaowm5-cache/
 scripts/.miaowm5-manifest.json
+scripts/.weapons-scrape-cache/
+scripts/.weapons-scrape-manifest.json
