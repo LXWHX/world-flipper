@@ -141,11 +141,11 @@
 
           <!-- Right-side quick buttons (slanted tag: semicircle icon + rectangle) -->
           <div style="position: absolute; right: 0; top: 71%; z-index: 5; display: flex; flex-direction: column; gap: 18px; align-items: flex-end;">
-            <button onClick="{{ toggleMenu }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
+            <button onClick="{{ openNews }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
               <svg width="17" height="17" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="1" y="1" width="6" height="1" fill="#3E4450"></rect><rect x="1" y="3" width="6" height="1" fill="#3E4450"></rect><rect x="1" y="5" width="4" height="1" fill="#3E4450"></rect></svg>
               <span style="font-size: 11px; font-weight: 800; color: #3E4450;">{{ navNewsLabel }}</span>
             </button>
-            <button onClick="{{ toggleMenu }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
+            <button onClick="{{ openAbout }}" style="border: none; cursor: pointer; background: #FFFFFF; border-radius: 22px 0 0 22px; height: 44px; padding: 0 20px 0 10px; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit; display: flex; align-items: center; gap: 7px; transform: rotate(-15deg) translateX(12px); transform-origin: right center;" style-hover="transform: rotate(-15deg) translateX(6px);">
               <svg width="17" height="17" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="1" y="2" width="6" height="4" fill="#3E4450"></rect><rect x="2" y="3" width="4" height="1" fill="#FFFFFF"></rect></svg>
               <span style="font-size: 11px; font-weight: 800; color: #3E4450;">{{ navAboutLabel }}</span>
             </button>
@@ -366,6 +366,100 @@
             <div style="flex: none; display: flex; flex-wrap: wrap; justify-content: center; border-top: 2px solid #DEDEDE; padding-top: 14px; padding-bottom: 7px; gap: 7px 14px;">
               <div onClick="{{ closeFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #E93551; border: 2px solid #F04064; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterCancelText }}</div>
               <div onClick="{{ applyFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #2DC4B6; border: 2px solid #38D0C6; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterOkText }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== NEWS dialog (changelog) =====
+           Reuses the filter dialog's modal shell (backdrop + card + magic circle). Corner-pinned
+           character sprites decorate it behind the text (z-index 0 vs the content's z-index 1). -->
+      <sc-if value="{{ newsOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeNews }}" style="position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.5);">
+          <div onClick="{{ stopDialogClick }}" style="position: relative; z-index: 0; width: 90%; max-height: 80%; background: linear-gradient(to top, #EFF0F2 0, #FAFAFA 2em, #FAFAFA 100%); border: 2px solid #FFFFFF; border-radius: 16px; box-shadow: 0 0 8px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; padding: 14px; box-sizing: border-box; color: #3E4450;">
+            <div class="wf-circle wf-circle-dialog"></div>
+            <sc-for list="{{ dialogGifItems }}" as="g" hint-placeholder-count="4">
+              <img src="{{ g.url }}" alt="" style="position: absolute; {{ g.pos }} width: 46px; height: 46px; object-fit: contain; object-position: bottom; image-rendering: pixelated; pointer-events: none; z-index: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));">
+            </sc-for>
+
+            <div style="position: relative; z-index: 1; flex: none; text-align: center; padding-bottom: 11px; border-bottom: 2px solid #DEDEDE; font-size: 15px; font-weight: 900;">{{ newsTitleText }}</div>
+
+            <div style="position: relative; z-index: 1; flex: 1; overflow-y: auto; padding: 0 7px 12px;">
+              <sc-for list="{{ newsRows }}" as="row" hint-placeholder-count="8">
+                <sc-if value="{{ row.isDate }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; align-items: center; padding: 15px 0 8px;">
+                    <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                    <div style="padding: 0 9px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ row.text }}</div>
+                    <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ row.isLine }}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; align-items: flex-start; gap: 8px; padding: 4px 4px 4px 8px; font-size: 12px; line-height: 1.5; font-weight: 600;">
+                    <span style="flex: none; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; background: #F0526E;"></span>
+                    <span style="flex: 1;">{{ row.text }}</span>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+
+            <div style="position: relative; z-index: 1; flex: none; display: flex; justify-content: center; border-top: 2px solid #DEDEDE; padding-top: 14px; padding-bottom: 4px;">
+              <div onClick="{{ closeNews }}" style="padding: 7px 40px; color: #FFFFFF; border-radius: 7px; background: #2DC4B6; border: 2px solid #38D0C6; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ dialogCloseText }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== ABOUT dialog ===== -->
+      <sc-if value="{{ aboutOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeAbout }}" style="position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.5);">
+          <div onClick="{{ stopDialogClick }}" style="position: relative; z-index: 0; width: 90%; max-height: 80%; background: linear-gradient(to top, #EFF0F2 0, #FAFAFA 2em, #FAFAFA 100%); border: 2px solid #FFFFFF; border-radius: 16px; box-shadow: 0 0 8px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; padding: 14px; box-sizing: border-box; color: #3E4450;">
+            <div class="wf-circle wf-circle-dialog"></div>
+            <sc-for list="{{ dialogGifItems }}" as="g" hint-placeholder-count="4">
+              <img src="{{ g.url }}" alt="" style="position: absolute; {{ g.pos }} width: 46px; height: 46px; object-fit: contain; object-position: bottom; image-rendering: pixelated; pointer-events: none; z-index: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.2));">
+            </sc-for>
+
+            <div style="position: relative; z-index: 1; flex: none; text-align: center; padding-bottom: 11px; border-bottom: 2px solid #DEDEDE; font-size: 15px; font-weight: 900;">{{ aboutTitleText }}</div>
+
+            <div style="position: relative; z-index: 1; flex: 1; overflow-y: auto; padding: 0 7px 12px;">
+              <div style="padding: 16px 4px 4px; font-size: 12px; line-height: 1.6; font-weight: 600; text-align: center; color: #5B6472;">{{ aboutIntroText }}</div>
+
+              <div style="display: flex; align-items: center; padding: 18px 0 12px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 9px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ aboutCreditsTitleText }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 11px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 11px 14px; margin: 0 4px 9px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);">
+                <span style="flex: none; width: 11px; height: 11px; border-radius: 50%; background: #F0526E;"></span>
+                <span style="font-size: 13px; font-weight: 800;">{{ creditMeText }}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 11px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 11px 14px; margin: 0 4px 9px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);">
+                <span style="flex: none; width: 11px; height: 11px; border-radius: 50%; background: #3FA6DD;"></span>
+                <span style="font-size: 13px; font-weight: 800;">{{ creditClaudeText }}</span>
+              </div>
+              <!-- Scraped data sources: a label + one linked card per site. -->
+              <div style="display: flex; align-items: center; gap: 11px; padding: 2px 4px 6px 6px;">
+                <span style="flex: none; width: 11px; height: 11px; border-radius: 50%; background: #35C8B4;"></span>
+                <span style="font-size: 13px; font-weight: 800;">{{ creditSourcesText }}</span>
+              </div>
+              <a href="https://wiki.biligame.com/worldflipper" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 8px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #FB7299;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditWikiText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">wiki.biligame.com/worldflipper</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #FB7299;">↗</span>
+              </a>
+              <a href="https://worldflipper.miaowm5.com" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 9px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #35C8B4;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditMiaoText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">worldflipper.miaowm5.com</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #35C8B4;">↗</span>
+              </a>
+            </div>
+
+            <div style="position: relative; z-index: 1; flex: none; display: flex; justify-content: center; border-top: 2px solid #DEDEDE; padding-top: 14px; padding-bottom: 4px;">
+              <div onClick="{{ closeAbout }}" style="padding: 7px 40px; color: #FFFFFF; border-radius: 7px; background: #2DC4B6; border: 2px solid #38D0C6; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ dialogCloseText }}</div>
             </div>
           </div>
         </div>
@@ -1359,10 +1453,6 @@
         <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="5" y="1" width="2" height="6" fill="currentColor"></rect><rect x="3" y="6" width="3" height="3" fill="currentColor"></rect><rect x="7" y="1" width="2" height="2" fill="currentColor"></rect></svg>
         <span style="font-size: 10px; font-weight: 800;">{{ tabMusicLabel }}</span>
       </button>
-      <button onClick="{{ toggleMenu }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; border-radius: 12px; padding: 7px 2px 5px; display: flex; flex-direction: column; align-items: center; gap: 3px; background: {{ tabBgMenu }}; color: {{ tabColMenu }};">
-        <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="2" width="6" height="1" fill="currentColor"></rect><rect x="2" y="4" width="6" height="1" fill="currentColor"></rect><rect x="2" y="6" width="6" height="1" fill="currentColor"></rect></svg>
-        <span style="font-size: 10px; font-weight: 800;">{{ tabMenuLabel }}</span>
-      </button>
     </div>
   </div>
 </div>
@@ -1460,6 +1550,59 @@ const FLIP_RISE_MS = 170;
 
 // UI-chrome copy only (not character/content data) — see CLAUDE.md for why
 // character-facing fields like enName/jpName stay separate, unlocalized fields.
+// Site changelog, shown in the News dialog. Hand-maintained (the site is static — no build step
+// and no runtime git), seeded from `git log`. Newest date first; each date carries bilingual
+// bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
+// Add a new group at the top when you ship something worth announcing.
+const CHANGELOG = [
+  { date: '2026-07-21', items: [
+      { en: 'Added News and About pages; removed the redundant bottom-bar menu.', zh: '新增资讯与关于页面，并移除多余的底部菜单。' },
+      { en: 'Reworked the top status bar — logo, white rounded bar, lighter counter pills.', zh: '重做顶部状态栏：logo、白色圆角栏、更轻盈的计数胶囊。' },
+      { en: 'Added a volume slider and a total-flips counter; story BGM now plays through the Music Room.', zh: '新增音量滑块与「总弹弹数」；故事 BGM 接入音乐室引擎。' },
+  ]},
+  { date: '2026-07-20', items: [
+      { en: 'Added the Music Room — a player over character themes and world/event BGM.', zh: '新增音乐室：播放角色主题曲与世界/活动原声。' },
+      { en: 'Play modes, playlists, and a draggable floating mini-player.', zh: '新增播放模式、播放列表与可拖动的悬浮播放器。' },
+  ]},
+  { date: '2026-07-17', items: [
+      { en: 'Added Flip (弹弹) — a swipe deck for voting on every illustration.', zh: '新增「弹弹」：为每张立绘投票的滑动卡组。' },
+      { en: 'Added the Story archive — a main / event / collab story browser.', zh: '新增故事档案：主线 / 活动 / 联动剧情浏览。' },
+      { en: 'Fixed a mobile crash from pinch-zoom and filled the viewport on phones.', zh: '修复移动端捏合缩放导致的崩溃，并在手机上铺满视口。' },
+  ]},
+  { date: '2026-07-16', items: [
+      { en: 'Added 108 characters from miaowm5 — the roster reaches 485.', zh: '新增 108 名角色，角色总数达到 485。' },
+      { en: 'Added the Armaments tab and a Units filter; adopted the magic-circle backdrop.', zh: '新增武器栏与角色筛选，采用魔法阵背景。' },
+      { en: 'Wired the top-bar counters to Supabase (visits + unique visitors).', zh: '顶部计数接入 Supabase（访问量与独立访客）。' },
+  ]},
+  { date: '2026-07-15', items: [
+      { en: 'Added the miaowm5 data pipeline — story, expressions, and pixel actions.', zh: '接入 miaowm5 数据：剧情、表情与像素动作。' },
+      { en: 'Split emotion art into faces plus toggleable overlays.', zh: '将表情拆分为脸部与可叠加的附加层。' },
+  ]},
+  { date: '2026-07-14', items: [
+      { en: 'Added the detail panel switcher (profile / voice).', zh: '新增详情面板切换（资料 / 语音）。' },
+      { en: 'Added the bilibili wiki data pipeline (scrape + match to roster).', zh: '接入 bilibili wiki 数据（抓取并匹配角色）。' },
+  ]},
+  { date: '2026-07-13', items: [
+      { en: 'Added the EN/ZH bilingual UI toggle and mobile screen adaption.', zh: '新增中英双语界面切换与手机屏幕适配。' },
+      { en: 'Added character theme music playback on the detail page.', zh: '在详情页新增角色主题曲播放。' },
+  ]},
+  { date: '2026-07-08', items: [
+      { en: 'World Flipper Museum & Archive goes live.', zh: '《世界弹射物语》博物馆与档案馆上线。' },
+  ]},
+];
+
+// Pick up to 4 random character pixel sprites (roster `thumbUrl`s) to decorate a dialog. The
+// sprites are GIFs that animate themselves; positioning keeps them clear of the text.
+function pickDialogGifs(roster) {
+  if (!roster || !roster.length) return [];
+  const pool = roster.slice();
+  const out = [];
+  for (let i = 0; i < 4 && pool.length; i++) {
+    out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0].thumbUrl);
+  }
+  return out;
+}
+
 const STRINGS = {
   brandMuseum: { en: 'MUSEUM', zh: '博物馆' },
   counterPv: { en: 'Total visits', zh: '总访问量' },
@@ -1469,6 +1612,21 @@ const STRINGS = {
   heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
   navNews: { en: 'News', zh: '资讯' },
   navAbout: { en: 'About', zh: '关于' },
+  // News (changelog) + About dialogs, opened from the two home-screen tags. The changelog copy
+  // itself lives in CHANGELOG (below); these are just the frame chrome. dialogClose is shared.
+  newsTitle: { en: 'News', zh: '更新日志' },
+  aboutTitle: { en: 'About', zh: '关于本站' },
+  aboutIntro: {
+    en: 'A fan-made museum & archive for the mobile game World Flipper — its characters, art, story, and music. Not affiliated with the official game.',
+    zh: '一个非官方的手游《世界弹射物语》博物馆与档案馆——收录角色、立绘、剧情与音乐。与官方无关。'
+  },
+  aboutCreditsTitle: { en: 'Credits', zh: '制作鸣谢' },
+  creditMe: { en: 'Myself', zh: '我自己' },
+  creditClaude: { en: 'Claude Code', zh: 'Claude Code' },
+  creditSources: { en: 'Data sources', zh: '数据来源' },
+  creditWiki: { en: 'Bilibili World Flipper Wiki', zh: 'bilibili 世界弹射物语 wiki' },
+  creditMiao: { en: 'miaowm5 Encyclopedia', zh: 'miaowm5 图鉴' },
+  dialogClose: { en: 'Close', zh: '关闭' },
   navStory: { en: 'Story', zh: '剧情' },
   navGallery: { en: 'Gallery', zh: '画廊' },
   // The home screen's centre button opens the Flip deck, not the roster — Units stays reachable
@@ -1773,7 +1931,7 @@ function computeLayout() {
 
 class Component extends DCLogic {
   state = {
-    tab: 'home', lang: this.loadLang(), menuOpen: false, roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
+    tab: 'home', lang: this.loadLang(), menuOpen: false, aboutOpen: false, newsOpen: false, dialogGifs: [], roster: [], rosterLoading: true, rosterError: null, visibleCount: ROSTER_BATCH,
     selectedChar: null, artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null,
     // Which tab the detail screen's Back button returns to; set by goDetail from wherever you
     // opened it. The Flip deck survives the round trip on its own (the deck is an instance field
@@ -3746,6 +3904,30 @@ class Component extends DCLogic {
       heroSubtitle: this.t('heroSubtitle'),
       navNewsLabel: this.t('navNews'),
       navAboutLabel: this.t('navAbout'),
+      // News / About dialogs.
+      newsOpen: this.state.newsOpen,
+      aboutOpen: this.state.aboutOpen,
+      newsTitleText: this.t('newsTitle'),
+      aboutTitleText: this.t('aboutTitle'),
+      aboutIntroText: this.t('aboutIntro'),
+      aboutCreditsTitleText: this.t('aboutCreditsTitle'),
+      creditMeText: this.t('creditMe'),
+      creditClaudeText: this.t('creditClaude'),
+      creditSourcesText: this.t('creditSources'),
+      creditWikiText: this.t('creditWiki'),
+      creditMiaoText: this.t('creditMiao'),
+      dialogCloseText: this.t('dialogClose'),
+      // Flattened to a single list (date headers + bullet lines) so the template uses one sc-for
+      // with an sc-if per row — the verified pattern — rather than a nested sc-for.
+      newsRows: CHANGELOG.flatMap(g => [
+        { isDate: true, isLine: false, text: g.date },
+        ...g.items.map(it => ({ isDate: false, isLine: true, text: it[this.state.lang] || it.en }))
+      ]),
+      // Decorative sprites, one per corner (top-left, top-right, bottom-left, bottom-right).
+      dialogGifItems: (this.state.dialogGifs || []).slice(0, 4).map((url, i) => ({
+        url,
+        pos: ['top: 5px; left: 5px;', 'top: 5px; right: 5px;', 'bottom: 5px; left: 5px;', 'bottom: 5px; right: 5px;'][i]
+      })),
       navStoryLabel: this.t('navStory'),
       navGalleryLabel: this.t('navGallery'),
       navMusicLabel: this.t('navMusic'),
@@ -3955,6 +4137,12 @@ class Component extends DCLogic {
       goArms: () => this.go('arms'),
       toggleMenu: () => this.setState(s => ({ menuOpen: !s.menuOpen })),
       closeMenu: () => this.setState({ menuOpen: false }),
+      // News / About dialogs. Opening seeds a fresh set of decorative sprites (picked once, so
+      // they don't reshuffle every render); closing clears them.
+      openNews:  () => this.setState(s => ({ newsOpen: true, dialogGifs: pickDialogGifs(s.roster) })),
+      closeNews: () => this.setState({ newsOpen: false, dialogGifs: [] }),
+      openAbout:  () => this.setState(s => ({ aboutOpen: true, dialogGifs: pickDialogGifs(s.roster) })),
+      closeAbout: () => this.setState({ aboutOpen: false, dialogGifs: [] }),
       menuItems: menuOrder.map(id => ({
         isUnits: id === 'units',
         isArms:  id === 'arms',
