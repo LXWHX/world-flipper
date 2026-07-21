@@ -88,33 +88,35 @@
   <div style="width: 430px; {{ cardHeightCss }} flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: #EAEAEA; box-shadow: {{ cardShadow }}; position: relative; z-index: 1; overflow: hidden;">
 
     <!-- ===== Top status bar ===== -->
-    <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #3E4450; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 0 rgba(0,0,0,0.15); z-index: 30;">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <svg width="18" height="18" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFD35C"></rect><rect x="1" y="2" width="6" height="2" fill="#FFB03A"></rect><rect x="2" y="4" width="4" height="2" fill="#F0526E"></rect><rect x="3" y="6" width="2" height="2" fill="#C83A56"></rect></svg>
-        <div style="color: #FFFFFF; font-weight: 900; font-size: 13px; letter-spacing: 1px;">WORLD FLIPPER <span style="color: #7ED8F2;">{{ brandMuseumLabel }}</span></div>
+    <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 5px 14px; background: #FFFFFF; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.12); z-index: 30;">
+      <div style="display: flex; align-items: center;">
+        <img src="icons/Site-logo.png" alt="WORLD FLIPPER" style="height: 58px; width: auto; display: block; margin: -8px 0;">
       </div>
       <div style="flex: 1;"></div>
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
-            <img src="icons/Exp_point.png" alt="" width="20" height="20" style="image-rendering: pixelated; display: block;">
-            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ flipTotalTitle }}">{{ flipTotal }}</span>
+          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
+            <img src="icons/Exp_point.png" alt="" width="17" height="17" style="image-rendering: pixelated; display: block;">
+            <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ flipTotalTitle }}">{{ flipTotal }}</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
+          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
             <img src="icons/Mana.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
-            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ pvTitle }}">{{ pvCount }}</span>
+            <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ pvTitle }}">{{ pvCount }}</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
+          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
             <img src="icons/Lodestar_Bead.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
-            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ uvTitle }}">{{ uvCount }}</span>
+            <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ uvTitle }}">{{ uvCount }}</span>
           </div>
         </div>
       </sc-if>
-      <button onClick="{{ toggleLang }}" style="border: none; cursor: pointer; background: #2E333D; color: #FFFFFF; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 10px; font-family: inherit;">{{ langToggleLabel }}</button>
+      <button onClick="{{ toggleLang }}" style="border: none; cursor: pointer; background: #EEF2F7; color: #3E4450; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 4px 10px; font-family: inherit; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">{{ langToggleLabel }}</button>
     </div>
 
     <!-- ===== Screen area ===== -->
-    <div style="flex: 1; position: relative; z-index: 0; overflow: hidden; display: flex; flex-direction: column;">
+    <!-- Pulled up by the top bar's corner radius so its rounded bottom corners overlap the screen
+         and their carved notches reveal the hero background behind them, not the flat card field.
+         Screens' own 14px top margins absorb the shift, so their content doesn't move. -->
+    <div style="flex: 1; position: relative; z-index: 0; overflow: hidden; display: flex; flex-direction: column; margin-top: -14px;">
 
       <!-- The app's backdrop. It hangs off this element rather than the card so the tab bar can't
            cover it, and `overflow: hidden` here is what crops the circle's bottom half. Screens are
@@ -127,7 +129,7 @@
 
           <!-- Hero key visual -->
           <div style="position: absolute; inset: 0;">
-            <img src="menu-img/normal_background.png" alt="" style="width: 100%; height: 100%; display: block; object-fit: cover; object-position: center top;">
+            <img src="menu-img/normal_background.png" alt="" style="width: 100%; height: 100%; display: block; object-fit: cover; object-position: center center; transform: scale(1.4) translateY(3%); transform-origin: center center;">
             <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(180,227,245,0.02) 48%, rgba(255,255,255,0.18) 100%); pointer-events: none;"></div>
           </div>
 
