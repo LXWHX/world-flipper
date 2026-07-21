@@ -70,6 +70,11 @@
       to   { transform: translate(-50%, 60%) rotate(360deg); }
     }
     @media (prefers-reduced-motion: reduce) { .wf-circle { animation: none !important; } }
+    /* Music-player volume popup: hidden by default, revealed on hover (desktop). Touch has no
+       hover, so the button also toggles roomVolOpen, which drives the inline opacity/visibility;
+       the hover rule uses !important so it wins over that inline base on pointer devices. */
+    .wf-vol-pop { transition: opacity 0.15s ease; }
+    .wf-vol:hover .wf-vol-pop { opacity: 1 !important; visibility: visible !important; }
   </style>
 </helmet>
 
@@ -91,6 +96,10 @@
       <div style="flex: 1;"></div>
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
+            <img src="icons/Exp_point.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
+            <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ flipTotalTitle }}">{{ flipTotal }}</span>
+          </div>
           <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
             <img src="icons/Mana.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
             <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ pvTitle }}">{{ pvCount }}</span>
@@ -605,6 +614,16 @@
                 </sc-for>
               </div>
 
+              <!-- Character theme music (sits below the GIF trigger buttons, above expressions);
+                   plays through the Music Room engine — see detailCharQueue. -->
+              <sc-if value="{{ hasMusic }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; justify-content: center; gap: 8px; padding: 8px 18px 0; overflow-x: auto;">
+                  <sc-for list="{{ musicTracks }}" as="mt" hint-placeholder-count="1">
+                    <button onClick="{{ mt.onClick }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ mt.color }}; background: {{ mt.bg }}; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ mt.label }}</button>
+                  </sc-for>
+                </div>
+              </sc-if>
+
               <!-- Expression viewer: two stacked layers (body + face) on a fixed-ratio box -->
               <sc-if value="{{ hasEmotions }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 14px 18px 0;">
@@ -640,15 +659,6 @@
                       </div>
                     </div>
                   </sc-if>
-                </div>
-              </sc-if>
-
-              <!-- Character theme music -->
-              <sc-if value="{{ hasMusic }}" hint-placeholder-val="{{ false }}">
-                <div style="display: flex; justify-content: center; gap: 8px; padding: 8px 18px 0; overflow-x: auto;">
-                  <sc-for list="{{ musicTracks }}" as="mt" hint-placeholder-count="1">
-                    <button onClick="{{ mt.onClick }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 11px; color: {{ mt.color }}; background: {{ mt.bg }}; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">{{ mt.label }}</button>
-                  </sc-for>
                 </div>
               </sc-if>
 
@@ -1214,6 +1224,18 @@
                 <button onClick="{{ roomNext }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
                   <svg width="14" height="14" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="0" y="1" width="2" height="8" fill="#3E4450"></rect><rect x="2" y="2" width="2" height="6" fill="#3E4450"></rect><rect x="4" y="3" width="2" height="4" fill="#3E4450"></rect><rect x="8" y="1" width="2" height="8" fill="#3E4450"></rect></svg>
                 </button>
+                <!-- Volume: a vertical slider that expands on hover (tap toggles it open on touch).
+                     Same ratio drag as the seek bar; volume applies to the single shared audio. -->
+                <div class="wf-vol" style="position: relative; flex: none;">
+                  <div class="wf-vol-pop" style="position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); background: #FFFFFF; border-radius: 999px; box-shadow: 0 3px 10px rgba(62,68,80,0.25); padding: 14px 9px 10px; opacity: {{ roomVolPopOpacity }}; visibility: {{ roomVolPopVis }};">
+                    <div onPointerDown="{{ roomVolumeDown }}" style="width: 8px; height: 96px; background: #EAEAEA; border-radius: 999px; overflow: hidden; cursor: pointer; touch-action: none; display: flex; align-items: flex-end; margin: 0 auto;">
+                      <div style="width: 100%; height: {{ roomVolumePct }}; background: {{ sectionColor }}; border-radius: 999px;"></div>
+                    </div>
+                  </div>
+                  <button onClick="{{ toggleRoomVol }}" title="{{ volumeLabel }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
+                    <svg width="16" height="16" viewBox="0 0 12 12" style="shape-rendering: crispedges;"><rect x="1" y="4" width="3" height="4" fill="#3E4450"></rect><rect x="4" y="3" width="1" height="6" fill="#3E4450"></rect><rect x="5" y="2" width="1" height="8" fill="#3E4450"></rect><rect x="8" y="4" width="1" height="4" fill="#3E4450"></rect><rect x="10" y="2" width="1" height="8" fill="#3E4450"></rect></svg>
+                  </button>
+                </div>
               </div>
             </div>
           </sc-if>
@@ -1410,6 +1432,9 @@ const SHEET_EXPANDED_Y = 0;
 const SHEET_MID_Y = 390;
 const SHEET_COLLAPSED_Y = 560;
 const LANG_STORAGE_KEY = 'wf_lang';
+// Music playback volume (0..1), persisted client-side like the language. Applied to the single
+// shared this.audio, so it carries across character-theme / story-BGM / Music-Room playback.
+const VOLUME_STORAGE_KEY = 'wf_volume';
 
 // --- Flip (弹弹): the art-voting swipe deck ------------------------------------------------
 // The one character whose folder has full_shot_1440_1920_0.png but no _1: of the 374 characters
@@ -1437,6 +1462,8 @@ const STRINGS = {
   brandMuseum: { en: 'MUSEUM', zh: '博物馆' },
   counterPv: { en: 'Total visits', zh: '总访问量' },
   counterUv: { en: 'Unique visitors', zh: '独立访客' },
+  counterFlips: { en: 'Total flips', zh: '总弹弹数' },
+  volume: { en: 'Volume', zh: '音量' },
   heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
   navNews: { en: 'News', zh: '资讯' },
   navAbout: { en: 'About', zh: '关于' },
@@ -1775,6 +1802,9 @@ class Component extends DCLogic {
     // Playback mode for auto-advance and prev/next (see ROOM_MODES): order = play through and
     // stop; shuffle = random next; repeat = loop the current track.
     roomMode: 'order',
+    // Playback volume (0..1), seeded from localStorage; roomVolOpen is the touch fallback for the
+    // hover-expanding volume slider in the now-playing bar.
+    roomVolume: this.loadVolume(), roomVolOpen: false,
     // The off-tab floating mini-player. roomMiniPos is its {x,y} top-left in design px (null = the
     // default bottom-right anchor); dragging it against either side edge collapses it to a small
     // arrow tab on roomMiniSide, which taps back open. roomMiniDragging suppresses its transition.
@@ -1853,6 +1883,14 @@ class Component extends DCLogic {
       if (saved === 'en' || saved === 'zh') return saved;
     } catch (e) {}
     return 'en';
+  }
+
+  loadVolume() {
+    try {
+      const v = parseFloat(localStorage.getItem(VOLUME_STORAGE_KEY));
+      if (isFinite(v) && v >= 0 && v <= 1) return v;
+    } catch (e) {}
+    return 1;
   }
 
   t(key) {
@@ -2021,7 +2059,15 @@ class Component extends DCLogic {
       .then(map => { this.storyHeads = (map && typeof map === 'object') ? map : {}; this.setState({ storyHeadsLoaded: true }); })
       .catch(() => { /* NPC avatars fall back to name plates */ });
 
+    // The shared Audio starts at its default 1.0; apply the persisted volume once here (a later
+    // .src change keeps .volume, so playback handlers need not re-apply it).
+    this.audio.volume = this.state.roomVolume;
+
     this.recordVisit();
+    // Populate the top-bar "total flips" pill from the same one-per-session art_stats_all read Flip
+    // makes; the flipStats/flipStatsLoading guard makes a later go('flip') a no-op, so this adds no
+    // extra request beyond what a Flip session already does.
+    this.loadArtStats();
 
     // Coalesced to one re-render per frame: a resize burst (URL bar collapsing, rotation) would
     // otherwise re-render the whole tree — every roster tile included — once per event.
@@ -2093,7 +2139,9 @@ class Component extends DCLogic {
   go(tab) {
     // Leaving detail/story stops *their* audio, but only theirs: Music Room playback deliberately
     // follows you across tabs (it's a music room), so an audio the room owns rides through here.
-    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); if (this.audioOwner === 'detail') this.stopMusic(); this.stopVoice(); }
+    // Detail's theme tracks now play through the room engine (see detailCharQueue), so leaving the
+    // page only stops the voice lines — the theme keeps going in the floating mini-player.
+    if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopVoice(); }
     if (this.state.tab === 'story' && tab !== 'story' && this.audioOwner === 'story') this.stopMusic();
     // A fly-out timer that outlives the screen would advance a deck nobody's looking at.
     if (this.state.tab === 'flip' && tab !== 'flip') this.clearFlipTimers();
@@ -2482,23 +2530,20 @@ class Component extends DCLogic {
     return trackNumber === 1 ? this.t('trackTheme') : this.t('trackTheme') + ' ' + trackNumber;
   }
 
-  toggleMusicTrack(index) {
-    const selectedChar = this.state.selectedChar;
-    if (!selectedChar || !selectedChar.music.length) return;
-    const sameTrack = index === this.state.musicIndex;
-    if (sameTrack && this.state.musicPlaying) {
-      this.audio.pause();
-      this.setState({ musicPlaying: false });
-      return;
-    }
-    // The index alone can't prove the src is right: if another feature owned the audio last, the
-    // element still holds *its* track even when the index matches.
-    if (!sameTrack || this.audioOwner !== 'detail') {
-      this.audio.src = selectedChar.folderUrl + '/music/' + selectedChar.music[index];
-    }
-    this.audioOwner = 'detail';
-    this.audio.play().catch(() => {});
-    this.setState({ musicIndex: index, musicPlaying: true, roomPlaying: false });
+  // The detail page's theme tracks play through the Music Room engine rather than an old
+  // detail-owned play/pause: a character's themes become a room queue, so tapping one starts room
+  // playback (surfacing the floating mini-player and keeping it alive across tab/character
+  // navigation) and gains seek, prev/next, volume and auto-advance for free. Entries match the
+  // shape roomAllCharTracks builds, so the Music Room's own character list stays interchangeable.
+  detailCharQueue() {
+    const c = this.state.selectedChar;
+    if (!c || !c.music || !c.music.length) return [];
+    const name = (this.state.lang === 'zh' && c.zhName) ? c.zhName : (c.enName || c.zhName || c.devName);
+    return c.music.map((f, i) => ({
+      url: c.folderUrl + '/music/' + f,
+      label: this.trackLabel(f, i + 1),
+      sub: name
+    }));
   }
 
   stopMusic() {
@@ -2659,7 +2704,7 @@ class Component extends DCLogic {
       this.setState({ arcBgmPlaying: false });
       return;
     }
-    // Same src caveat as toggleMusicTrack: a matching index doesn't mean a matching src when
+    // Same src caveat as roomToggleTrack: a matching index doesn't mean a matching src when
     // another feature owned the audio last.
     if (!sameTrack || this.audioOwner !== 'story') this.audio.src = ASSET_BASE + '/' + bgm[i].file;
     this.audioOwner = 'story';
@@ -2924,6 +2969,38 @@ class Component extends DCLogic {
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
+  }
+
+  // Vertical volume slider. Same ratio-along-the-bar trick as roomSeekDown (the canvas scale
+  // multiplies the clientY offset and rect.height alike, so it cancels — no /state.scale), but
+  // vertical and inverted so up = louder. Volume lives on the shared this.audio, so setting it here
+  // carries into character-theme and story-BGM playback too. Persist on release, not per move.
+  roomVolumeDown(e) {
+    e.preventDefault();
+    const bar = e.currentTarget;
+    const setFrom = clientY => {
+      const rect = bar.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (rect.bottom - clientY) / rect.height));
+      this.audio.volume = frac;
+      if (frac !== this.state.roomVolume) this.setState({ roomVolume: frac });
+    };
+    setFrom(e.clientY);
+    const onMove = ev => setFrom(ev.clientY);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      try { localStorage.setItem(VOLUME_STORAGE_KEY, String(this.state.roomVolume)); } catch (err) {}
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  // Touch has no hover, so tapping the speaker button pins the slider open (CSS :hover covers the
+  // desktop case via the inline opacity/visibility base this flag drives).
+  toggleRoomVol() {
+    this.setState(s => ({ roomVolOpen: !s.roomVolOpen }));
   }
 
   // Story speakers resolve to a portrait in two tiers: a roster character uses their own framed
@@ -3609,6 +3686,13 @@ class Component extends DCLogic {
       roomModeGlyph: ROOM_MODE_GLYPH[this.state.roomMode],
       roomModeLabel: this.t(ROOM_MODE_LABEL[this.state.roomMode]),
       cycleRoomMode: () => this.cycleRoomMode(),
+      // Volume slider (hover-expanding vertical bar; tap-toggles on touch).
+      roomVolumePct: Math.round(this.state.roomVolume * 100) + '%',
+      roomVolPopOpacity: this.state.roomVolOpen ? '1' : '0',
+      roomVolPopVis: this.state.roomVolOpen ? 'visible' : 'hidden',
+      roomVolumeDown: (e) => this.roomVolumeDown(e),
+      toggleRoomVol: () => this.toggleRoomVol(),
+      volumeLabel: this.t('volume'),
 
       // Music Room: "play all" playlist builders (library view)
       roomPlaylistLabel: this.t('roomPlaylistLabel'),
@@ -3646,6 +3730,16 @@ class Component extends DCLogic {
       uvCount: this.state.uv == null ? '—' : this.state.uv.toLocaleString('en-US'),
       pvTitle: this.t('counterPv'),
       uvTitle: this.t('counterUv'),
+      // Community total votes cast across every illustration (likes + dislikes + skips), summed from
+      // the flipStats map Flip already loads — no extra DB call, and it ticks up live as votes land.
+      flipTotal: (() => {
+        const s = this.state.flipStats;
+        if (!s) return '—';
+        let n = 0;
+        for (const k in s) n += (s[k].likes || 0) + (s[k].dislikes || 0) + (s[k].skips || 0);
+        return n.toLocaleString('en-US');
+      })(),
+      flipTotalTitle: this.t('counterFlips'),
       langToggleLabel: this.t('langToggle'),
       toggleLang: () => this.toggleLang(),
       brandMuseumLabel: this.t('brandMuseum'),
@@ -3736,15 +3830,20 @@ class Component extends DCLogic {
       platformUrl2: selectedChar ? (selectedChar.folderUrl + '/' + PLATFORM_FILES[2]) : '',
       hasSpecial: this.state.hasSpecial,
       hasMusic: !!(selectedChar && selectedChar.music.length),
-      musicTracks: selectedChar ? selectedChar.music.map((fileName, i) => {
-        const playing = this.state.musicPlaying && this.state.musicIndex === i;
-        return {
-          label: (playing ? '⏸ ' : '▶ ') + this.trackLabel(fileName, i + 1),
-          bg: playing ? accent : '#F0F3F7',
-          color: playing ? '#FFFFFF' : '#3E4450',
-          onClick: () => this.toggleMusicTrack(i)
-        };
-      }) : [],
+      musicTracks: (() => {
+        // Play through the room engine: the pills reflect room playback state and share the queue
+        // with the floating mini-player, so the theme keeps going as you leave the page.
+        const q = this.detailCharQueue();
+        return q.map((tr, i) => {
+          const playing = roomIsPlaying(tr.url);
+          return {
+            label: (playing ? '⏸ ' : '▶ ') + tr.label,
+            bg: playing ? accent : '#F0F3F7',
+            color: playing ? '#FFFFFF' : '#3E4450',
+            onClick: () => this.roomToggleTrack(q, i)
+          };
+        });
+      })(),
       wikiSource: this.t('wikiSource'),
       hasWikiData: !!(wikiData && (wikiData.skills.length || wikiData.story.stories.length || wikiData.review || wikiData.voice.length || Object.keys(wikiData.basicInfo).length || wikiInfoBlocks.length || emotions.length)),
       wikiSectionInfoLabel: this.t('wikiSectionInfo'),

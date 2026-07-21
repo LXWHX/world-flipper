@@ -393,9 +393,19 @@ A player over the two music libraries the site already ships: the roster's `musi
 (character themes, ~150 characters, `head.png` as row art) and the world/event BGM albums in
 `story/music_index.json` (see the music-index pipeline above; one album per story, the story
 banner as cover). Two views — the library (section chips 角色主题曲/世界原声 + search + lists) and
-an open album — plus a now-playing bar with play/pause, prev/next, seek, a play-mode toggle and
-queue auto-advance. Everything is `room`-prefixed: `music*` is the character sheet's theme pills
-and `arc*` the story archive, same hazard the Flip section describes.
+an open album — plus a now-playing bar with play/pause, prev/next, seek, a play-mode toggle, a
+hover-expanding vertical **volume slider** (`roomVolumeDown`, persisted to `wf_volume` and applied
+to the shared `this.audio`, so it carries across every player) and queue auto-advance. Everything is
+`room`-prefixed: `music*` is the character sheet's theme pills and `arc*` the story archive, same
+hazard the Flip section describes.
+
+**The character detail page's theme pills feed this same engine.** `detailCharQueue()` turns the
+selected character's `music` into a room queue (the `roomAllCharTracks` shape) and the pills call
+`roomToggleTrack` — so a theme gains seek/prev/next/volume/auto-advance, surfaces the floating
+mini-player, and keeps playing across tab and character navigation. There is no longer a
+detail-owned player: leaving the detail tab only stops the voice lines. (The old `toggleMusicTrack`
+and the `'detail'` `audioOwner` value for themes are retired; `musicIndex`/`musicPlaying` remain as
+harmless vestigial state.)
 
 - **`audioOwner` is the coexistence rule.** The shared `this.audio` has one owner at a time
   (`null | 'detail' | 'story' | 'room'`, an instance field — every mutation is paired with a
@@ -404,8 +414,10 @@ and `arc*` the story archive, same hazard the Flip section describes.
   flags. That is what lets room playback deliberately keep playing across tabs (unlike
   detail/story audio): `go()`, `goDetail()` and `closeArcStory()` check the owner before
   `stopMusic()`, the `ended` listener routes to `roomAdvance()` when the room owns it, and
-  `toggleMusicTrack`/`toggleArcBgm` re-set `src` whenever they *weren't* the last owner — their
-  `sameTrack` index check can't see that the element holds someone else's track.
+  `roomToggleTrack`/`toggleArcBgm` re-set `src` whenever they *weren't* the last owner — their
+  `sameTrack` url/index check can't see that the element holds someone else's track. (Character
+  themes are now `'room'`-owned via `detailCharQueue`, so `'detail'` no longer owns audio in
+  practice; voice lines play on a separate `voiceAudio`.)
 - **`roomQueue` is whatever list the tapped track belonged to** — a character's tracks, an album,
   a search result's owning album, or a whole-library playlist (see below) — so auto-advance
   continues through what the user was looking at. It persists across tabs; the full now-playing bar
@@ -511,8 +523,10 @@ surface, and `dragging ? 'none' : 'transform …'` for the transition.
 *sibling* of the sheet div, sharing `sheetTransform`/`sheetTransition` so they track the drag
 without joining its layout. `state.sheetPanel` (via `setSheetPanel()`) picks the body content:
 
-- **profile** — GIF stage, Skill/Special buttons + `extraActionButtons` pills, theme-music pills,
-  expression viewer (`hasEmotions`), and wiki text sections gated by `hasWikiInfoRows` /
+- **profile** — GIF stage, Skill/Special buttons + `extraActionButtons` pills, theme-music pills
+  (below the GIF buttons, above expressions — they play through the Music Room engine, not a
+  detail-owned player; see `detailCharQueue` and the Music Room section), expression viewer
+  (`hasEmotions`), and wiki text sections gated by `hasWikiInfoRows` /
   `hasWikiSkills` / `hasWikiStory` / `hasWikiReview` (encyclopedia `info` renders under the story
   intro, so `hasWikiStory` accounts for it too).
 - **voice** — voice-line list with Japanese `textJp` sub-text; `hasNoVoiceTracks` empty state.
@@ -596,8 +610,8 @@ with RLS enabled and **zero policies** (so nothing is directly readable or writa
 role granted EXECUTE on only the SECURITY DEFINER functions, each pinned with
 `set search_path = public`. That is the whole reason the anon key is safe to ship.
 
-- `supabase-visit-counter.sql` → `record_visit(vid)`. The two top-right pills (`icons/Mana.png` =
-  total page views, `icons/Lodestar_Bead.png` = unique visitors). `recordVisit()` fires once in
+- `supabase-visit-counter.sql` → `record_visit(vid)`. Two of the three top-right pills
+  (`icons/Mana.png` = total page views, `icons/Lodestar_Bead.png` = unique visitors). `recordVisit()` fires once in
   `componentDidMount`; the RPC bumps PV, upserts the visitor id and returns `{pv, uv}`, which
   `renderVals` formats into `pvCount`/`uvCount` (a dash until it resolves). **No IP is ever read**
   (a browser can't, and it'd miscount shared/rotating IPs anyway).
@@ -607,7 +621,10 @@ role granted EXECUTE on only the SECURITY DEFINER functions, each pinned with
   blank under the user's thumb on every swipe. Two tables: per-visitor vote rows plus a
   denormalized aggregate that only `vote_art` writes, in one transaction under a row lock, so they
   can't drift. Note the RPC parameter is `akey`, not `art_key` — a parameter sharing a column's
-  name makes every unqualified reference in the body ambiguous.
+  name makes every unqualified reference in the body ambiguous. **The third top-bar pill
+  (`icons/Exp_point.png`) reuses this data**: `renderVals`' `flipTotal` sums
+  Σ(`likes+dislikes+skips`) over `state.flipStats` — no new RPC — and `loadArtStats()` is kicked in
+  `componentDidMount` (idempotent) so the pill populates on load without a second call.
 
 **Shared helpers**: `visitorId()` (the memoized `wf_visitor_id` uuid — both features key on the
 same id, which is what makes reloads dedupe to one visitor and one vote per artwork stick),
