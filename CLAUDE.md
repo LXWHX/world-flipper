@@ -315,9 +315,13 @@ panel**, which is a different feature — read the prefix before assuming which 
   not a circle — `head.png`'s corner badge would be clipped.
 - `{marker:'bgm'}` rows are filtered out of the reader (data-only for now, kept for a future
   "now playing" feature).
-- **BGM plays through the same single `this.audio`** as the character theme pills, so the two can
-  never overlap — which is why `go()`, `goDetail()` and `closeArcStory()` all stop it and clear
-  `arcBgmPlaying`, and the `ended` handler clears both playing flags.
+- **BGM plays through the Music Room engine**, exactly like the character detail page's theme pills
+  (see `detailCharQueue`): `arcBgmQueue()` turns `arcDetail.bgm` into a room queue and the BGM rows
+  call `roomToggleTrack`, so a track becomes `'room'`-owned — it surfaces the floating mini-player,
+  keeps playing across tab/story navigation, and gains seek/prev/next/volume/auto-advance. Rows read
+  their playing state from the shared `roomIsPlaying(url)` helper. (The old `'story'` `audioOwner`
+  value and the `arcBgmPlaying`/`arcBgmIndex` state are retired; `go()`/`goDetail()`/`closeArcStory()`
+  no longer stop it, since room audio deliberately rides across tabs.)
 - The category chip row (全部/主线/活动/联动) filters on the `category` the pipeline stamps;
   single-select, `all` inert. `ARC_CATEGORIES` is the table.
 
@@ -399,25 +403,27 @@ to the shared `this.audio`, so it carries across every player) and queue auto-ad
 `room`-prefixed: `music*` is the character sheet's theme pills and `arc*` the story archive, same
 hazard the Flip section describes.
 
-**The character detail page's theme pills feed this same engine.** `detailCharQueue()` turns the
-selected character's `music` into a room queue (the `roomAllCharTracks` shape) and the pills call
-`roomToggleTrack` — so a theme gains seek/prev/next/volume/auto-advance, surfaces the floating
-mini-player, and keeps playing across tab and character navigation. There is no longer a
-detail-owned player: leaving the detail tab only stops the voice lines. (The old `toggleMusicTrack`
-and the `'detail'` `audioOwner` value for themes are retired; `musicIndex`/`musicPlaying` remain as
-harmless vestigial state.)
+**The character detail page's theme pills and the story archive's BGM both feed this same engine.**
+`detailCharQueue()` turns the selected character's `music` into a room queue (the `roomAllCharTracks`
+shape) and `arcBgmQueue()` does the same for the opened story's `arcDetail.bgm`; both sets of rows
+call `roomToggleTrack` — so a track gains seek/prev/next/volume/auto-advance, surfaces the floating
+mini-player, and keeps playing across tab/character/story navigation. There is no longer a
+detail-owned or story-owned player: leaving the detail tab only stops the voice lines, and leaving
+the story tab stops nothing. (The old `toggleMusicTrack`, the `'detail'`/`'story'` `audioOwner`
+values, and the `arcBgmPlaying`/`arcBgmIndex` state are retired; `musicIndex`/`musicPlaying` remain
+as harmless vestigial state.)
 
 - **`audioOwner` is the coexistence rule.** The shared `this.audio` has one owner at a time
-  (`null | 'detail' | 'story' | 'room'`, an instance field — every mutation is paired with a
-  setState of the owner's own playing flag, which is what renderVals reads). A feature stops the
-  audio only if it owns it; starting playback anywhere claims ownership and clears the other
-  flags. That is what lets room playback deliberately keep playing across tabs (unlike
-  detail/story audio): `go()`, `goDetail()` and `closeArcStory()` check the owner before
-  `stopMusic()`, the `ended` listener routes to `roomAdvance()` when the room owns it, and
-  `roomToggleTrack`/`toggleArcBgm` re-set `src` whenever they *weren't* the last owner — their
-  `sameTrack` url/index check can't see that the element holds someone else's track. (Character
-  themes are now `'room'`-owned via `detailCharQueue`, so `'detail'` no longer owns audio in
-  practice; voice lines play on a separate `voiceAudio`.)
+  (`null | 'room'` in practice — the field still accepts `'detail'`/`'story'` but nothing claims
+  those anymore — an instance field, every mutation paired with a setState of the owner's own
+  playing flag, which is what renderVals reads). A feature stops the audio only if it owns it;
+  starting playback anywhere claims ownership and clears the other flags. That is what lets room
+  playback deliberately keep playing across tabs: `go()`, `goDetail()` and `closeArcStory()` check
+  the owner before `stopMusic()`, the `ended` listener routes to `roomAdvance()` when the room owns
+  it, and `roomToggleTrack` re-sets `src` whenever it *wasn't* the last owner — its `sameTrack` url
+  check can't see that the element holds someone else's track. (Character themes and story BGM are
+  both `'room'`-owned now via `detailCharQueue`/`arcBgmQueue`; voice lines play on a separate
+  `voiceAudio`.)
 - **`roomQueue` is whatever list the tapped track belonged to** — a character's tracks, an album,
   a search result's owning album, or a whole-library playlist (see below) — so auto-advance
   continues through what the user was looking at. It persists across tabs; the full now-playing bar

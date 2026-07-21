@@ -97,7 +97,7 @@
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
-            <img src="icons/Exp_point.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
+            <img src="icons/Exp_point.png" alt="" width="20" height="20" style="image-rendering: pixelated; display: block;">
             <span style="color: #FFFFFF; font-size: 11px; font-weight: 700;" title="{{ flipTotalTitle }}">{{ flipTotal }}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 5px; background: #2E333D; border-radius: 999px; padding: 3px 10px 3px 6px;">
@@ -1789,7 +1789,6 @@ class Component extends DCLogic {
     arcIndex: null, arcIndexLoading: false, arcIndexError: null, arcCategory: 'all',
     arcStory: null, arcDetail: null, arcDetailLoading: false, arcTab: 'info',
     arcEpisodeIndex: null, arcEpisode: null, arcEpisodeLoading: false,
-    arcBgmIndex: 0, arcBgmPlaying: false,
     // Music Room (the music tab). `room` prefix throughout — `music*` already means the character
     // sheet's theme pills and `arc*` the story archive, so an unprefixed name here would quietly
     // rewire one of them. roomQueue is the current playlist ({url, label, sub} per track): a
@@ -2087,12 +2086,12 @@ class Component extends DCLogic {
       document.addEventListener(type, e => e.preventDefault(), { passive: false });
     });
 
-    // One audio element serves the character theme pills, the story-archive BGM pills and the
-    // Music Room, so a finished track has to clear whichever "playing" flag is showing — except
-    // the room, which queues tracks and advances instead.
+    // One audio element serves the character theme pills, the story-archive BGM and the Music
+    // Room — the latter two both room-owned now, so they queue and auto-advance; anything else
+    // just clears its "playing" flag.
     this.audio.addEventListener('ended', () => {
       if (this.audioOwner === 'room') { this.roomAdvance(); return; }
-      this.setState({ musicPlaying: false, arcBgmPlaying: false });
+      this.setState({ musicPlaying: false });
     });
     // The room's progress bar. Positions are floored to whole seconds and gated to the music tab,
     // so this re-renders at most once a second there and never anywhere else (renderVals rebuilds
@@ -2142,10 +2141,11 @@ class Component extends DCLogic {
     // Detail's theme tracks now play through the room engine (see detailCharQueue), so leaving the
     // page only stops the voice lines — the theme keeps going in the floating mini-player.
     if (this.state.tab === 'detail' && tab !== 'detail') { this.clearAnimTimers(); this.stopVoice(); }
-    if (this.state.tab === 'story' && tab !== 'story' && this.audioOwner === 'story') this.stopMusic();
+    // Story-archive BGM now plays through the room engine (see arcBgmQueue), so leaving the story
+    // tab keeps it going in the floating mini-player — nothing to stop here.
     // A fly-out timer that outlives the screen would advance a deck nobody's looking at.
     if (this.state.tab === 'flip' && tab !== 'flip') this.clearFlipTimers();
-    this.setState({ tab: tab, menuOpen: false, arcBgmPlaying: false });
+    this.setState({ tab: tab, menuOpen: false });
     if (tab === 'units') this.restoreUnitsScroll();
     if (tab === 'story') this.loadArcIndex();
     if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
@@ -2466,8 +2466,8 @@ class Component extends DCLogic {
 
   goDetail(c) {
     this.clearAnimTimers();
-    // Stops the previous character's theme / a story BGM on chip navigation — but not the Music
-    // Room, whose playback rides through detail pages (see audioOwner).
+    // Stops the previous character's voice — but not the Music Room, whose playback (character
+    // themes and story-archive BGM alike) rides through detail pages (see audioOwner).
     if (this.audioOwner !== 'room') this.stopMusic();
     this.stopVoice();
     // The hero art's vote pills read the same shared map the Flip deck does, and this screen is
@@ -2485,9 +2485,7 @@ class Component extends DCLogic {
       musicIndex: 0, musicPlaying: false,
       wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
       storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
-      emotionOverlays: [],
-      // A story-archive related chip lands here, and stopMusic() above killed its BGM.
-      arcBgmPlaying: false
+      emotionOverlays: []
     }));
     const probe = new Image();
     probe.onload = () => { if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ hasSpecial: true }); };
@@ -2664,9 +2662,10 @@ class Component extends DCLogic {
   }
 
   closeArcStory() {
-    if (this.audioOwner === 'story') this.stopMusic();
+    // The BGM plays through the room engine now, so returning to the story list keeps it going in
+    // the floating mini-player — same as leaving the tab entirely.
     this.setState({
-      arcStory: null, arcDetail: null, arcEpisodeIndex: null, arcEpisode: null, arcBgmPlaying: false
+      arcStory: null, arcDetail: null, arcEpisodeIndex: null, arcEpisode: null
     });
     this.scrollArcTop();
   }
@@ -2693,24 +2692,18 @@ class Component extends DCLogic {
 
   closeArcEpisode() { this.setState({ arcEpisodeIndex: null, arcEpisode: null }); this.scrollArcTop(); }
 
-  // Story BGM plays through the same single audio element as the character theme music and the
-  // Music Room, so none of them can ever overlap — and leaving the tab (go/closeArcStory) stops it.
-  toggleArcBgm(i) {
-    const bgm = this.state.arcDetail && this.state.arcDetail.bgm;
-    if (!bgm || !bgm[i]) return;
-    const sameTrack = i === this.state.arcBgmIndex;
-    if (sameTrack && this.state.arcBgmPlaying) {
-      this.audio.pause();
-      this.setState({ arcBgmPlaying: false });
-      return;
-    }
-    // Same src caveat as roomToggleTrack: a matching index doesn't mean a matching src when
-    // another feature owned the audio last.
-    if (!sameTrack || this.audioOwner !== 'story') this.audio.src = ASSET_BASE + '/' + bgm[i].file;
-    this.audioOwner = 'story';
-    this.audio.play().catch(() => {});
-    this.setState({ arcBgmIndex: i, arcBgmPlaying: true, roomPlaying: false });
+  // The story archive's BGM tracks play through the Music Room engine, same as the character
+  // detail page's theme pills (see detailCharQueue): a story's bgm list becomes a room queue, so
+  // tapping a track surfaces the floating mini-player, keeps playing across tab navigation, and
+  // gains seek/prev/next/volume/auto-advance for free. Entries match the room queue shape.
+  arcBgmQueue() {
+    const detail = this.state.arcDetail;
+    const bgm = (detail && detail.bgm) || [];
+    const sub = this.state.arcStory ? this.state.arcStory.title : this.t('arcBgmTitle');
+    return bgm.map(tr => ({ url: ASSET_BASE + '/' + tr.file, label: tr.name, sub }));
   }
+
+  toggleArcBgm(i) { this.roomToggleTrack(this.arcBgmQueue(), i); }
 
   // Switching story/tab/episode swaps the scroller's content while its offset stays put, which
   // would drop you into the middle of the next view — same reset as scrollSheetBodyTop.
@@ -2786,7 +2779,7 @@ class Component extends DCLogic {
     this.audio.play().catch(() => {});
     this.setState({
       roomQueue: queue, roomQueuePos: pos, roomPlaying: true, roomPos: 0, roomDur: 0,
-      musicPlaying: false, arcBgmPlaying: false
+      musicPlaying: false
     });
   }
 
@@ -3626,11 +3619,16 @@ class Component extends DCLogic {
       arcGalleryImages: ((arcDetail && arcDetail.gallery) || []).map(p => ({ url: ASSET_BASE + '/' + p })),
       arcHasGalleryImages: !!(arcDetail && arcDetail.gallery && arcDetail.gallery.length),
       arcBgmTitleLabel: this.t('arcBgmTitle'),
-      arcBgmTracks: ((arcDetail && arcDetail.bgm) || []).map((tr, i) => ({
-        label: (this.state.arcBgmPlaying && this.state.arcBgmIndex === i ? '❚❚  ' : '▶  ') + tr.name,
-        bg: (this.state.arcBgmPlaying && this.state.arcBgmIndex === i) ? accent : '#F7F9FC',
-        onClick: () => this.toggleArcBgm(i)
-      })),
+      arcBgmTracks: (() => {
+        // Play through the room engine: rows reflect room playback state and share the queue with
+        // the floating mini-player, so the track keeps going as you leave the story archive.
+        const q = this.arcBgmQueue();
+        return q.map((tr, i) => ({
+          label: (roomIsPlaying(tr.url) ? '❚❚  ' : '▶  ') + tr.label,
+          bg: roomIsPlaying(tr.url) ? accent : '#F7F9FC',
+          onClick: () => this.roomToggleTrack(q, i)
+        }));
+      })(),
 
       // Music Room: library view (section chips + search + the two lists)
       isMusic: roomOnTab,
