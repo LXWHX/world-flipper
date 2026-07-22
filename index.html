@@ -1364,7 +1364,7 @@
 
           <!-- ---- Now-playing bar (persists across library/album views) ---- -->
           <sc-if value="{{ roomBarVisible }}" hint-placeholder-val="{{ false }}">
-            <div style="flex: none; position: relative; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px; transform: translateZ(0); -webkit-backface-visibility: hidden;">
+            <div id="room-bar" style="flex: none; position: relative; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px; transform: translateZ(0); -webkit-backface-visibility: hidden;">
               <!-- Up-next: an arrow tab centred above the bar, toggling a preview of the coming tracks -->
               <div onClick="{{ toggleRoomQueue }}" style="position: absolute; left: 50%; top: -13px; transform: translateX(-50%); width: 46px; height: 18px; border-radius: 10px 10px 0 0; background: #FFFFFF; box-shadow: 0 -2px 6px rgba(62,68,80,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;">
                 <svg width="14" height="14" viewBox="0 0 12 12" style="transform: {{ roomQueueArrowRot }}; transition: transform 0.2s;"><path d="M2.5 7.5 L6 4 L9.5 7.5" stroke="#8A93A5" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -1744,7 +1744,7 @@
 
       <!-- Collapsed state: an arrow tab hugging the edge it was dropped on; tap to pop back open. -->
       <sc-if value="{{ roomMiniArrowShow }}" hint-placeholder-val="{{ false }}">
-        <div onClick="{{ expandRoomMini }}" style="position: absolute; {{ roomMiniArrowStyle }} width: 20px; height: 40px; z-index: 45; background: {{ sectionColor }}; box-shadow: 0 3px 10px rgba(40,45,60,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; font-size: 15px; font-weight: 900; transform: translateZ(0); -webkit-backface-visibility: hidden;" style-active="transform: translateY(1px);">{{ roomMiniArrowGlyph }}</div>
+        <div id="room-mini-arrow" onClick="{{ expandRoomMini }}" style="position: absolute; {{ roomMiniArrowStyle }} width: 20px; height: 40px; z-index: 45; background: {{ sectionColor }}; box-shadow: 0 3px 10px rgba(40,45,60,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; font-size: 15px; font-weight: 900; transform: translateZ(0); -webkit-backface-visibility: hidden;" style-active="transform: translateY(1px);">{{ roomMiniArrowGlyph }}</div>
       </sc-if>
     </div>
 
@@ -2668,6 +2668,37 @@ class Component extends DCLogic {
     // a bound handler could never preventDefault(), and would then double-scroll on the
     // browsers that do map the wheel themselves.
     document.addEventListener('wheel', (e) => this.handleUnitsWheel(e), { passive: false });
+  }
+
+  componentDidUpdate() {
+    // iOS Quark (a WebKit build stricter than Safari's) fails to paint the room-audio widgets
+    // when they're inserted into the transform-scaled canvas after a queue loads — the CSS layer
+    // promotion (translateZ, see the three widgets' inline styles) isn't enough on its own. Nudge
+    // a repaint the first frame each one appears. Keyed on presence so the reflow is paid once on
+    // the transition into view, never on the per-second timeupdate re-renders during playback.
+    this.nudgeRoomPaint('room-bar');
+    this.nudgeRoomPaint('room-mini');
+    this.nudgeRoomPaint('room-mini-arrow');
+  }
+
+  nudgeRoomPaint(id) {
+    const el = document.getElementById(id);
+    const flag = '_painted_' + id;
+    if (!el) { this[flag] = false; return; }   // gone → re-arm for its next appearance
+    if (this[flag]) return;                     // already nudged since it appeared
+    this[flag] = true;
+    requestAnimationFrame(() => {
+      const e = document.getElementById(id);
+      if (!e) { this[flag] = false; return; }
+      // Detach from the render tree and force a synchronous reflow, then reattach: WebKit rebuilds
+      // and re-rasters the subtree, so the freshly-inserted layer actually paints. Same frame, so
+      // the browser never paints the removed state — no flicker. Restore the prior display value
+      // (not ''), since these carry an inline `display` (flex) we'd otherwise clear.
+      const prev = e.style.display;
+      e.style.display = 'none';
+      void e.offsetHeight;
+      e.style.display = prev;
+    });
   }
 
   handleUnitsWheel(e) {
