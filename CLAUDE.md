@@ -457,9 +457,13 @@ A player over the two music libraries the site already ships: the roster's `musi
 (character themes, ~150 characters, `head.png` as row art) and the world/event BGM albums in
 `story/music_index.json` (see the music-index pipeline above; one album per story, the story
 banner as cover). Two views — the library (section chips 角色主题曲/世界原声 + search + lists) and
-an open album — plus a now-playing bar with play/pause, prev/next, seek, a play-mode toggle, a
-hover-expanding vertical **volume slider** (`roomVolumeDown`, persisted to `wf_volume` and applied
-to the shared `this.audio`, so it carries across every player) and queue auto-advance. Everything is
+an open album — plus a now-playing bar with play/pause, prev/next, seek, a play-mode toggle, an
+up-arrow that toggles an **up-next popup** (`toggleRoomQueue`/`roomQueueOpen`, the next ≤10 queue
+tracks in order — tap one to jump), a click-toggled vertical **volume slider** with a draggable
+knob (`roomVolumeDown`/`toggleRoomVol`/`roomVolOpen` — the speaker button toggles the popup; no
+`:hover` rule, since it would pin the popup open under the cursor and block the close click;
+persisted to `wf_volume` and applied to the shared `this.audio`, so it carries across every player)
+and queue auto-advance. Everything is
 `room`-prefixed: `music*` is the character sheet's theme pills and `arc*` the story archive, same
 hazard the Flip section describes.
 

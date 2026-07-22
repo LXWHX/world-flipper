@@ -70,11 +70,10 @@
       to   { transform: translate(-50%, 60%) rotate(360deg); }
     }
     @media (prefers-reduced-motion: reduce) { .wf-circle { animation: none !important; } }
-    /* Music-player volume popup: hidden by default, revealed on hover (desktop). Touch has no
-       hover, so the button also toggles roomVolOpen, which drives the inline opacity/visibility;
-       the hover rule uses !important so it wins over that inline base on pointer devices. */
+    /* Music-player volume popup: click-toggled via roomVolOpen (drives the inline
+       opacity/visibility). No :hover rule — it would pin the popup open while the cursor sits on
+       the button, so a second click could never close it. */
     .wf-vol-pop { transition: opacity 0.15s ease; }
-    .wf-vol:hover .wf-vol-pop { opacity: 1 !important; visibility: visible !important; }
   </style>
 </helmet>
 
@@ -1334,7 +1333,23 @@
 
           <!-- ---- Now-playing bar (persists across library/album views) ---- -->
           <sc-if value="{{ roomBarVisible }}" hint-placeholder-val="{{ false }}">
-            <div style="flex: none; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px;">
+            <div style="flex: none; position: relative; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px;">
+              <!-- Up-next: an arrow tab centred above the bar, toggling a preview of the coming tracks -->
+              <div onClick="{{ toggleRoomQueue }}" style="position: absolute; left: 50%; top: -13px; transform: translateX(-50%); width: 46px; height: 18px; border-radius: 10px 10px 0 0; background: #FFFFFF; box-shadow: 0 -2px 6px rgba(62,68,80,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;">
+                <svg width="14" height="14" viewBox="0 0 12 12" style="transform: {{ roomQueueArrowRot }}; transition: transform 0.2s;"><path d="M2.5 7.5 L6 4 L9.5 7.5" stroke="#8A93A5" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </div>
+              <div style="position: absolute; left: 0; right: 0; bottom: calc(100% + 5px); background: #FFFFFF; border-radius: 14px; box-shadow: 0 6px 18px rgba(62,68,80,0.22); padding: 10px 12px; max-height: 232px; overflow-y: auto; opacity: {{ roomQueueOpacity }}; visibility: {{ roomQueueVis }}; transition: opacity 0.15s ease; z-index: 3;">
+                <div style="font-size: 11px; font-weight: 800; color: #8A93A5; margin-bottom: 8px; padding-left: 2px;">{{ roomUpNextLabel }}</div>
+                <sc-if value="{{ roomUpNextEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="font-size: 11px; font-weight: 700; color: #B7BECC; text-align: center; padding: 12px 0;">{{ roomUpNextEmptyText }}</div>
+                </sc-if>
+                <sc-for list="{{ roomUpNext }}" as="un" hint-placeholder-count="3">
+                  <button onClick="{{ un.onClick }}" style="display: block; width: 100%; text-align: left; border: none; cursor: pointer; font-family: inherit; background: {{ un.bg }}; border-radius: 10px; padding: 8px 10px; margin-bottom: 6px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
+                    <div style="font-weight: 800; font-size: 11px; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ un.label }}</div>
+                    <div style="font-weight: 700; font-size: 9px; color: #8A93A5; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ un.sub }}</div>
+                  </button>
+                </sc-for>
+              </div>
               <!-- Seek: a ratio along the bar, so the canvas scale cancels (see roomSeekDown) -->
               <div onPointerDown="{{ roomSeekDown }}" style="padding: 8px 0 6px; cursor: pointer; touch-action: none;">
                 <div style="height: 6px; background: #EAEAEA; border-radius: 999px; overflow: hidden;">
@@ -1359,8 +1374,11 @@
                      Same ratio drag as the seek bar; volume applies to the single shared audio. -->
                 <div class="wf-vol" style="position: relative; flex: none;">
                   <div class="wf-vol-pop" style="position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); background: #FFFFFF; border-radius: 999px; box-shadow: 0 3px 10px rgba(62,68,80,0.25); padding: 14px 9px 10px; opacity: {{ roomVolPopOpacity }}; visibility: {{ roomVolPopVis }};">
-                    <div onPointerDown="{{ roomVolumeDown }}" style="width: 8px; height: 96px; background: #EAEAEA; border-radius: 999px; overflow: hidden; cursor: pointer; touch-action: none; display: flex; align-items: flex-end; margin: 0 auto;">
-                      <div style="width: 100%; height: {{ roomVolumePct }}; background: {{ sectionColor }}; border-radius: 999px;"></div>
+                    <div onPointerDown="{{ roomVolumeDown }}" style="width: 8px; height: 96px; background: #EAEAEA; border-radius: 999px; cursor: pointer; touch-action: none; display: flex; align-items: flex-end; margin: 0 auto; position: relative;">
+                      <div style="width: 100%; height: {{ roomVolumePct }}; background: {{ sectionColor }}; border-radius: 999px; position: relative;">
+                        <!-- Draggable knob riding the top of the fill (the volume level) -->
+                        <div style="position: absolute; left: 50%; top: 0; transform: translate(-50%, -50%); width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; border: 2px solid {{ sectionColor }}; box-shadow: 0 1px 4px rgba(62,68,80,0.4); pointer-events: none;"></div>
+                      </div>
                     </div>
                   </div>
                   <button onClick="{{ toggleRoomVol }}" title="{{ volumeLabel }}" style="flex: none; border: none; cursor: pointer; width: 32px; height: 32px; border-radius: 50%; background: #F0F3F7; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(62,68,80,0.2); font-family: inherit;" style-active="transform: translateY(2px); box-shadow: 0 1px 0 rgba(62,68,80,0.2);">
@@ -1850,6 +1868,10 @@ const FLIP_RISE_MS = 170;
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-22', items: [
+      { en: 'Music player: the volume slider now has a draggable knob, and its popup toggles closed on a second tap.', zh: '音乐播放器：音量滑块新增可拖动的按钮，再次点击音量键即可关闭音量条。' },
+      { en: 'Added an up-arrow above the player that previews the next tracks in the queue.', zh: '播放器上方新增向上箭头，可预览队列中即将播放的歌曲。' },
+  ]},
   { date: '2026-07-21', items: [
       { en: 'Added the Armaments library — browse all 384 weapons with a filter, search, and detail pages.', zh: '新增武器库：浏览全部 384 件武器，支持筛选、搜索与武器详情页。' },
       { en: 'Added News and About pages; removed the redundant bottom-bar menu.', zh: '新增资讯与关于页面，并移除多余的底部菜单。' },
@@ -2121,6 +2143,8 @@ const STRINGS = {
   roomModeOrder: { en: 'In order', zh: '顺序' },
   roomModeShuffle: { en: 'Shuffle', zh: '随机' },
   roomModeRepeat: { en: 'Repeat one', zh: '单曲循环' },
+  roomUpNextLabel: { en: 'Up next', zh: '即将播放' },
+  roomUpNextEmpty: { en: 'Nothing queued next', zh: '没有更多歌曲' },
   roomPlaylistLabel: { en: 'Play all', zh: '播放全部' },
   roomPlaylistChar: { en: 'Characters', zh: '人物音乐' },
   roomPlaylistWorld: { en: 'World', zh: '世界音乐' },
@@ -2288,6 +2312,8 @@ class Component extends DCLogic {
     // Playback volume (0..1), seeded from localStorage; roomVolOpen is the touch fallback for the
     // hover-expanding volume slider in the now-playing bar.
     roomVolume: this.loadVolume(), roomVolOpen: false,
+    // Up-next popup above the now-playing bar (a preview of the coming tracks in the queue).
+    roomQueueOpen: false,
     // The off-tab floating mini-player. roomMiniPos is its {x,y} top-left in design px (null = the
     // default bottom-right anchor); dragging it against either side edge collapses it to a small
     // arrow tab on roomMiniSide, which taps back open. roomMiniDragging suppresses its transition.
@@ -2369,6 +2395,12 @@ class Component extends DCLogic {
     try {
       const saved = localStorage.getItem(LANG_STORAGE_KEY);
       if (saved === 'en' || saved === 'zh') return saved;
+    } catch (e) {}
+    try {
+      const langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+      for (const l of langs) {
+        if (l && /^zh\b/i.test(l)) return 'zh';
+      }
     } catch (e) {}
     return 'en';
   }
@@ -3578,6 +3610,11 @@ class Component extends DCLogic {
     this.setState(s => ({ roomVolOpen: !s.roomVolOpen }));
   }
 
+  // The up-arrow above the now-playing bar toggles a preview of the upcoming queue tracks.
+  toggleRoomQueue() {
+    this.setState(s => ({ roomQueueOpen: !s.roomQueueOpen }));
+  }
+
   // Story speakers resolve to a portrait in two tiers: a roster character uses their own framed
   // head.png; a story-only speaker (Light, Stella, recurring NPCs, bosses) uses the story_heads
   // portrait the pipeline exported for them. Anything left keeps a plain name plate. `speakerDev`
@@ -3973,6 +4010,16 @@ class Component extends DCLogic {
     // Floating mini-player visibility + its dragged position (see the roomMini* bindings below).
     const roomMiniOn = this.state.roomQueue.length > 0 && tab !== 'music' && !this.state.menuOpen;
     const roomMiniPos = this.state.roomMiniPos;
+    // Up-next preview: the coming tracks in queue order (wrapping), capped at 10. Shown in order
+    // even under shuffle — a best-effort peek, not a promise of the shuffle sequence.
+    const roomUpNext = [];
+    {
+      const q = this.state.roomQueue, n = q.length;
+      for (let k = 1; k <= 10 && k < n; k++) {
+        const idx = (this.state.roomQueuePos + k) % n, t = q[idx];
+        roomUpNext.push({ label: t.label, sub: t.sub, bg: '#F0F3F7', onClick: () => this.roomPlay(this.state.roomQueue, idx) });
+      }
+    }
     const roomCharRows = roomOnTab ? this.state.roster
       .filter(c => c.music.length && (!roomSearchText ||
         [c.enName, c.zhName, c.jpName, c.devName].filter(Boolean).join(' ').toLowerCase().includes(roomSearchText)))
@@ -4304,6 +4351,15 @@ class Component extends DCLogic {
       roomVolumeDown: (e) => this.roomVolumeDown(e),
       toggleRoomVol: () => this.toggleRoomVol(),
       volumeLabel: this.t('volume'),
+      // Up-next popup (the up-arrow above the now-playing bar)
+      toggleRoomQueue: () => this.toggleRoomQueue(),
+      roomUpNext,
+      roomUpNextEmpty: roomUpNext.length === 0,
+      roomUpNextLabel: this.t('roomUpNextLabel'),
+      roomUpNextEmptyText: this.t('roomUpNextEmpty'),
+      roomQueueOpacity: this.state.roomQueueOpen ? '1' : '0',
+      roomQueueVis: this.state.roomQueueOpen ? 'visible' : 'hidden',
+      roomQueueArrowRot: this.state.roomQueueOpen ? 'rotate(180deg)' : 'rotate(0deg)',
 
       // Music Room: "play all" playlist builders (library view)
       roomPlaylistLabel: this.t('roomPlaylistLabel'),
