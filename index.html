@@ -34,6 +34,33 @@
     }
     @keyframes wfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes wfPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    /* The "come play" cue on the home red flip button: a little speech bubble bobbing at its
+       top-right corner (reusing wfFloat) with a mini card inside that rocks left-right (wfSwipeCard),
+       miming the deck's swipe gesture. pointer-events: none keeps the button the single click target. */
+    @keyframes wfSwipeCard {
+      0%, 100% { transform: translateX(-3px) rotate(-8deg); }
+      50%      { transform: translateX(3px)  rotate(8deg); }
+    }
+    @keyframes wfHintBob {
+      0%, 100% { transform: translate(-50%, 0); }
+      50%      { transform: translate(-50%, -5px); }
+    }
+    .wf-flip-hint {
+      position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); z-index: 2;
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 5px 8px 6px; background: #FFFFFF; border-radius: 12px;
+      box-shadow: 0 3px 0 rgba(62,68,80,0.2); pointer-events: none;
+      animation: wfHintBob 2.4s ease-in-out infinite;
+    }
+    .wf-flip-hint::after {
+      content: ''; position: absolute; bottom: -4px; left: 50%;
+      width: 9px; height: 9px; background: #FFFFFF; transform: translateX(-50%) rotate(45deg);
+      box-shadow: 2px 2px 0 rgba(62,68,80,0.12);
+    }
+    .wf-flip-hint span {
+      color: #F0526E; font-weight: 900; font-size: 9px; letter-spacing: 0.5px; line-height: 1;
+    }
+    .wf-flip-hint-card { animation: wfSwipeCard 1.6s ease-in-out infinite; display: block; }
     /* The magic circle turning behind the app, ported from miaowm5's ui/magicCircle.svelte —
        same art, same 25s linear spin, and both of its variants. `bottom: 0` plus a translate of
        half its own height parks the circle's centre on its container's bottom edge, so only the
@@ -69,7 +96,7 @@
       from { transform: translate(-50%, 60%) rotate(0deg); }
       to   { transform: translate(-50%, 60%) rotate(360deg); }
     }
-    @media (prefers-reduced-motion: reduce) { .wf-circle { animation: none !important; } }
+    @media (prefers-reduced-motion: reduce) { .wf-circle, .wf-flip-hint, .wf-flip-hint-card { animation: none !important; } }
     /* Music-player volume popup: click-toggled via roomVolOpen (drives the inline
        opacity/visibility). No :hover rule — it would pin the popup open while the cursor sits on
        the button, so a second click could never close it. */
@@ -174,7 +201,11 @@
                 {{ navGalleryLabel }}
               </span>
             </button>
-            <button onClick="{{ goFlip }}" style="width: 120px; height: 120px; flex: none; border: none; cursor: pointer; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #FF7A8E 0%, #F0526E 55%, #D63B58 100%); box-shadow: 0 0 0 6px #FFFFFF, 0 6px 0 6px #C9CFDA, inset 0 3px 0 rgba(255,255,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; animation: wfPulse 3s ease-in-out infinite;" style-hover="filter: brightness(1.08);" style-active="transform: scale(0.95);">
+            <button onClick="{{ goFlip }}" style="position: relative; width: 120px; height: 120px; flex: none; border: none; cursor: pointer; border-radius: 50%; background: radial-gradient(circle at 50% 32%, #FF7A8E 0%, #F0526E 55%, #D63B58 100%); box-shadow: 0 0 0 6px #FFFFFF, 0 6px 0 6px #C9CFDA, inset 0 3px 0 rgba(255,255,255,0.45); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-family: inherit; animation: wfPulse 3s ease-in-out infinite;" style-hover="filter: brightness(1.08);" style-active="transform: scale(0.95);">
+              <div class="wf-flip-hint">
+                <svg class="wf-flip-hint-card" width="22" height="20" viewBox="0 0 22 20"><rect x="1.5" y="1.5" width="19" height="17" rx="3" fill="#FFFFFF" stroke="#F0526E" stroke-width="1.5"></rect><path d="M11 6.6 C 10.1 4.9, 7.4 5.3, 7.4 7.6 C 7.4 9.4, 9.4 10.8, 11 12.4 C 12.6 10.8, 14.6 9.4, 14.6 7.6 C 14.6 5.3, 11.9 4.9, 11 6.6 Z" fill="#F0526E"></path></svg>
+                <span>{{ flipVoteHint }}</span>
+              </div>
               <svg width="34" height="34" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="2" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="6" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="1" y="2" width="8" height="2" fill="#FFFFFF"></rect><rect x="1" y="4" width="8" height="1" fill="#FFE1E7"></rect><rect x="2" y="5" width="6" height="1" fill="#FFE1E7"></rect><rect x="3" y="6" width="4" height="1" fill="#FFFFFF"></rect><rect x="4" y="7" width="2" height="1" fill="#FFFFFF"></rect></svg>
               <span style="color: #FFFFFF; font-weight: 900; font-size: 16px; letter-spacing: 0.5px;">{{ navFlipLabel }}</span>
             </button>
@@ -1333,7 +1364,7 @@
 
           <!-- ---- Now-playing bar (persists across library/album views) ---- -->
           <sc-if value="{{ roomBarVisible }}" hint-placeholder-val="{{ false }}">
-            <div style="flex: none; position: relative; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px;">
+            <div style="flex: none; position: relative; margin: 0 10px 10px; background: #FFFFFF; border-radius: 14px; box-shadow: 0 3px 0 rgba(62,68,80,0.15); padding: 4px 12px 10px; transform: translateZ(0); -webkit-backface-visibility: hidden;">
               <!-- Up-next: an arrow tab centred above the bar, toggling a preview of the coming tracks -->
               <div onClick="{{ toggleRoomQueue }}" style="position: absolute; left: 50%; top: -13px; transform: translateX(-50%); width: 46px; height: 18px; border-radius: 10px 10px 0 0; background: #FFFFFF; box-shadow: 0 -2px 6px rgba(62,68,80,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2;">
                 <svg width="14" height="14" viewBox="0 0 12 12" style="transform: {{ roomQueueArrowRot }}; transition: transform 0.2s;"><path d="M2.5 7.5 L6 4 L9.5 7.5" stroke="#8A93A5" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
@@ -1699,7 +1730,7 @@
            to the arrow tab below. Sits at z-index 45 so it rides over the detail sheet; hidden while
            the menu overlay (40) is open (see roomMiniOn). -->
       <sc-if value="{{ roomMiniExpanded }}" hint-placeholder-val="{{ false }}">
-        <div id="room-mini" onPointerDown="{{ roomMiniDown }}" style="position: absolute; {{ roomMiniPosStyle }} width: 166px; z-index: 45; background: #FFFFFF; border-radius: 12px; box-shadow: 0 5px 16px rgba(40,45,60,0.32); border-left: 3px solid {{ sectionColor }}; padding: 6px 6px 6px 9px; display: flex; align-items: center; gap: 5px; cursor: grab; touch-action: none; transition: {{ roomMiniTransition }};">
+        <div id="room-mini" onPointerDown="{{ roomMiniDown }}" style="position: absolute; {{ roomMiniPosStyle }} width: 166px; z-index: 45; background: #FFFFFF; border-radius: 12px; box-shadow: 0 5px 16px rgba(40,45,60,0.32); border-left: 3px solid {{ sectionColor }}; padding: 6px 6px 6px 9px; display: flex; align-items: center; gap: 5px; cursor: grab; touch-action: none; transform: translateZ(0); -webkit-backface-visibility: hidden; transition: {{ roomMiniTransition }};">
           <div style="flex: 1; min-width: 0; pointer-events: none;">
             <div style="font-size: 11px; font-weight: 800; color: #3E4450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">♪ {{ roomNowTitle }}</div>
             <div style="font-size: 9px; font-weight: 700; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ roomNowSub }}</div>
@@ -1713,7 +1744,7 @@
 
       <!-- Collapsed state: an arrow tab hugging the edge it was dropped on; tap to pop back open. -->
       <sc-if value="{{ roomMiniArrowShow }}" hint-placeholder-val="{{ false }}">
-        <div onClick="{{ expandRoomMini }}" style="position: absolute; {{ roomMiniArrowStyle }} width: 20px; height: 40px; z-index: 45; background: {{ sectionColor }}; box-shadow: 0 3px 10px rgba(40,45,60,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; font-size: 15px; font-weight: 900;" style-active="transform: translateY(1px);">{{ roomMiniArrowGlyph }}</div>
+        <div onClick="{{ expandRoomMini }}" style="position: absolute; {{ roomMiniArrowStyle }} width: 20px; height: 40px; z-index: 45; background: {{ sectionColor }}; box-shadow: 0 3px 10px rgba(40,45,60,0.35); display: flex; align-items: center; justify-content: center; cursor: pointer; color: #FFFFFF; font-size: 15px; font-weight: 900; transform: translateZ(0); -webkit-backface-visibility: hidden;" style-active="transform: translateY(1px);">{{ roomMiniArrowGlyph }}</div>
       </sc-if>
     </div>
 
@@ -2107,6 +2138,7 @@ const STRINGS = {
     zh: '右滑喜欢，左滑不喜欢，往下滑跳过'
   },
   flipTapHint: { en: 'Tap the art for details', zh: '点击立绘查看详情' },
+  flipVoteHint: { en: 'VOTE', zh: '投票' },
   flipLoading: { en: 'Shuffling the deck…', zh: '正在洗牌…' },
   flipDone: { en: "That's every illustration", zh: '所有立绘都看完了' },
   flipReshuffle: { en: 'Shuffle again', zh: '再来一轮' },
@@ -4134,6 +4166,7 @@ class Component extends DCLogic {
       flipScreenTitle: this.t('flipScreenTitle'),
       flipHintText: this.t('flipHint'),
       flipTapHintText: this.t('flipTapHint'),
+      flipVoteHint: this.t('flipVoteHint'),
       flipLoadingText: this.t('flipLoading'),
       flipDoneText: this.t('flipDone'),
       flipReshuffleText: this.t('flipReshuffle'),
