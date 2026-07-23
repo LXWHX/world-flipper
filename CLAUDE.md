@@ -35,8 +35,9 @@ shared parsing in `scripts/lib/wiki-common.mjs`) crawls into `scripts/.wiki-scra
 (gitignored, resumable); `npm run match:wiki-zh` (`scripts/match-wiki-to-roster.mjs`) matches
 pages to `roster.json` by `jpName`, downloads voice mp3s, writes `wiki_zh.json`, and stamps
 `hasWiki`/`voiceCount`/`zhName` on the roster (unmatched cases →
-`Character Assets/_unmatched_wiki_report.md`). A future English source can follow the same shape,
-matched by `enName` into `wiki_en.json`.
+`Character Assets/_unmatched_wiki_report.md`). The English counterpart now exists as
+`wiki_en.json` — see the wiki.gg pipeline below. It does **not** match by `enName` the way this
+note once assumed it would; that only works for 166 of 377.
 
 ### weapons pipeline (wiki.biligame.com/worldflipper/装备)
 
@@ -66,6 +67,78 @@ character wiki pipeline; reuses `scripts/lib/wiki-common.mjs`. Current scrape: 3
   one lean record per weapon (`href` merge-key, `nameZh`, `rarity`, `element`, `role`/`limit`/
   `system`, `icon`, base/max `hp`/`atk`, `effect`/`maxEffect`, `flavor`, `acquisition` — empty/null
   fields pruned). Partial `--limit` runs merge into the existing file rather than dropping entries.
+
+### wiki.gg pipeline (worldflipper.wiki.gg) — the English text
+
+The English half of the character sheet and the weapon library. Two scripts, one shared lib
+(`scripts/lib/wikigg-common.mjs`), same byte-stable/`invalidateR2`/disk-cache rules as everything
+above (cache: `scripts/.wikigg-cache/`, gitignored). Output files are **new and exclusively owned**
+— nothing here ever touches `wiki_zh.json`, `weapons.json` or `roster.json`, so the three existing
+pipelines are unaffected and no owned-keys contract had to be extended.
+
+- **It has a real API — do not scrape HTML.** `api.php` is a full public MediaWiki 1.43 Action API.
+  Content lives in flat template parameters, fetched as raw wikitext **50 titles per request**
+  (`prop=revisions&rvslots=main`); all 379 unit pages cost ~8 calls. No Cargo/SMW, so the templates
+  are the schema: `{{Unit}}`, `{{Unit story page}}` (+`{{SL|speaker|line}}`), `{{Unit Quotes}}`,
+  `{{Armament}}`.
+- **The template parser must balance braces, not regex.** `episodeNScript` holds dozens of nested
+  `{{SL|…}}` calls whose pipes are not parameter separators. `findTemplates` splits on `|`/`=` only
+  at depth 0 — and deliberately **descends into non-matching templates**, since `{{Unit Quote}}`
+  is nested inside a `{{Unit Quotes}}` wrapper.
+
+**Characters** (`npm run scrape:wiki-en`, `--force`/`--limit=N`/`--only=devName,…`) writes
+`rarityN/<devName>/wiki_en.json` (profile, stats, skill, leader talent, abilities, episode
+names+summaries, quotes) and `story_en.json` (the dialogue, split off for the same reason
+`story_zh.json` is: the front-end only fetches it when the story panel opens).
+
+- **Matching is the hard part — three tiers, currently 369/377.** `enName` looks like it should
+  equal the page title, and for Alice it does, but **only 166 of 377 match that way**. Tier 2 is
+  the winner (189): `rarity + element + maxHP + maxAttack`, with the max stats read out of the
+  character's own `wiki_zh.json` — the numbers are the game's, so they cross the language gap when
+  every name differs. Tier 3 is a 14-entry `TITLE_OVERRIDES` table for the rest.
+- Two systematic name drifts are rules, not exceptions: roster `(Christmas)` = wiki `(Holiday)`,
+  and every `(Anniversary)` = `(Flipperversary)`. roster also writes ambiguous romanizations as
+  `"Ecrire / Écrire (Summer)"` — one name, two spellings, so each half is recombined with the
+  qualifier before lookup.
+- **The 108 `bustOnly` characters have no English anywhere** — they're CN-only and wiki.gg
+  documents the global release. Expected, reported separately, and they fall back to Chinese.
+  The 5 Haruhi Suzumiya collab characters are genuinely absent for the same reason.
+- `_wikigg_unmatched_report.md` lists both sides. Cross-check a roster miss against the orphan
+  list before believing a character is absent — a counterpart under a different romanization
+  belongs in `TITLE_OVERRIDES`.
+
+**Weapons** (`npm run scrape:weapons-en`) writes **`Weapons/weapons_en.json`**, a sidecar keyed by
+the same `href` merge-key, *not* extra columns on `weapons.json` (that file is rewritten wholesale
+by `scrape-weapons.mjs`; sharing it would mean inventing a second owned-keys contract). 316/384.
+
+- The two sources share **no name at all**, so the key is `rarity + element + base/max HP/ATK`.
+  Verified by hand: 捕食者 (Fire 5★ 440/112 → 660/168) = **Predator**.
+- **wiki.gg calls the non-elemental bucket `All`; `weapons.json` calls it `None`.** There is no
+  `none` upstream — same bucket, two names. Missing this costs ~60 matches on its own. (Thunder is
+  likewise spelled `Lightning` in places.)
+- Whole weapon families share an identical stat line, so ~64 keys collide. The tiebreaker is the
+  **numbers inside the effect text**, which survive translation ("自身攻击+160%" and "own ATK +160%"
+  both fingerprint to `160`); that resolves 48. The remaining collisions are **refused, not
+  guessed** — a wrong weapon name is worse than a missing one.
+- Orbs have no base row on either side (as with the CN scraper), so they fall back to a
+  max-stats-only key.
+
+**Front-end.** English is preferred when `state.lang === 'en'` and falls back to Chinese
+**field by field** — a character can have an English profile but no English stories, and many do.
+`wiki_en.json`/`story_en.json`/`weapons_en.json` are fetched **only in English** (so a zh session
+pays nothing), which is why `toggleLang()` has to kick the loaders for whatever is already open.
+`null` = not fetched, `false` = fetched and absent. Two deliberate asymmetries:
+
+- **English quotes are a separate group in the voice panel, not a relabelling of the mp3 rows.**
+  They carry no audio and don't correspond one-to-one, so overwriting `voice[].text` would pair
+  the wrong line with the clip that plays.
+- **English story episodes replace the Chinese list wholesale** rather than merging: different
+  source, different episode count, and an index means different things in each. wiki.gg scripts
+  have no `speakerDev`, so those speakers get the plain name plate (no portrait, no emotion art).
+- `nickname` and `type` have no `{{Unit}}` equivalent and stay Chinese in English mode — the
+  per-field fallback working as designed, since the data only exists in Chinese.
+- wiki.gg is **CC BY-SA**: every record carries `sourceUrl`, and a credit line (`wikiSourceGg`)
+  renders under the English text on both the character sheet and the weapon detail.
 
 ### miaowm5 pipeline (worldflipper.miaowm5.com)
 
@@ -230,7 +303,9 @@ bug to dedupe.
   `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`) **plus the top-level
   `Weapons/` folder under a `Weapons/` key prefix** (matching the front-end's `WEAPON_BASE`);
   dev-only files are excluded. Resumes via `scripts/.r2-upload-manifest.json`; `--force` re-uploads
-  everything.
+  everything. **`Weapons/` has no include list** — the whole folder ships — so anything dev-only
+  written in there must be `_`-prefixed, which the collector skips explicitly. (`Character Assets/`
+  needs no such rule: its top level is an allow-list, so a stray file there is ignored by default.)
 - No lint/test/build commands exist.
 
 ## Architecture
@@ -348,9 +423,14 @@ for; note `isArms`/`goArms`/`arms` (the section identifiers) predate this and me
   with a big icon hero on the pedestal, then white cards for 属性 (base vs 满级 HP/ATK), 效果 +
   最大效果, 获取方式, and the 图鉴描述 flavor, each gated on the field being present (orbs have no
   base stats). Back = `closeArmDetail()`.
-- **Weapons have only a Chinese name** (the source is a CN wiki), so the tile/detail show `nameZh`
-  regardless of `state.lang`; only the UI chrome localizes. Icons are self-hosted under
-  `WEAPON_BASE` (`Weapons/` locally, the R2 `Weapons/` prefix live — see Asset loading below).
+- **Weapon names are per-weapon bilingual, not per-language.** The CN source gives every weapon a
+  `nameZh`; `weapons_en.json` adds `nameEn` for the 316 of 384 the wiki.gg matcher resolved (see
+  the wiki.gg pipeline above), merged onto the record by `href` in `loadWeaponsEn()`. So the tile
+  label is `displayName` — English when `state.lang === 'en'` *and* that weapon matched, Chinese
+  otherwise — rather than a single language-wide switch. The 能力 filter chips stay Chinese: `role`
+  has no English counterpart in `{{Armament}}`, so `armRoleTokens` has nothing to localize with.
+  Icons are self-hosted under `WEAPON_BASE` (`Weapons/` locally, the R2 `Weapons/` prefix live —
+  see Asset loading below).
 
 #### Story tab (the story archive)
 

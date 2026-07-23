@@ -882,6 +882,9 @@
                   <sc-if value="{{ hasMiaowm5Data }}" hint-placeholder-val="{{ false }}">
                     <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center;">{{ miaowm5SourceLabel }}</div>
                   </sc-if>
+                  <sc-if value="{{ showWikiSourceGg }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center;">{{ wikiSourceGgText }}</div>
+                  </sc-if>
                 </div>
               </sc-if>
               </sc-if>
@@ -902,6 +905,20 @@
                               <div style="font-size: 11px; font-weight: 600; color: #B7BECC; white-space: pre-line; line-height: 1.4;">{{ vt.textJp }}</div>
                             </sc-if>
                           </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <!-- English quote lines (wiki.gg). A separate group, deliberately: they carry no
+                       audio and don't line up one-to-one with the mp3 rows above, so replacing
+                       vt.text with them would mispair the text against the clip that plays. -->
+                  <sc-if value="{{ hasVoiceQuotes }}" hint-placeholder-val="{{ false }}">
+                    <div style="margin-top: 14px;">
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ wikiSectionQuotesLabel }}</div>
+                      <sc-for list="{{ voiceQuotes }}" as="vq" hint-placeholder-count="3">
+                        <div style="padding: 7px 0; border-bottom: 1px solid #F4F6F9;">
+                          <div style="font-size: 10.5px; font-weight: 800; color: #8A93A5;">{{ vq.type }}</div>
+                          <div style="font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.4;">{{ vq.text }}</div>
                         </div>
                       </sc-for>
                     </div>
@@ -1463,9 +1480,9 @@
                         <img src="{{ w.rarityUrl }}" alt="{{ w.rarityLabel }}" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 2px; height: 7px; width: auto; z-index: 2;">
                       </div>
                       <!-- Weapon icon standing on the pedestal -->
-                      <img src="{{ w.iconUrl }}" alt="{{ w.nameZh }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
+                      <img src="{{ w.iconUrl }}" alt="{{ w.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
                     </div>
-                    <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ w.nameZh }}</div>
+                    <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ w.displayName }}</div>
                   </div>
                 </sc-for>
               </div>
@@ -1590,6 +1607,9 @@
                 </div>
                 <div style="font-size: 12px; font-weight: 600; color: #6B7280; line-height: 1.8; white-space: pre-line; font-style: italic;">{{ armDetailFlavor }}</div>
               </div>
+            </sc-if>
+            <sc-if value="{{ showArmSourceGg }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding: 2px 0 10px;">{{ wikiSourceGgText }}</div>
             </sc-if>
           </div>
         </div>
@@ -1899,6 +1919,11 @@ const FLIP_RISE_MS = 170;
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-23', items: [
+      { en: 'Added English character data from worldflipper.wiki.gg — profile, skills, abilities, stories and quotes for 369 characters.', zh: '接入 worldflipper.wiki.gg 英文角色资料：369 名角色的简介、技能、能力、故事与台词。' },
+      { en: 'Added English weapon names and effects for 316 of the 384 armaments.', zh: '新增 384 件武器中 316 件的英文名称与效果说明。' },
+      { en: 'Content now follows the EN/ZH toggle, falling back to Chinese where no English exists.', zh: '内容区跟随中英切换，缺少英文时回落中文。' },
+  ]},
   { date: '2026-07-22', items: [
       { en: 'Music player: the volume slider now has a draggable knob, and its popup toggles closed on a second tap.', zh: '音乐播放器：音量滑块新增可拖动的按钮，再次点击音量键即可关闭音量条。' },
       { en: 'Added an up-arrow above the player that previews the next tracks in the queue.', zh: '播放器上方新增向上箭头，可预览队列中即将播放的歌曲。' },
@@ -2094,6 +2119,14 @@ const STRINGS = {
   wikiSectionStory: { en: 'Character Story', zh: '角色故事' },
   wikiSectionReview: { en: 'Evaluation', zh: '评价' },
   wikiSectionVoice: { en: 'Voice Lines', zh: '语音' },
+  // English character/weapon content from worldflipper.wiki.gg (scrape-wiki-gg-*.mjs). The three
+  // wikiEn* labels caption the {{Unit}} template's skill blocks, which have no Chinese equivalent
+  // to borrow a caption from. wikiSourceGg is the CC BY-SA attribution shown under English text.
+  wikiSectionQuotes: { en: 'Quotes (English)', zh: '英文台词' },
+  wikiEnSkill: { en: 'Skill', zh: '必杀技能' },
+  wikiEnLeaderTalent: { en: 'Leader Talent', zh: '队长技' },
+  wikiEnAbilities: { en: 'Abilities', zh: '能力' },
+  wikiSourceGg: { en: 'English text from worldflipper.wiki.gg (CC BY-SA)', zh: '英文资料来自 worldflipper.wiki.gg（CC BY-SA）' },
   wikiFieldNickname: { en: 'Nickname', zh: '昵称' },
   wikiFieldType: { en: 'Type', zh: '类型' },
   wikiFieldRole: { en: 'Role', zh: '职责' },
@@ -2320,8 +2353,8 @@ class Component extends DCLogic {
     sheetY: SHEET_MID_Y, sheetDragging: false,
     ...computeLayout(), // -> scale, fill
     musicIndex: 0, musicPlaying: false,
-    wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
-    storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
+    wikiData: null, wikiEnData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
+    storyData: null, storyEnData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
     emotionOverlays: [],
     // Story archive (the Story tab). `arc` prefix throughout so none of it collides with the
     // character sheet's own story panel above. arcStory null = the list view; arcEpisodeIndex
@@ -2376,7 +2409,7 @@ class Component extends DCLogic {
     filterOpen: false, filter: { ...EMPTY_FILTER }, draftFilter: { ...EMPTY_FILTER },
     // Weapons (the Armaments tab). `arm` prefix throughout so none of it collides with the Units
     // grid's roster/filter state. armDetail null = the 武器库 library grid; set = a 武器详情 page.
-    armWeapons: [], armLoading: false, armLoaded: false, armError: null, armVisibleCount: ROSTER_BATCH,
+    armWeapons: [], armLoading: false, armLoaded: false, armEnLoaded: false, armError: null, armVisibleCount: ROSTER_BATCH,
     armDetail: null,
     armFilterOpen: false, armFilter: { ...EMPTY_ARM_FILTER }, armDraftFilter: { ...EMPTY_ARM_FILTER }
   };
@@ -2455,6 +2488,13 @@ class Component extends DCLogic {
     const lang = this.state.lang === 'en' ? 'zh' : 'en';
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
     this.setState({ lang });
+    // The English content files are only fetched in English, so switching into it mid-session has
+    // to go get whatever the open screens now want. All three are idempotent no-ops otherwise.
+    if (lang === 'en') {
+      this.loadWikiEn();
+      if (this.state.sheetPanel === 'story') this.loadStory();
+      if (this.state.armLoaded) this.loadWeaponsEn();
+    }
   }
 
   get sections() {
@@ -3071,8 +3111,8 @@ class Component extends DCLogic {
       selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
-      wikiData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
-      storyData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
+      wikiData: null, wikiEnData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
+      storyData: null, storyEnData: null, storyLoading: false, storyIndex: null, emotionIndex: 0,
       emotionOverlays: []
     }));
     const probe = new Image();
@@ -3097,6 +3137,29 @@ class Component extends DCLogic {
       .catch(() => null)
       .then(data => {
         if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) this.setState({ wikiData: data });
+      });
+    this.loadWikiEn();
+  }
+
+  // The English half of the character sheet (scripts/scrape-wiki-gg-units.mjs). Only fetched in
+  // English, so a zh-only session never pays for it — which is also why it can't just ride the
+  // wiki_zh.json fetch above. Idempotent, and called again from toggleLang() so flipping to
+  // English with a sheet already open pulls the file it didn't need a moment ago.
+  // 369 of 485 characters have one; the rest (the CN-only bustOnly roster, mainly) 404 and fall
+  // back to Chinese, so a null result is cached as a normal outcome rather than retried.
+  loadWikiEn() {
+    const c = this.state.selectedChar;
+    if (!c || this.state.lang !== 'en' || this.state.wikiEnData !== null || this.wikiEnPending === c.devName) return;
+    this.wikiEnPending = c.devName;
+    fetch(c.folderUrl + '/wiki_en.json')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        this.wikiEnPending = null;
+        // The user may have navigated to another character while this was in flight.
+        if (this.state.selectedChar && this.state.selectedChar.devName === c.devName) {
+          this.setState({ wikiEnData: data || false }); // false = "checked, nothing there"
+        }
       });
   }
 
@@ -3141,10 +3204,32 @@ class Component extends DCLogic {
           ARM_ELEMENTS.indexOf(a.element) - ARM_ELEMENTS.indexOf(b.element) ||
           a.nameZh.localeCompare(b.nameZh, 'zh'));
         this.setState({ armWeapons: weapons, armLoading: false, armLoaded: true });
+        this.loadWeaponsEn();
       })
       .catch(err => {
         console.error('[arms] failed to load weapons.json', err);
         this.setState({ armLoading: false, armError: String(err && err.message || err) });
+      });
+  }
+
+  // The English armament sidecar (scripts/scrape-wiki-gg-weapons.mjs), merged onto the loaded
+  // records by `href` — the same merge key weapons.json itself uses. It's a sidecar rather than
+  // extra columns on weapons.json because the two files come from different scrapers; see that
+  // script's header. Only fetched in English, and only once. 316 of 384 weapons have an entry;
+  // the rest keep showing Chinese, which is what armName()/armText() fall back to anyway.
+  loadWeaponsEn() {
+    if (this.state.lang !== 'en' || this.state.armEnLoaded || this.armEnPending) return;
+    this.armEnPending = true;
+    fetch(WEAPON_BASE + '/weapons_en.json')
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        this.armEnPending = false;
+        const byHref = new Map(((data && data.weapons) || []).map(w => [w.href, w]));
+        this.setState(s => ({
+          armEnLoaded: true,
+          armWeapons: s.armWeapons.map(w => (byHref.has(w.href) ? { ...w, en: byHref.get(w.href) } : w))
+        }));
       });
   }
 
@@ -3266,8 +3351,23 @@ class Component extends DCLogic {
   // so it's only fetched when the story panel is actually opened, and only once per character.
   loadStory() {
     const selectedChar = this.state.selectedChar;
-    if (!selectedChar || this.state.storyData || this.state.storyLoading) return;
+    if (!selectedChar) return;
     const devName = selectedChar.devName;
+    // In English the panel wants story_en.json too. The two are independent files from different
+    // sources (miaowm5 vs wiki.gg) with different episode counts, so each gets its own fetch and
+    // its own cache slot rather than one replacing the other.
+    if (this.state.lang === 'en' && this.state.storyEnData === null && this.storyEnPending !== devName) {
+      this.storyEnPending = devName;
+      fetch(selectedChar.folderUrl + '/story_en.json')
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+        .then(data => {
+          this.storyEnPending = null;
+          if (!this.state.selectedChar || this.state.selectedChar.devName !== devName) return;
+          this.setState({ storyEnData: data || false }); // false = "checked, nothing there"
+        });
+    }
+    if (this.state.storyData || this.state.storyLoading) return;
     this.setState({ storyLoading: true });
     fetch(selectedChar.folderUrl + '/story_zh.json')
       .then(r => r.ok ? r.json() : null)
@@ -3810,9 +3910,23 @@ class Component extends DCLogic {
     // --- Weapons (武器库 / 武器详情) — the same grid/filter shape as the roster above ---
     const isArms = tab === 'arms';
     const armDetail = this.state.armDetail;
+    // The English sidecar (weapons_en.json), merged onto the record by href in loadWeaponsEn.
+    // Only 316 of 384 weapons have one, and it never carries stats — those are language-neutral
+    // numbers that come from the Chinese record either way. Falls back field by field.
+    const armEn = (this.state.lang === 'en' && armDetail && armDetail.en) || null;
+    const armDetailEffect = (armEn && armEn.baseSkillDetail) || (armDetail && armDetail.effect) || '';
+    const armDetailMaxEffect = (armEn && armEn.maxSkillDetail) || (armDetail && armDetail.maxEffect) || '';
+    const armDetailAcquire = (armEn && armEn.obtain) || (armDetail && armDetail.acquisition) || '';
+    const armDetailFlavor = (armEn && armEn.description) || (armDetail && armDetail.flavor) || '';
     const armWeaponsAll = this.filteredWeapons();
+    // Weapons have a Chinese name always and an English one only where the wiki.gg sidecar
+    // matched (316 of 384), so the tile label is per-weapon rather than per-language.
+    const armLangEn = this.state.lang === 'en';
     const armVisible = armWeaponsAll.slice(0, this.state.armVisibleCount).map(w => ({
-      ...w, hasElement: !!w.elementIconUrl, onSelect: () => this.goArmDetail(w)
+      ...w,
+      displayName: (armLangEn && w.en && w.en.nameEn) || w.nameZh,
+      hasElement: !!w.elementIconUrl,
+      onSelect: () => this.goArmDetail(w)
     }));
     const armStatusText = this.state.armLoading
       ? this.t('loadingWeapons')
@@ -3842,6 +3956,12 @@ class Component extends DCLogic {
     const sheetY = this.state.sheetY;
 
     const wikiData = this.state.wikiData;
+    // The English half (scripts/scrape-wiki-gg-units.mjs). `false` means "fetched, doesn't exist",
+    // so both that and the un-fetched null collapse to "no English" here. Every binding below
+    // reads through `en(...)`, which falls back to Chinese field by field rather than all-or-
+    // nothing — a character can have an English profile but no English stories, and often does.
+    const wikiEn = (this.state.lang === 'en' && this.state.wikiEnData) || null;
+    const en = (enValue, zhValue) => (enValue == null || enValue === '' ? zhValue : enValue);
     const WIKI_FIELD_LABELS = {
       nickname: this.t('wikiFieldNickname'),
       type: this.t('wikiFieldType'),
@@ -3851,14 +3971,40 @@ class Component extends DCLogic {
       cv: this.t('wikiFieldCv'),
       acquisition: this.t('wikiFieldAcquisition')
     };
-    const wikiInfoRows = wikiData
+    // wiki.gg names the same fields differently and has no nickname/type at all, so the English
+    // values are mapped onto the existing rows rather than given rows of their own.
+    const enInfo = (wikiEn && wikiEn.info) || null;
+    const EN_FIELD_MAP = enInfo
+      ? { role: enInfo.class, gender: enInfo.gender, race: enInfo.race, cv: enInfo.va, acquisition: enInfo.obtain }
+      : {};
+    const wikiInfoRows = (wikiData || enInfo)
       ? Object.keys(WIKI_FIELD_LABELS)
-        .filter(key => wikiData.basicInfo[key])
-        .map(key => ({ label: WIKI_FIELD_LABELS[key], value: wikiData.basicInfo[key] }))
+        .map(key => ({
+          label: WIKI_FIELD_LABELS[key],
+          value: en(EN_FIELD_MAP[key], wikiData ? wikiData.basicInfo[key] : '')
+        }))
+        .filter(row => row.value)
       : [];
-    const wikiSkillGroups = wikiData
-      ? wikiData.skills.map(g => ({ caption: g.caption, entries: g.entries.map(e => ({ name: e.name, text: e.text })) }))
+    // In English the {{Unit}} template's skill / leader talent / passive abilities stand in for
+    // the Chinese skill tables, laid out as the same caption+entries groups the template expects.
+    const enSkillGroups = wikiEn
+      ? [
+        wikiEn.skill && wikiEn.skill.detail
+          ? { caption: this.t('wikiEnSkill'), entries: [{ name: wikiEn.skill.name || '', text: wikiEn.skill.detail }] }
+          : null,
+        wikiEn.leaderTalent && wikiEn.leaderTalent.detail
+          ? { caption: this.t('wikiEnLeaderTalent'), entries: [{ name: wikiEn.leaderTalent.name || '', text: wikiEn.leaderTalent.detail }] }
+          : null,
+        (wikiEn.abilities || []).length
+          ? { caption: this.t('wikiEnAbilities'), entries: wikiEn.abilities.map((a, i) => ({ name: String(i + 1), text: a })) }
+          : null
+      ].filter(Boolean)
       : [];
+    const wikiSkillGroups = enSkillGroups.length
+      ? enSkillGroups
+      : (wikiData
+        ? wikiData.skills.map(g => ({ caption: g.caption, entries: g.entries.map(e => ({ name: e.name, text: e.text })) }))
+        : []);
     const voiceTracks = (wikiData && selectedChar)
       ? wikiData.voice.map((line, i) => {
         const playing = this.state.voicePlaying && this.state.voiceIndex === i;
@@ -3873,6 +4019,10 @@ class Component extends DCLogic {
         };
       })
       : [];
+
+    // wiki.gg's English quote lines. Text only — no audio ships with them — so they render as a
+    // separate group under the playable mp3 rows rather than relabelling them.
+    const voiceQuotes = (wikiEn && wikiEn.quotes) ? wikiEn.quotes.map(q => ({ type: q.type || '', text: q.text })) : [];
 
     // Extra pixel actions the miaowm5 pipeline generated (into_coffin/ghost_raise/...), shown
     // as pills beside Skill/Special. `pixelActions` lists what the folder actually holds, so
@@ -3961,7 +4111,15 @@ class Component extends DCLogic {
     }));
 
     const storyData = this.state.storyData;
-    const stories = (storyData && storyData.stories) || [];
+    // In English the panel is driven by story_en.json instead (wiki.gg's own episode scripts).
+    // It's a different source from story_zh.json with its own episode list, so it replaces the
+    // list wholesale rather than merging — an episode index means different things in each.
+    const storyEn = (this.state.lang === 'en' && this.state.storyEnData) || null;
+    const storyEnEpisodes = (storyEn && storyEn.episodes) || [];
+    const useStoryEn = storyEnEpisodes.length > 0;
+    const stories = useStoryEn
+      ? storyEnEpisodes.map(ep => ({ title: ep.name || '', desc: ep.summary || '' }))
+      : ((storyData && storyData.stories) || []);
     const storyIndex = this.state.storyIndex;
     const openedStory = (storyIndex !== null && stories[storyIndex]) ? stories[storyIndex] : null;
     const storyList = stories.map((st, i) => ({
@@ -3986,7 +4144,23 @@ class Component extends DCLogic {
         fronts: entries.filter(e => e.front).map(e => ({ url: emotionDir + e.front }))
       };
     };
-    const storyDialogs = openedStory ? openedStory.dialogs.map(d => {
+    // wiki.gg's scripts are plain speaker+line pairs: no speakerDev, so no portrait to look up and
+    // no emotion art to stack. Those speakers get the plain name plate the Chinese reader already
+    // falls back to for anyone without a sprite — the honest degradation, not a missing feature.
+    const storyEnDialogs = (useStoryEn && storyIndex !== null && storyEnEpisodes[storyIndex])
+      ? (storyEnEpisodes[storyIndex].lines || []).map(l => ({
+        speaker: l.speaker || '',
+        color: '',
+        text: l.text,
+        hasAvatar: false,
+        emotionBaseUrl: '',
+        hasEmotionBase: false,
+        emotionFronts: [],
+        hasHeadArt: false,
+        headUrl: ''
+      }))
+      : [];
+    const storyDialogs = useStoryEn ? storyEnDialogs : (openedStory ? openedStory.dialogs.map(d => {
       const art = (selectedChar && d.speakerDev === selectedChar.devName && d.emotion)
         ? resolveEmotionStack(d.emotion)
         : null;
@@ -4003,7 +4177,7 @@ class Component extends DCLogic {
         hasHeadArt: !!headUrl,
         headUrl
       };
-    }) : [];
+    }) : []);
 
     // --- Story archive -----------------------------------------------------------------------
     // The list is filtered by the single-select category chip row; 'all' is inert. Stories whose
@@ -4592,7 +4766,7 @@ class Component extends DCLogic {
       setArmFilterText: (e) => this.setArmFilterText(e),
       // Weapon detail (armDetail set = the 武器详情 screen)
       closeArmDetail: () => this.closeArmDetail(),
-      armDetailName: armDetail ? armDetail.nameZh : '',
+      armDetailName: armDetail ? ((armEn && armEn.nameEn) || armDetail.nameZh) : '',
       armDetailAlt: armDetail ? (armDetail.altName || '') : '',
       armDetailHasAlt: !!(armDetail && armDetail.altName),
       armDetailIconUrl: armDetail ? armDetail.iconUrl : '',
@@ -4619,18 +4793,21 @@ class Component extends DCLogic {
       armMaxEffectTitleText: this.t('armMaxEffectTitle'),
       armAcquireTitleText: this.t('armAcquireTitle'),
       armLoreTitleText: this.t('armLoreTitle'),
-      armDetailHasEffect: !!(armDetail && armDetail.effect),
-      armDetailEffect: armDetail ? (armDetail.effect || '') : '',
-      armDetailHasMaxEffect: !!(armDetail && armDetail.maxEffect),
-      armDetailMaxEffect: armDetail ? (armDetail.maxEffect || '') : '',
+      armDetailHasEffect: !!armDetailEffect,
+      armDetailEffect: armDetailEffect,
+      armDetailHasMaxEffect: !!armDetailMaxEffect,
+      armDetailMaxEffect: armDetailMaxEffect,
       // The card shows when either effect exists (orbs carry only a max effect); the max-effect
       // block only gets its divider/spacing when a base effect sits above it.
-      armDetailHasAnyEffect: !!(armDetail && (armDetail.effect || armDetail.maxEffect)),
-      armMaxEffectBlockStyle: (armDetail && armDetail.effect) ? 'margin-top: 12px; padding-top: 10px; border-top: 1px dashed #E3E9F0;' : '',
-      armDetailHasAcquire: !!(armDetail && armDetail.acquisition),
-      armDetailAcquire: armDetail ? (armDetail.acquisition || '') : '',
-      armDetailHasFlavor: !!(armDetail && armDetail.flavor),
-      armDetailFlavor: armDetail ? (armDetail.flavor || '') : '',
+      armDetailHasAnyEffect: !!(armDetailEffect || armDetailMaxEffect),
+      armMaxEffectBlockStyle: armDetailEffect ? 'margin-top: 12px; padding-top: 10px; border-top: 1px dashed #E3E9F0;' : '',
+      armDetailHasAcquire: !!armDetailAcquire,
+      armDetailAcquire: armDetailAcquire,
+      armDetailHasFlavor: !!armDetailFlavor,
+      armDetailFlavor: armDetailFlavor,
+      // Attribution for the English armament text, shown only when some is actually on screen.
+      // (wikiSourceGgText itself is defined once, up with the character-sheet bindings.)
+      showArmSourceGg: !!armEn,
       // Swallows clicks inside the dialog so they don't reach the backdrop's close handler.
       stopDialogClick: (e) => e.stopPropagation(),
       detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
@@ -4681,20 +4858,35 @@ class Component extends DCLogic {
       wikiSectionStoryLabel: this.t('wikiSectionStory'),
       wikiSectionReviewLabel: this.t('wikiSectionReview'),
       wikiSectionVoiceLabel: this.t('wikiSectionVoice'),
+      wikiSectionQuotesLabel: this.t('wikiSectionQuotes'),
+      wikiSourceGgText: this.t('wikiSourceGg'),
+      // Attribution for the wiki.gg text, shown only when some is actually on screen.
+      showWikiSourceGg: !!wikiEn || useStoryEn,
       wikiInfoRows: wikiInfoRows,
       hasWikiInfoRows: wikiInfoRows.length > 0,
       wikiSkillGroups: wikiSkillGroups,
       hasWikiSkills: wikiSkillGroups.length > 0,
-      wikiStoryIntro: wikiData && wikiData.story ? wikiData.story.intro : '',
-      wikiStories: wikiData && wikiData.story ? wikiData.story.stories : [],
+      // In English the profile blurb stands in for the bilibili story intro, and the wiki.gg
+      // episode names + summaries for its story list. Falls through field by field: a character
+      // with an English profile but no English stories keeps the Chinese ones.
+      wikiStoryIntro: en(enInfo && enInfo.description, wikiData && wikiData.story ? wikiData.story.intro : ''),
+      wikiStories: (wikiEn && (wikiEn.stories || []).length)
+        ? wikiEn.stories.map(s => ({ title: s.name || '', text: s.summary || '' }))
+        : (wikiData && wikiData.story ? wikiData.story.stories : []),
       // Also gates the encyclopedia info blocks, which render in this section — a character
       // with no bilibili wiki story can still have them.
-      hasWikiStory: !!(wikiData && ((wikiData.story && (wikiData.story.intro || wikiData.story.stories.length)) || wikiInfoBlocks.length)),
+      hasWikiStory: !!(
+        (wikiEn && ((enInfo && enInfo.description) || (wikiEn.stories || []).length)) ||
+        (wikiData && ((wikiData.story && (wikiData.story.intro || wikiData.story.stories.length)) || wikiInfoBlocks.length))
+      ),
       wikiReview: wikiData ? wikiData.review : '',
       hasWikiReview: !!(wikiData && wikiData.review),
       voiceTracks: voiceTracks,
       hasVoiceTracks: voiceTracks.length > 0,
-      hasNoVoiceTracks: voiceTracks.length === 0,
+      voiceQuotes: voiceQuotes,
+      hasVoiceQuotes: voiceQuotes.length > 0,
+      // The empty state is only really empty when neither list has anything.
+      hasNoVoiceTracks: voiceTracks.length === 0 && voiceQuotes.length === 0,
       wikiNoVoiceText: this.t('wikiNoVoice'),
       showProfilePanel: this.state.sheetPanel === 'profile',
       showVoicePanel: this.state.sheetPanel === 'voice',

@@ -69,10 +69,13 @@ function buildFileList() {
   }));
 
   // The top-level Weapons/ folder, keyed under a Weapons/ prefix so live URLs are
-  // <r2-root>/Weapons/… — exactly what WEAPON_BASE points at.
+  // <r2-root>/Weapons/… — exactly what WEAPON_BASE points at. Unlike Character Assets/, this
+  // folder has no include list to filter by (the whole thing ships), so the scrapers' dev-only
+  // `_`-prefixed reports have to be excluded explicitly or they'd be published.
   if (existsSync(WEAPONS_DIR)) {
     const weaponFiles = collectFiles(WEAPONS_DIR, WEAPONS_DIR, []);
     for (const abs of weaponFiles) {
+      if (path.basename(abs).startsWith('_')) continue;
       out.push({ abs, key: 'Weapons/' + path.relative(WEAPONS_DIR, abs).split(path.sep).join('/') });
     }
   }
