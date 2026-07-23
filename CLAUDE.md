@@ -123,11 +123,31 @@ by `scrape-weapons.mjs`; sharing it would mean inventing a second owned-keys con
 - Orbs have no base row on either side (as with the CN scraper), so they fall back to a
   max-stats-only key.
 
+**Main + event stories** (`npm run scrape:stories-en`, `scripts/scrape-wiki-gg-stories.mjs`) writes
+`Character Assets/story/en/<slug>.json` + `story/en/index.json`, feeding the **Story tab** in
+English. 19 stories, 119 episodes with dialogue.
+
+- **This source does have the main story** — an earlier note in `wikigg-gaps.md` said it had none.
+  The scripts aren't on `/Stories` subpages; they're on `Story Quests/World N: <name>/<Episode>`
+  and `<Event> Event/<Episode>` pages built on `{{Story pages}}` (`Story`/`Summary`/`Script`).
+  Enumerate them with **`list=embeddedin` on `Template:Story pages`** — 131 pages, the only listing
+  that finds every event without knowing its title. Coverage is Worlds 1-5 (Worlds 6-10 have a
+  chapter page, so an English *title* but no episodes) plus 9 events.
+- **Speakers are wrapped**: `{{SL|{{DU|Alk}}|line}}`, sometimes `{{DU|???|a32535}}` (a name-plate
+  colour) or `{{DUL|…}}`. `parseSLLines` in `wikigg-common.mjs` doesn't unwrap those, so this
+  script has its own `parseSpeaker`/`parseScript` — which also has to read `{{SL}}` and `{{SN}}`
+  (stage directions) in **one ordered pass**, or the narration all piles up at the end.
+- **Episode order comes from the parent page's quest tables** (`[[/Name | Story]]` links, in
+  order). The API's page order is alphabetical, which is meaningless here.
+- Slugs are a hand table (`STORY_PAGES`) — ours come from the CN encyclopedia's eventID, theirs
+  from the global release's own naming, and they share no key. The report cross-checks each pair's
+  episode count against `story/index.json`, which is what makes a mis-mapping obvious.
+
 **Front-end.** English is preferred when `state.lang === 'en'` and falls back to Chinese
 **field by field** — a character can have an English profile but no English stories, and many do.
-`wiki_en.json`/`story_en.json`/`weapons_en.json` are fetched **only in English** (so a zh session
-pays nothing), which is why `toggleLang()` has to kick the loaders for whatever is already open.
-`null` = not fetched, `false` = fetched and absent. Two deliberate asymmetries:
+`wiki_en.json`/`story_en.json`/`weapons_en.json`/`story/en/*` are fetched **only in English** (so a
+zh session pays nothing), which is why `toggleLang()` has to kick the loaders for whatever is already
+open. `null` = not fetched, `false` = fetched and absent. Two deliberate asymmetries:
 
 - **English quotes are a separate group in the voice panel, not a relabelling of the mp3 rows.**
   They carry no audio and don't correspond one-to-one, so overwriting `voice[].text` would pair
@@ -138,7 +158,41 @@ pays nothing), which is why `toggleLang()` has to kick the loaders for whatever 
 - `nickname` and `type` have no `{{Unit}}` equivalent and stay Chinese in English mode — the
   per-field fallback working as designed, since the data only exists in Chinese.
 - wiki.gg is **CC BY-SA**: every record carries `sourceUrl`, and a credit line (`wikiSourceGg`)
-  renders under the English text on both the character sheet and the weapon detail.
+  renders under the English text on the character sheet, the weapon detail and the Story tab's
+  episode list.
+
+### community sheet pipeline (a public Google Sheet)
+
+`npm run fetch:community-en` (`scripts/fetch-community-en.mjs`, flag `--force`) reads the
+English-speaking community's story-archive spreadsheet — five tabs pulled straight through the CSV
+export endpoint (`/export?format=csv&gid=N`, no auth), cached in `scripts/.community-en-cache/`
+(gitignored). It writes two files it owns outright, `Character Assets/units_en.json` and
+`Character Assets/story/community_en.json`, plus `_community_en_report.md`. Nothing else is touched.
+
+- **The unit tab carries `devName`** (its "Dev Nicknames" column) — the same key `roster.json`
+  uses, so 432 of 485 characters match exactly with no name matching at all. That is the whole
+  reason this source is worth a pipeline: it closes the gap `wikigg-gaps.md` §1 called "needs a
+  different source entirely". **Every character now has an English name except `flame_witch`.**
+- The other 52 are on a separate CN/JP-only tab with **no devName column**, so they go through the
+  hand-verified `CN_ONLY_DEVNAMES` table, keyed on the tab's epithet ("TL Title" — unique, unlike
+  the unit name). Each pair was checked by transliterating the roster `zhName` (露涅塔 = Runetta,
+  卡西瓦尔斯 = Käsivars, 画狂老人Z = Old Man Zigza); the script re-checks element and rarity on
+  every run and **skips + warns** rather than mis-attaching a name.
+- **The character-episode tabs join on the epithet, not the unit name.** Three units share a name
+  with their own alt (two Liams, two Hartliefs) and one row spells a name differently from the unit
+  tab ("Ernest" for Ornesto — so that's *not* a missing character, as §3 of the gaps doc assumed).
+  Epithets are unique across all 432 rows.
+- Event rows key off the game's own eventID in the last column, which is *near* our slug but not
+  equal (`hw20` vs our `event_halloween2020`) — hence `EVENT_SLUGS`. Three collabs have no id at
+  all and key off the event name. The main-story tab's trailing id column is a stray paste from the
+  event tab (World 1 is not `advent_event_001`) and is ignored.
+- What it actually provides: **English names/epithets/jpName** for the whole roster, **a YouTube
+  playthrough link per character episode** (484) and **per story** (42 of 42, the only English that
+  exists for the 29 stories nobody transcribed), and an English title for every event. It does
+  **not** provide main-chapter titles — the tab only says "World 3" — those come from wiki.gg.
+- Links are other people's recordings, so the UI credits the uploader and marks the JP/KR ones
+  (`raw: true`) as having no English subtitles. `units_en.json` is in `upload-to-r2.mjs`'s
+  `INCLUDE_TOP_LEVEL`; `story/community_en.json` ships under the `story/` prefix already.
 
 ### miaowm5 pipeline (worldflipper.miaowm5.com)
 
@@ -182,7 +236,9 @@ Idempotent — once in the roster, no longer "new". This yielded 108 characters;
 570x690 story bust — so they carry `bustOnly: true` and the detail page uses the stacked bust as
 hero art with the awaken toggle hidden. They also have **no `enName`/`jpName`** (miaowm5 is a
 Chinese source) — only `zhName` from `character_text[gameId][0]`; the front-end falls back
-`enName || zhName || devName`. Three Black Clover collab characters have Japanese-script `zhName`s
+`enName || zhName || devName`. (The community-sheet pipeline now supplies an English name and a
+`jpName` for all but one of them, patched onto the roster entries at load time by `loadUnitsEn` —
+`hasEnName` is what marks who may be renamed, since the fallback above already filled `enName`.) Three Black Clover collab characters have Japanese-script `zhName`s
 because the game's own CN data left them untranslated.
 
 **Per-character outputs** (beyond the `wiki_zh.json` keys):
@@ -299,8 +355,8 @@ bug to dedupe.
 
 - `npm run upload:assets` — uploads `Character Assets/` to Cloudflare R2 (`wf-assets`) via
   `scripts/upload-to-r2.mjs`. Needs `npx wrangler login` once (or `CLOUDFLARE_API_TOKEN` /
-  `CLOUDFLARE_ACCOUNT_ID`). Ships only `roster.json`, `story_heads.json`, `rarityN/`,
-  `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`) **plus the top-level
+  `CLOUDFLARE_ACCOUNT_ID`). Ships only `roster.json`, `story_heads.json`, `units_en.json`,
+  `rarityN/`, `story_heads/`, `story/` (see `INCLUDE_TOP_LEVEL`/`INCLUDE_DIR_PREFIX`) **plus the top-level
   `Weapons/` folder under a `Weapons/` key prefix** (matching the front-end's `WEAPON_BASE`);
   dev-only files are excluded. Resumes via `scripts/.r2-upload-manifest.json`; `--force` re-uploads
   everything. **`Weapons/` has no include list** — the whole folder ships — so anything dev-only
@@ -445,6 +501,21 @@ panel**, which is a different feature — read the prefix before assuming which 
   `story/index.json` once on first `go('story')`, `story/detail/<slug>.json` per story
   (`arcDetailCache`), one episode file per episode (`arcEpisodeCache`). Episode dialogue is the
   bulk of the data, so it never loads until an episode is actually opened.
+- **In English there are two more, both English-only** (`loadArcEn`, `loadArcEnDetail`):
+  `story/en/index.json` + `story/community_en.json` together with the index, and
+  `story/en/<slug>.json` when a story with a script opens (`arcEnCache`). The per-story fetch is
+  gated on the index's `episodeCount` — 29 of the 42 have no script, and asking would be 29
+  guaranteed 404s. `arcTitleFor()` resolves a title wiki.gg → community sheet → Chinese.
+- **English episodes replace the Chinese list wholesale**, the same rule the character sheet's
+  story panel follows (`arcEnEpisodes()` is the switch). They carry their dialogue inline, so
+  `openArcEpisode` is pure state in English — nothing to fetch. `toggleLang` closes an open reader
+  in both readers, because an episode index means a different episode in each language.
+- **Community playthrough links render under the episode list**, not behind a tab: for most
+  stories they're the only English there is. The same rows appear in the character sheet's story
+  panel, which is why `showStoryList`/`showStoryEmpty` count videos as content.
+- `DIALOG_PLATE_DEFAULT` exists because the name plate's text is white and English lines usually
+  have no colour: the Chinese scripts carry a per-speaker colour from the game's data, `{{DU}}`
+  only sets one for the odd unnamed speaker, and an empty `background:` renders invisible.
 - **Tab icons are the committed `icons/small-*.png`** (profile → info, story-book → episodes, book
   → gallery, speaker → BGM), *not* upstream's atlas sprites — a deliberate choice. Tabs render
   conditionally: no info tab without `desc` (extras), no gallery without orb/images, no BGM without
@@ -733,8 +804,9 @@ suffix convention (`enName`/`jpName`/`zhName`), not nesting.
 `ASSET_BASE` switches on how the page is served: `file://`/`localhost` → local
 `Character Assets/`; anything else → the public Cloudflare R2 bucket. **Check both branches when
 changing asset references.** `Character Assets/`, `WF OST/`, and `node_modules/` are gitignored;
-only `roster.json`, `story_heads.json`, `rarityN/*`, `story_heads/*`, and `story/*` reach R2 — any
-new asset type must be added to `upload-to-r2.mjs`'s include rules or it silently never ships.
+only `roster.json`, `story_heads.json`, `units_en.json`, `rarityN/*`, `story_heads/*`, and
+`story/*` reach R2 — any new asset type must be added to `upload-to-r2.mjs`'s include rules or it
+silently never ships.
 Every path inside `story/index.json` and `story/detail/*.json` is stored relative to
 `Character Assets/` (i.e. it mirrors the R2 key), so `ASSET_BASE + '/' + p` resolves on both
 branches with no per-branch special-casing.

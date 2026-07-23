@@ -11,7 +11,9 @@
     "match:wiki-zh": "node scripts/match-wiki-to-roster.mjs",
     "fetch:miaowm5": "node scripts/fetch-miaowm5.mjs",
     "fetch:story": "node scripts/fetch-main-story.mjs",
-    "build:music-index": "node scripts/build-music-index.mjs"
+    "build:music-index": "node scripts/build-music-index.mjs",
+    "scrape:stories-en": "node scripts/scrape-wiki-gg-stories.mjs",
+    "fetch:community-en": "node scripts/fetch-community-en.mjs"
   },
   "devDependencies": {
     "cheerio": "^1.2.0",

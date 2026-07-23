@@ -733,6 +733,11 @@
               <div style="display: flex; align-items: center; gap: 10px; padding: 2px 18px 10px;">
                 <div style="flex: 1; min-width: 0;">
                   <div style="font-size: 16px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnName }}</div>
+                  <!-- The character's epithet, English only: it comes from the community sheet,
+                       and the Chinese record's own 称号 already renders in the wiki info rows. -->
+                  <sc-if value="{{ detailHasEnTitle }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 11px; font-weight: 800; color: #8A93A5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ detailEnTitle }}</div>
+                  </sc-if>
                   <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ detailJpName }}</div>
                 </div>
                 <img src="{{ detailRarityUrl }}" alt="{{ detailRarityLabel }}" style="height: 13px; width: auto; flex: none;">
@@ -942,13 +947,35 @@
 
                   <sc-if value="{{ showStoryList }}" hint-placeholder-val="{{ true }}">
                     <div>
-                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ storyListTitleLabel }}</div>
+                      <sc-if value="{{ hasStoryEpisodes }}" hint-placeholder-val="{{ true }}">
+                        <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ storyListTitleLabel }}</div>
+                      </sc-if>
                       <sc-for list="{{ storyList }}" as="sl" hint-placeholder-count="3">
                         <div onClick="{{ sl.onClick }}" style="cursor: pointer; background: #F7F9FC; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
                           <div style="font-size: 12.5px; font-weight: 800; color: #3E4450; margin-bottom: 2px;">{{ sl.title }}</div>
                           <div style="font-size: 11px; font-weight: 600; color: #8A93A5; white-space: pre-line; line-height: 1.45;">{{ sl.desc }}</div>
                         </div>
                       </sc-for>
+                      <!-- A community recording of this character's episode. Shown next to the
+                           list rather than instead of it: for the 331 characters wiki.gg has no
+                           English script for, it's the only way to follow the episode. -->
+                      <sc-if value="{{ charHasVideos }}" hint-placeholder-val="{{ false }}">
+                        <div style="margin-top: 14px;">
+                          <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ videosTitleLabel }}</div>
+                          <sc-for list="{{ charVideoRows }}" as="cv" hint-placeholder-count="1">
+                            <div onClick="{{ cv.onClick }}" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: #F7F9FC; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
+                              <div style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: #F0526E; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #FFFFFF;">▶</div>
+                              <div style="flex: 1; min-width: 0;">
+                                <div style="font-size: 12px; font-weight: 800; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ cv.label }}</div>
+                                <sc-if value="{{ cv.raw }}" hint-placeholder-val="{{ false }}">
+                                  <div style="font-size: 10.5px; font-weight: 700; color: #B7BECC;">{{ videoRawLabel }}</div>
+                                </sc-if>
+                              </div>
+                            </div>
+                          </sc-for>
+                          <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding: 2px 0 4px;">{{ videoSourceCommunityText }}</div>
+                        </div>
+                      </sc-if>
                     </div>
                   </sc-if>
 
@@ -1191,6 +1218,28 @@
                     </sc-if>
                     <sc-if value="{{ arcHasNoEpisodes }}" hint-placeholder-val="{{ false }}">
                       <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ arcNoEpisodesText }}</div>
+                    </sc-if>
+                    <sc-if value="{{ arcShowWikiSourceGg }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding: 2px 0 10px;">{{ wikiSourceGgText }}</div>
+                    </sc-if>
+                    <!-- Community playthroughs: for 29 of the 42 stories this is the only English
+                         there is, so it sits under the episode list rather than behind a tab. -->
+                    <sc-if value="{{ arcHasVideos }}" hint-placeholder-val="{{ false }}">
+                      <div style="margin-top: 14px;">
+                        <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ videosTitleLabel }}</div>
+                        <sc-for list="{{ arcVideoRows }}" as="av" hint-placeholder-count="2">
+                          <div onClick="{{ av.onClick }}" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: #F7F9FC; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.08);">
+                            <div style="flex: none; width: 22px; height: 22px; border-radius: 50%; background: #F0526E; display: flex; align-items: center; justify-content: center; font-size: 9px; color: #FFFFFF;">▶</div>
+                            <div style="flex: 1; min-width: 0;">
+                              <div style="font-size: 12px; font-weight: 800; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ av.label }}</div>
+                              <sc-if value="{{ av.raw }}" hint-placeholder-val="{{ false }}">
+                                <div style="font-size: 10.5px; font-weight: 700; color: #B7BECC;">{{ videoRawLabel }}</div>
+                              </sc-if>
+                            </div>
+                          </div>
+                        </sc-for>
+                        <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding: 2px 0 4px;">{{ videoSourceCommunityText }}</div>
+                      </div>
                     </sc-if>
                   </div>
                 </sc-if>
@@ -1923,6 +1972,9 @@ const CHANGELOG = [
       { en: 'Added English character data from worldflipper.wiki.gg — profile, skills, abilities, stories and quotes for 369 characters.', zh: '接入 worldflipper.wiki.gg 英文角色资料：369 名角色的简介、技能、能力、故事与台词。' },
       { en: 'Added English weapon names and effects for 316 of the 384 armaments.', zh: '新增 384 件武器中 316 件的英文名称与效果说明。' },
       { en: 'Content now follows the EN/ZH toggle, falling back to Chinese where no English exists.', zh: '内容区跟随中英切换，缺少英文时回落中文。' },
+      { en: 'The Story archive now reads in English: full scripts for main story Worlds 1-5 and nine events, 119 episodes in all.', zh: '故事档案支持英文阅读：主线世界 1–5 与九个活动的完整剧本，共 119 话。' },
+      { en: 'English story titles for 39 of the 42 stories, and community playthrough links for the ones with no English script.', zh: '42 个剧情中 39 个补上英文标题；暂无英文剧本的剧情附社区实况录像链接。' },
+      { en: 'Every character but one now has an English name — including the 108 that no wiki documents — plus their English epithet and a playthrough of their episode.', zh: '除一名角色外全员补齐英文名（含 108 名各大 wiki 均无收录的角色），并新增英文称号与角色剧情实况链接。' },
   ]},
   { date: '2026-07-22', items: [
       { en: 'Music player: the volume slider now has a draggable knob, and its popup toggles closed on a second tap.', zh: '音乐播放器：音量滑块新增可拖动的按钮，再次点击音量键即可关闭音量条。' },
@@ -2197,6 +2249,17 @@ const STRINGS = {
   arcLoadingEpisode: { en: 'Loading episode…', zh: '剧情加载中…' },
   arcNoEpisodes: { en: 'No episodes available yet.', zh: '暂无剧情数据。' },
   arcBackToStories: { en: 'Stories', zh: '剧情列表' },
+  // Community playthrough videos (the Google Sheet the fetch:community-en pipeline reads). They
+  // stand in for the stories nobody has transcribed, so the copy has to be honest about what the
+  // link is: someone else's recording, on YouTube, sometimes without English.
+  videosTitle: { en: 'Watch in English', zh: '英文实况' },
+  videoBy: { en: 'Playthrough by {by}', zh: '实况录像：{by}' },
+  videoWatch: { en: 'Playthrough on YouTube', zh: 'YouTube 实况录像' },
+  videoRaw: { en: 'no English subtitles', zh: '无英文字幕' },
+  videoSourceCommunity: {
+    en: 'Video links from the community story archive sheet',
+    zh: '视频链接来自社区剧情整理表格'
+  },
   roomSectionChar: { en: 'Character Themes', zh: '角色主题曲' },
   roomSectionWorld: { en: 'World & Events', zh: '世界原声' },
   roomSearchHint: { en: 'Search music…', zh: '搜索音乐…' },
@@ -2233,6 +2296,11 @@ const ARC_CATEGORIES = [
   { id: 'event', labelKey: 'arcFilterEvent' },
   { id: 'collab', labelKey: 'arcFilterCollab' }
 ];
+
+// Name-plate colour for dialogue rows whose source doesn't give one. The Chinese scripts carry a
+// per-speaker colour from the game's own data; wiki.gg's {{DU}} only sets one for the occasional
+// unnamed speaker, and the plate's text is white — so an empty value would render invisible.
+const DIALOG_PLATE_DEFAULT = '#8A93A5';
 
 // The Music Room's two libraries: character theme tracks (the roster's `music` arrays) and the
 // world/event BGM albums (story/music_index.json, one album per story). The room can't use the
@@ -2360,6 +2428,11 @@ class Component extends DCLogic {
     // character sheet's own story panel above. arcStory null = the list view; arcEpisodeIndex
     // non-null = the reader rather than the episode list.
     arcIndex: null, arcIndexLoading: false, arcIndexError: null, arcCategory: 'all',
+    // The English half of the archive, all fetched only in English (see loadArcEn):
+    // arcEnIndex = story/en/index.json (wiki.gg titles + which stories have a script),
+    // arcCommunity = story/community_en.json (the community sheet's titles + playthrough videos),
+    // arcEnDetail = story/en/<slug>.json for the open story. null = not fetched, false = absent.
+    arcEnIndex: null, arcCommunity: null, arcEnDetail: null,
     arcStory: null, arcDetail: null, arcDetailLoading: false, arcTab: 'info',
     arcEpisodeIndex: null, arcEpisode: null, arcEpisodeLoading: false,
     // Music Room (the music tab). `room` prefix throughout — `music*` already means the character
@@ -2431,6 +2504,14 @@ class Component extends DCLogic {
   // re-requests what it already has.
   arcDetailCache = new Map();
   arcEpisodeCache = new Map();
+  // story/en/<slug>.json, same idea. Kept off state for the same reason the two above are.
+  arcEnCache = new Map();
+
+  // units_en.json's `characters` map (devName -> { name, title, jpName, videos }), or null until
+  // the English session fetches it. An instance field rather than state: it's a lookup table the
+  // render reads, and the one thing it changes about the tree (English names for the characters
+  // roster.json has none for) is patched onto the roster entries themselves.
+  unitsEn = null;
 
   // Which feature the single shared this.audio currently belongs to: null | 'detail' | 'story' |
   // 'room'. A feature stops the audio only if it owns it, and starting playback anywhere claims
@@ -2488,12 +2569,18 @@ class Component extends DCLogic {
     const lang = this.state.lang === 'en' ? 'zh' : 'en';
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
     this.setState({ lang });
+    // The two languages' episode lists come from different sources and don't line up, so an index
+    // into one means a different episode in the other. Closing the reader is the honest answer.
+    if (this.state.arcEpisodeIndex !== null) this.closeArcEpisode();
+    if (this.state.storyIndex !== null) this.setState({ storyIndex: null });
     // The English content files are only fetched in English, so switching into it mid-session has
     // to go get whatever the open screens now want. All three are idempotent no-ops otherwise.
     if (lang === 'en') {
       this.loadWikiEn();
+      this.loadUnitsEn();
       if (this.state.sheetPanel === 'story') this.loadStory();
       if (this.state.armLoaded) this.loadWeaponsEn();
+      if (this.state.tab === 'story') this.loadArcEn();
     }
   }
 
@@ -2600,6 +2687,9 @@ class Component extends DCLogic {
             // mode falls back to their Chinese name — the alternative is the internal devName,
             // which reads far worse than 惠惠 does.
             enName: c.enName || c.zhName || c.devName,
+            // Whether that name is a real English one, so loadUnitsEn knows whom the community
+            // sheet is allowed to rename — after the fallback above, `enName` can't say.
+            hasEnName: !!c.enName,
             zhName: c.zhName || '',
             jpName: c.jpName || '',
             rarity: c.rarity,
@@ -2634,6 +2724,8 @@ class Component extends DCLogic {
             a.devName.localeCompare(b.devName));
         this.rosterByDev = new Map(roster.map(c => [c.devName, c]));
         this.setState({ roster, rosterLoading: false });
+        // Has to run after the roster lands: its whole job is patching these entries.
+        this.loadUnitsEn();
         // The Flip deck is built from the roster, and go('flip') can beat this fetch home —
         // whichever of the two happens second is the one that builds it.
         if (this.state.tab === 'flip') this.ensureFlipDeck();
@@ -2775,7 +2867,7 @@ class Component extends DCLogic {
     this.setState({ tab: tab, menuOpen: false, ...(tab === 'arms' ? { armDetail: null } : {}) });
     if (tab === 'units') this.restoreUnitsScroll();
     if (tab === 'arms') this.loadWeapons();
-    if (tab === 'story') this.loadArcIndex();
+    if (tab === 'story') { this.loadArcIndex(); this.loadArcEn(); }
     if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
     if (tab === 'music') this.loadRoomAlbums();
   }
@@ -3399,6 +3491,78 @@ class Component extends DCLogic {
   // story/detail/<slug>.json when a story opens, and one episode file when an episode opens.
   // Each tier caches, and each guards against the user navigating away mid-flight.
 
+  // The community sheet's unit records: English names for the 108 miaowm5-only characters that no
+  // wiki documents, their epithets, and a playthrough video per character episode. English only,
+  // fetched once, and non-critical — a failure just leaves the Chinese fallbacks in place.
+  loadUnitsEn() {
+    if (this.state.lang !== 'en' || this.unitsEn || this.unitsEnPending) return;
+    this.unitsEnPending = true;
+    fetch(ASSET_BASE + '/units_en.json')
+      .then(r => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then(data => {
+        this.unitsEnPending = false;
+        this.unitsEn = (data && data.characters) || {};
+        // Patch in the names the roster genuinely lacks. `hasEnName` is what says who those are:
+        // the roster mapping already fell back to zhName, so the field itself can't tell us.
+        let patched = 0;
+        for (const c of this.state.roster || []) {
+          const rec = this.unitsEn[c.devName];
+          if (!rec || !rec.name || c.hasEnName) continue;
+          c.enName = rec.name;
+          c.hasEnName = true;
+          patched++;
+        }
+        // The roster array is mutated in place (rosterByDev holds the same objects), so nothing
+        // downstream needs rebuilding — but renderVals has to be told to run again.
+        this.setState({ unitsEnVersion: (this.state.unitsEnVersion || 0) + 1 });
+      });
+  }
+
+  // The Story tab's English sidecars, both small and both fetched once: wiki.gg's episode scripts
+  // index and the community sheet's titles/videos. They cover different stories on purpose —
+  // wiki.gg has scripts for 13, the sheet has a video for nearly all 42 — so neither replaces the
+  // other and the render prefers whichever it has.
+  loadArcEn() {
+    if (this.state.lang !== 'en' || this.state.arcEnIndex !== null || this.arcEnIndexPending) return;
+    this.arcEnIndexPending = true;
+    Promise.all([
+      fetch(ASSET_BASE + '/story/en/index.json').then(r => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(ASSET_BASE + '/story/community_en.json').then(r => (r.ok ? r.json() : null)).catch(() => null)
+    ]).then(([en, community]) => {
+      this.arcEnIndexPending = false;
+      this.setState({
+        arcEnIndex: (en && en.stories) || false,
+        arcCommunity: (community && community.stories) || false
+      });
+      // A story may already be open (language toggled mid-read).
+      if (this.state.arcStory) this.loadArcEnDetail(this.state.arcStory.slug);
+    });
+  }
+
+  // wiki.gg's episode scripts for one story. Only fetched when the index says that story has any —
+  // 29 of the 42 have none, and asking for them would be 29 guaranteed 404s.
+  loadArcEnDetail(slug) {
+    if (this.state.lang !== 'en') return;
+    const index = this.state.arcEnIndex;
+    const entry = index && index[slug];
+    if (!entry || !entry.episodeCount) {
+      if (this.state.arcEnDetail !== false) this.setState({ arcEnDetail: false });
+      return;
+    }
+    const cached = this.arcEnCache.get(slug);
+    if (cached) { this.setState({ arcEnDetail: cached }); return; }
+    fetch(ASSET_BASE + '/story/en/' + slug + '.json')
+      .then(r => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then(data => {
+        if (data) this.arcEnCache.set(slug, data);
+        // The user may have navigated to another story while this was in flight.
+        if (!this.state.arcStory || this.state.arcStory.slug !== slug) return;
+        this.setState({ arcEnDetail: data || false });
+      });
+  }
+
   loadArcIndex() {
     if (this.state.arcIndex || this.state.arcIndexLoading) return;
     this.setState({ arcIndexLoading: true, arcIndexError: null });
@@ -3424,9 +3588,11 @@ class Component extends DCLogic {
       arcDetail: cached || null,
       arcDetailLoading: !cached,
       arcTab: this.defaultArcTab(cached),
+      arcEnDetail: null,
       arcEpisodeIndex: null, arcEpisode: null
     });
     this.scrollArcTop();
+    this.loadArcEnDetail(story.slug);
     if (cached) return;
     fetch(ASSET_BASE + '/story/detail/' + story.slug + '.json')
       .then(r => r.ok ? r.json() : null)
@@ -3442,14 +3608,33 @@ class Component extends DCLogic {
     // The BGM plays through the room engine now, so returning to the story list keeps it going in
     // the floating mini-player — same as leaving the tab entirely.
     this.setState({
-      arcStory: null, arcDetail: null, arcEpisodeIndex: null, arcEpisode: null
+      arcStory: null, arcDetail: null, arcEnDetail: null, arcEpisodeIndex: null, arcEpisode: null
     });
     this.scrollArcTop();
   }
 
   setArcTab(tab) { this.setState({ arcTab: tab }); this.scrollArcTop(); }
 
+  // wiki.gg's episodes for the open story, or null when there are none (or we're in Chinese).
+  // They replace the Chinese episode list wholesale rather than merging into it — the same rule
+  // the character sheet's story panel follows, for the same reason: different source, different
+  // episode split, so index i means a different episode in each.
+  arcEnEpisodes() {
+    const detail = this.state.lang === 'en' ? this.state.arcEnDetail : null;
+    const episodes = detail && detail.episodes;
+    return (episodes && episodes.length) ? episodes : null;
+  }
+
   openArcEpisode(i) {
+    // English episodes carry their dialogue inline (the whole story is one file), so there's
+    // nothing to fetch — opening one is pure state.
+    const enEpisodes = this.arcEnEpisodes();
+    if (enEpisodes) {
+      if (!enEpisodes[i]) return;
+      this.setState({ arcEpisodeIndex: i, arcEpisode: null, arcEpisodeLoading: false });
+      this.scrollArcTop();
+      return;
+    }
     const detail = this.state.arcDetail;
     const ep = detail && detail.episodes && detail.episodes[i];
     if (!ep) return;
@@ -3955,6 +4140,17 @@ class Component extends DCLogic {
     const selectedChar = this.state.selectedChar;
     const sheetY = this.state.sheetY;
 
+    // This character's row in the community sheet (English name/epithet/jpName and a playthrough
+    // of their episode). English only, and null until units_en.json lands.
+    const charEn = (this.state.lang === 'en' && this.unitsEn && selectedChar)
+      ? (this.unitsEn[selectedChar.devName] || null)
+      : null;
+    const charVideoRows = ((charEn && charEn.videos) || []).map(v => ({
+      label: v.by ? this.t('videoBy').replace('{by}', v.by) : this.t('videoWatch'),
+      raw: !!v.raw,
+      onClick: () => window.open(v.url, '_blank', 'noopener')
+    }));
+
     const wikiData = this.state.wikiData;
     // The English half (scripts/scrape-wiki-gg-units.mjs). `false` means "fetched, doesn't exist",
     // so both that and the un-fetched null collapse to "no English" here. Every binding below
@@ -4150,7 +4346,7 @@ class Component extends DCLogic {
     const storyEnDialogs = (useStoryEn && storyIndex !== null && storyEnEpisodes[storyIndex])
       ? (storyEnEpisodes[storyIndex].lines || []).map(l => ({
         speaker: l.speaker || '',
-        color: '',
+        color: DIALOG_PLATE_DEFAULT,
         text: l.text,
         hasAvatar: false,
         emotionBaseUrl: '',
@@ -4183,10 +4379,21 @@ class Component extends DCLogic {
     // The list is filtered by the single-select category chip row; 'all' is inert. Stories whose
     // banner sprite the atlas didn't have render as a text tile instead (as upstream does).
     const arcCategory = this.state.arcCategory;
+    // English story titles come from two sources that cover different halves of the archive:
+    // wiki.gg has the ten main chapters and the nine events it transcribed, the community sheet
+    // has an English name for every event. Falls back to the Chinese title, story by story.
+    const arcEnIndexMap = (this.state.lang === 'en' && this.state.arcEnIndex) || null;
+    const arcCommunityMap = (this.state.lang === 'en' && this.state.arcCommunity) || null;
+    const arcTitleFor = (story) => {
+      if (!story) return '';
+      const en = arcEnIndexMap && arcEnIndexMap[story.slug];
+      const community = arcCommunityMap && arcCommunityMap[story.slug];
+      return (en && en.title) || (community && community.title) || story.title;
+    };
     const arcStoryItems = (this.state.arcIndex || [])
       .filter(s => arcCategory === 'all' || s.category === arcCategory)
       .map(s => ({
-        title: s.title,
+        title: arcTitleFor(s),
         hasBanner: !!s.banner,
         noBanner: !s.banner,
         bannerUrl: s.banner ? ASSET_BASE + '/' + s.banner : '',
@@ -4203,7 +4410,19 @@ class Component extends DCLogic {
     const arcDetail = this.state.arcDetail;
     const arcTab = this.state.arcTab;
     const arcInReader = this.state.arcEpisodeIndex !== null;
-    const arcEpisodes = (arcDetail && arcDetail.episodes) || [];
+    // Community playthrough recordings for the open story. They're the only English there is for
+    // the 29 stories nobody has transcribed, so they show whether or not a script exists.
+    const arcCommunityEntry = (arcCommunityMap && arcStory) ? arcCommunityMap[arcStory.slug] : null;
+    const arcVideoRows = ((arcCommunityEntry && arcCommunityEntry.videos) || []).map((v, i) => ({
+      label: v.by ? this.t('videoBy').replace('{by}', v.by) : this.t('videoWatch'),
+      raw: !!v.raw,
+      url: v.url,
+      onClick: () => window.open(v.url, '_blank', 'noopener')
+    }));
+    const arcEnEpisodes = this.arcEnEpisodes();
+    const arcEpisodes = arcEnEpisodes
+      ? arcEnEpisodes.map(ep => ({ title: ep.name || '', desc: ep.summary || '' }))
+      : ((arcDetail && arcDetail.episodes) || []);
     const arcOpenedEpisode = arcInReader ? arcEpisodes[this.state.arcEpisodeIndex] : null;
     const arcRelated = (arcDetail && arcDetail.related) || null;
     // Same resolution as the character sheet's related panel: a chip that lands on a roster
@@ -4225,12 +4444,24 @@ class Component extends DCLogic {
     }));
     // The reader has no "viewed character", so unlike the character sheet's dialogue rows every
     // speaker resolves to a portrait; `marker` rows (BGM change points) are data-only for now.
-    const arcDialogRows = ((this.state.arcEpisode && this.state.arcEpisode.dialogs) || [])
-      .filter(d => !d.marker)
-      .map(d => {
-        const headUrl = this.headUrlForSpeaker(d.speakerDev);
-        return { speaker: d.speaker, color: d.color, text: d.text, hasAvatar: !!headUrl, headUrl };
-      });
+    // wiki.gg's scripts are speaker+line pairs with no speakerDev, so those rows get the plain
+    // name plate rather than a portrait — the honest degradation, same as the character sheet's
+    // English stories. The plate keeps a neutral colour: {{DU}} only carries one for the odd
+    // unnamed speaker, and an empty `background:` would leave white text on nothing.
+    const arcDialogRows = (arcEnEpisodes && arcInReader)
+      ? ((arcEnEpisodes[this.state.arcEpisodeIndex] || {}).lines || []).map(l => ({
+        speaker: l.speaker || '',
+        color: l.color || DIALOG_PLATE_DEFAULT,
+        text: l.text,
+        hasAvatar: false,
+        headUrl: ''
+      }))
+      : ((this.state.arcEpisode && this.state.arcEpisode.dialogs) || [])
+        .filter(d => !d.marker)
+        .map(d => {
+          const headUrl = this.headUrlForSpeaker(d.speakerDev);
+          return { speaker: d.speaker, color: d.color, text: d.text, hasAvatar: !!headUrl, headUrl };
+        });
     const arcTabBg = id => (arcTab === id ? accent : '#F0F3F7');
 
     // --- Music Room ---------------------------------------------------------------------------
@@ -4461,7 +4692,7 @@ class Component extends DCLogic {
       arcNoStoriesText: this.t('arcNoStories'),
 
       // Story archive: detail header + tab switcher
-      arcTitle: arcStory ? arcStory.title : '',
+      arcTitle: arcTitleFor(arcStory),
       arcHeaderUrl: (arcDetail && arcDetail.header) ? 'url("' + ASSET_BASE + '/' + arcDetail.header + '")' : 'none',
       arcBackToStoriesLabel: this.t('arcBackToStories'),
       arcBackToStoriesBtn: () => this.closeArcStory(),
@@ -4502,6 +4733,15 @@ class Component extends DCLogic {
       arcHasEpisodes: arcEpisodes.length > 0,
       arcHasNoEpisodes: !!arcDetail && arcEpisodes.length === 0,
       arcNoEpisodesText: this.t('arcNoEpisodes'),
+      // The English extras under the episode list: wiki.gg's CC BY-SA credit when the scripts
+      // above came from there, then the community playthrough links (which exist for far more
+      // stories than the scripts do, so they're gated separately).
+      arcShowWikiSourceGg: !!arcEnEpisodes,
+      arcHasVideos: arcVideoRows.length > 0,
+      arcVideoRows: arcVideoRows,
+      videosTitleLabel: this.t('videosTitle'),
+      videoRawLabel: this.t('videoRaw'),
+      videoSourceCommunityText: this.t('videoSourceCommunity'),
       arcEpisodeLoading: this.state.arcEpisodeLoading,
       arcLoadingEpisodeText: this.t('arcLoadingEpisode'),
       arcReaderTitle: arcOpenedEpisode ? arcOpenedEpisode.title : '',
@@ -4811,7 +5051,13 @@ class Component extends DCLogic {
       // Swallows clicks inside the dialog so they don't reach the backdrop's close handler.
       stopDialogClick: (e) => e.stopPropagation(),
       detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
-      detailJpName: selectedChar ? (selectedChar.jpName || '') : '',
+      // The 108 miaowm5-only characters have no jpName in the roster; the community sheet does,
+      // and a Japanese name reads the same in either UI language, so it fills in unconditionally.
+      detailJpName: selectedChar ? (selectedChar.jpName || (charEn && charEn.jpName) || '') : '',
+      detailEnTitle: (charEn && charEn.title) || '',
+      detailHasEnTitle: !!(charEn && charEn.title),
+      charHasVideos: charVideoRows.length > 0,
+      charVideoRows: charVideoRows,
       detailRarityUrl: selectedChar ? selectedChar.rarityUrl : '',
       detailRarityLabel: selectedChar ? selectedChar.rarityLabel : '',
       fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
@@ -4934,9 +5180,13 @@ class Component extends DCLogic {
       storyBackLabel: this.t('storyBack'),
       storyBackToListLabel: this.t('storyBackToList'),
       storyLoading: this.state.storyLoading,
-      showStoryList: !this.state.storyLoading && storyIndex === null && stories.length > 0,
+      // A character with no episodes can still have a community playthrough, so the list view owns
+      // the panel whenever there's either — otherwise the video would be stranded behind the
+      // "no stories" placeholder.
+      showStoryList: !this.state.storyLoading && storyIndex === null && (stories.length > 0 || charVideoRows.length > 0),
+      hasStoryEpisodes: stories.length > 0,
       showStoryDetail: !this.state.storyLoading && !!openedStory,
-      showStoryEmpty: !this.state.storyLoading && stories.length === 0,
+      showStoryEmpty: !this.state.storyLoading && stories.length === 0 && charVideoRows.length === 0,
       storyList: storyList,
       storyDialogs: storyDialogs,
       storyDetailTitle: openedStory ? openedStory.title : '',

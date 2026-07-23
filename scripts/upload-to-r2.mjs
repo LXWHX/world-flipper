@@ -34,7 +34,7 @@ const WRANGLER_BIN = path.resolve(
 // manifest, every rarityN/ folder, the story_heads/ folder those portraits live in, and the
 // story/ tree (main-story browser: index/detail JSON, episodes, banners, headers, orb, gallery, bgm).
 // Dev-only files (fetch/*.ps1, *_log.txt, metadata.json, unmatched_music_report.md, _unmatched_music/) are skipped.
-const INCLUDE_TOP_LEVEL = new Set(['roster.json', 'story_heads.json']);
+const INCLUDE_TOP_LEVEL = new Set(['roster.json', 'story_heads.json', 'units_en.json']);
 const INCLUDE_DIR_PREFIX = /^(rarity\d+|story_heads|story)$/;
 
 function collectFiles(dir, baseDir, out) {
