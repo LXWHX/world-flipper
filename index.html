@@ -487,6 +487,27 @@
                 </div>
                 <span style="flex: none; font-size: 14px; font-weight: 800; color: #35C8B4;">↗</span>
               </a>
+              <a href="https://worldflipper.wiki.gg" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 9px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #9B6BD8;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditWikiGgText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">worldflipper.wiki.gg</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #9B6BD8;">↗</span>
+              </a>
+              <a href="https://docs.google.com/spreadsheets/d/1cjrja_U6biwyST_pX9yN6Y0pEpwOoB5QuVzRlevaTNE/edit" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 9px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #E0913C;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditCommunityText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">docs.google.com</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #E0913C;">↗</span>
+              </a>
+              <a href="https://eliya-bot.herokuapp.com/gl/" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 9px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #4FA3E3;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditEliyaText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">eliya-bot.herokuapp.com</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #4FA3E3;">↗</span>
+              </a>
 
               <!-- Official World Flipper links: a label + one linked card per site. -->
               <div style="display: flex; align-items: center; gap: 11px; padding: 8px 4px 6px 6px;">
@@ -888,7 +909,7 @@
                     <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center;">{{ miaowm5SourceLabel }}</div>
                   </sc-if>
                   <sc-if value="{{ showWikiSourceGg }}" hint-placeholder-val="{{ false }}">
-                    <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center;">{{ wikiSourceGgText }}</div>
+                    <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center;">{{ wikiEnSourceText }}</div>
                   </sc-if>
                 </div>
               </sc-if>
@@ -1968,6 +1989,9 @@ const FLIP_RISE_MS = 170;
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-27', items: [
+      { en: 'Added English skills, leader buffs and abilities for 60 more characters — the roster additions that no wiki documents — sourced from the Eliya-bot Global database.', zh: '为另外 60 名角色补上英文技能、队长技与能力（这些是各大 wiki 均未收录的新增角色），资料来自 Eliya-bot 国际服数据库。' },
+  ]},
   { date: '2026-07-23', items: [
       { en: 'Added English character data from worldflipper.wiki.gg — profile, skills, abilities, stories and quotes for 369 characters.', zh: '接入 worldflipper.wiki.gg 英文角色资料：369 名角色的简介、技能、能力、故事与台词。' },
       { en: 'Added English weapon names and effects for 316 of the 384 armaments.', zh: '新增 384 件武器中 316 件的英文名称与效果说明。' },
@@ -2052,6 +2076,9 @@ const STRINGS = {
   creditSources: { en: 'Data sources', zh: '数据来源' },
   creditWiki: { en: 'Bilibili World Flipper Wiki', zh: 'bilibili 世界弹射物语 wiki' },
   creditMiao: { en: 'miaowm5 Encyclopedia', zh: 'miaowm5 图鉴' },
+  creditWikiGg: { en: 'World Flipper Wiki (wiki.gg)', zh: 'World Flipper Wiki（wiki.gg）' },
+  creditCommunity: { en: 'WF EN Story Archive (community)', zh: '英文社区剧情档案表' },
+  creditEliya: { en: 'Eliya-bot (Global data)', zh: 'Eliya-bot（国际服数据）' },
   creditOfficial: { en: 'Official links', zh: '官方链接' },
   officialSite: { en: 'Official Website', zh: '官方网站' },
   officialTwitter: { en: 'Official X (Twitter)', zh: '官方推特' },
@@ -2179,6 +2206,8 @@ const STRINGS = {
   wikiEnLeaderTalent: { en: 'Leader Talent', zh: '队长技' },
   wikiEnAbilities: { en: 'Abilities', zh: '能力' },
   wikiSourceGg: { en: 'English text from worldflipper.wiki.gg (CC BY-SA)', zh: '英文资料来自 worldflipper.wiki.gg（CC BY-SA）' },
+  // Shown instead of the wiki.gg line when the English text came from the Eliya-bot GL fallback.
+  wikiSourceEliya: { en: 'English text from Eliya-bot (Global release data)', zh: '英文资料来自 Eliya-bot（国际服数据）' },
   wikiFieldNickname: { en: 'Nickname', zh: '昵称' },
   wikiFieldType: { en: 'Type', zh: '类型' },
   wikiFieldRole: { en: 'Role', zh: '职责' },
@@ -3246,6 +3275,10 @@ class Component extends DCLogic {
     fetch(c.folderUrl + '/wiki_en.json')
       .then(r => r.ok ? r.json() : null)
       .catch(() => null)
+      // wiki.gg is primary; the 60 bustOnly characters it can't match fall back to the Eliya-bot
+      // GL sidecar (scripts/fetch-eliya-gl.mjs), which carries `source: 'eliya'` and the same
+      // info/skill/leaderTalent/abilities shape, so the render path below needs no special case.
+      .then(data => data || fetch(c.folderUrl + '/eliya_en.json').then(r => r.ok ? r.json() : null).catch(() => null))
       .then(data => {
         this.wikiEnPending = null;
         // The user may have navigated to another character while this was in flight.
@@ -4903,6 +4936,9 @@ class Component extends DCLogic {
       creditSourcesText: this.t('creditSources'),
       creditWikiText: this.t('creditWiki'),
       creditMiaoText: this.t('creditMiao'),
+      creditWikiGgText: this.t('creditWikiGg'),
+      creditCommunityText: this.t('creditCommunity'),
+      creditEliyaText: this.t('creditEliya'),
       creditOfficialText: this.t('creditOfficial'),
       officialSiteText: this.t('officialSite'),
       officialTwitterText: this.t('officialTwitter'),
@@ -5106,6 +5142,10 @@ class Component extends DCLogic {
       wikiSectionVoiceLabel: this.t('wikiSectionVoice'),
       wikiSectionQuotesLabel: this.t('wikiSectionQuotes'),
       wikiSourceGgText: this.t('wikiSourceGg'),
+      // The character sheet's English attribution: wiki.gg for the matched majority, Eliya-bot for
+      // the bustOnly fallback (its record carries `source: 'eliya'`). The Story tab's own credit
+      // lines below stay wiki.gg — that source has no Eliya equivalent.
+      wikiEnSourceText: (wikiEn && wikiEn.source === 'eliya') ? this.t('wikiSourceEliya') : this.t('wikiSourceGg'),
       // Attribution for the wiki.gg text, shown only when some is actually on screen.
       showWikiSourceGg: !!wikiEn || useStoryEn,
       wikiInfoRows: wikiInfoRows,

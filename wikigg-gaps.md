@@ -1,4 +1,4 @@
-# English data gaps (updated 2026-07-23, after the community-sheet + story passes)
+# English data gaps (updated 2026-07-27, after the Eliya-bot GL pass)
 
 What the English pipelines could **not** fill in, and where to look next.
 
@@ -9,6 +9,7 @@ npm run scrape:wiki-en       # -> Character Assets/_wikigg_unmatched_report.md
 npm run scrape:weapons-en    # -> Weapons/_wikigg_unmatched_report.md
 npm run scrape:stories-en    # -> Character Assets/_wikigg_stories_report.md
 npm run fetch:community-en   # -> Character Assets/_community_en_report.md
+npm run fetch:eliya-gl       # -> Character Assets/_eliya_gl_report.md
 ```
 
 Those reports hold the full name lists. This document is the interpretation: which gaps are real,
@@ -22,6 +23,7 @@ which are fixable here, and which need an outside source.
 | --- | --- | --- |
 | Character English names (of 485 roster entries) | **484** | 1 |
 | Character wiki text (of 377 with a roster `enName`) | 369 | 8 |
+| Character skill text for the 108 `bustOnly` (English) | **60** (Eliya-bot GL) | 48 (CN-only) |
 | Character stories (episode scripts) | 291 pages | ~86 characters |
 | Character episode playthrough videos | 484 | — |
 | Character quote lines | 38 pages | ~331 characters have none |
@@ -33,6 +35,21 @@ which are fixable here, and which need an outside source.
 ---
 
 ## What closed since the first pass
+
+**Eliya-bot's GL data closed most of the bustOnly skill-text gap.** Its Global collection tracker is
+keyed by `DevNicknames` = our `devName` (exact join) and carries the game's own English
+skill / leader buff / abilities text. `npm run fetch:eliya-gl` wrote `eliya_en.json` for the **60
+`bustOnly` characters** that had an English name but no English skill text anywhere; the front-end
+falls back to it when `wiki_en.json` is absent. See the Eliya-bot GL pipeline in `PIPELINES.md`. The
+other 48 bustOnly plus 5 collab characters (Haruhi, Konosuba's `aqua`/`megumin`) aren't in the GL
+data — CN-only or never globally released — so they stay Chinese-only for skill text.
+
+**The §4 name-drift trio is confirmed but still unusable.** Eliya has them by devName —
+`estateguild_leader`=**Hildegarde**, `anger_investigator`=**Weihu**, `scissor_ratgirl`=**Karina** —
+settling the guesses below. But all three are `thumb:null` (no folder, filtered out of every grid),
+so there is nowhere to write and nothing on screen; the pipeline skips them.
+
+## What closed earlier
 
 **§1 (the 108 `bustOnly` characters) is closed.** The community story-archive spreadsheet has a
 unit tab carrying `devName`, so 432 of 485 matched exactly; the remaining 52 came from its CN-only
@@ -94,23 +111,19 @@ by event name in `EVENT_SLUGS_BY_NAME`.
 `nagato_yuki`, `asahina_mikuru`, `kyon`, `koizumi_ituki`). Global never ran that collab, so there
 is no page to match; they do now have English names and epithets from the sheet.
 
-**Three are probably name drift, not absence.** Each has a plausible counterpart in the orphan list
-at matching rarity + element, and slipped through both matcher tiers only because their
-`wiki_zh.json` carries no stat table for the stats tier to key on:
+**Three were name drift, now confirmed by Eliya-bot's GL data** (which keys by devName, so it needed
+no name match):
 
-| roster | `enName` | rarity/element | likely wiki.gg page | confidence |
+| roster | `enName` | rarity/element | wiki.gg page | Eliya GL confirms |
 | --- | --- | --- | --- | --- |
-| `estateguild_leader` | Hildegard | 5★ Dark | **Hildegarde** | near-certain (same name) |
-| `scissor_ratgirl` | Rinkarina | 4★ Thunder | Karina | plausible, unverified |
-| `anger_investigator` | Waif | 5★ Fire | Weihu | plausible, unverified |
+| `estateguild_leader` | Hildegard | 5★ Dark | **Hildegarde** | Hildegarde ✓ |
+| `scissor_ratgirl` | Rinkarina | 4★ Thunder | Karina | Karina ✓ |
+| `anger_investigator` | Waif | 5★ Fire | Weihu | Weihu ✓ |
 
-To act on any of these, add the pair to `TITLE_OVERRIDES` in `scripts/scrape-wiki-gg-units.mjs`
-and re-run.
-
-⚠️ **`estateguild_leader` is deliberately not in the override table.** It's one of the three roster
-entries with `thumb: null` — no character folder to write into, and the front-end filters it out of
-every grid. Matching it raises the reported count without producing a file or changing anything on
-screen. Only add it if those `thumb: null` entries ever get folders.
+⚠️ **All three are `thumb: null`** — no character folder to write into, and the front-end filters
+them out of every grid. wiki.gg `TITLE_OVERRIDES` and the Eliya pipeline both deliberately skip
+them: matching raises the reported count without producing a file or changing anything on screen.
+Only act on these if those `thumb: null` entries ever get folders.
 
 ## 5. Six wiki.gg characters not in our roster
 
@@ -146,7 +159,8 @@ one pass. Deliberately not guessed automatically — a wrong weapon name is wors
   from the community sheet instead (shown under the name in English); `type` is still Chinese-only.
 - **Weapon role/limit/system (能力/限制/体系)** have no English counterpart in `{{Armament}}`, so
   the Armaments filter chips stay Chinese.
-- **`flame_witch` (夏可缇)** — the one roster character with no English name from any source.
+- **`flame_witch` (夏可缇)** — the one roster character with no English name from any source
+  (not in the community sheet, not in Eliya-bot's GL data either).
 
 ---
 
