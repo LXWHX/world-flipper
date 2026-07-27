@@ -508,6 +508,13 @@
                 </div>
                 <span style="flex: none; font-size: 14px; font-weight: 800; color: #4FA3E3;">↗</span>
               </a>
+              <a href="https://en.namu.wiki/w/%EC%9B%94%EB%93%9C%20%ED%94%8C%EB%A6%AC%ED%8D%BC/%EC%8A%A4%ED%86%A0%EB%A6%AC" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 2px solid #EEF1F5; border-radius: 12px; padding: 10px 14px; margin: 0 4px 9px 22px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); text-decoration: none; color: #3E4450;" style-hover="border-color: #00A495;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ creditNamuText }}</div>
+                  <div style="font-size: 10px; font-weight: 600; color: #8A93A5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">en.namu.wiki</div>
+                </div>
+                <span style="flex: none; font-size: 14px; font-weight: 800; color: #00A495;">↗</span>
+              </a>
 
               <!-- Official World Flipper links: a label + one linked card per site. -->
               <div style="display: flex; align-items: center; gap: 11px; padding: 8px 4px 6px 6px;">
@@ -1188,6 +1195,9 @@
                 <sc-if value="{{ arcShowInfo }}" hint-placeholder-val="{{ true }}">
                   <div>
                     <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 8px;">{{ arcInfoTitleLabel }}</div>
+                    <sc-if value="{{ arcShowSummaryNotice }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 10.5px; font-weight: 700; color: #B7BECC; line-height: 1.4; margin-bottom: 10px;">{{ arcSummaryNoticeText }}</div>
+                    </sc-if>
                     <sc-for list="{{ arcInfoBlocks }}" as="ab" hint-placeholder-count="2">
                       <div style="background: #FFFFFF; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 2px 0 rgba(62,68,80,0.08); font-size: 12px; font-weight: 600; color: #3E4450; white-space: pre-line; line-height: 1.6;">{{ ab.text }}</div>
                     </sc-for>
@@ -1990,6 +2000,7 @@ const FLIP_RISE_MS = 170;
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
   { date: '2026-07-27', items: [
+      { en: 'The Story archive’s Info tab now reads in English for the chapters that have no English script — main story Worlds 6-10 and 19 events — with plot summaries machine-translated from namu.wiki (marked as auto-translated).', zh: '故事档案「情报」页现可用英文阅读此前无英文剧本的章节——主线世界 6–10 及 19 个活动——剧情简介机翻自 namu.wiki（页内标注为机翻）。' },
       { en: 'Added English skills, leader buffs and abilities for 60 more characters — the roster additions that no wiki documents — sourced from the Eliya-bot Global database.', zh: '为另外 60 名角色补上英文技能、队长技与能力（这些是各大 wiki 均未收录的新增角色），资料来自 Eliya-bot 国际服数据库。' },
   ]},
   { date: '2026-07-23', items: [
@@ -2079,6 +2090,7 @@ const STRINGS = {
   creditWikiGg: { en: 'World Flipper Wiki (wiki.gg)', zh: 'World Flipper Wiki（wiki.gg）' },
   creditCommunity: { en: 'WF EN Story Archive (community)', zh: '英文社区剧情档案表' },
   creditEliya: { en: 'Eliya-bot (Global data)', zh: 'Eliya-bot（国际服数据）' },
+  creditNamu: { en: 'namu.wiki (story summaries, machine-translated)', zh: 'namu.wiki（剧情简介，机翻）' },
   creditOfficial: { en: 'Official links', zh: '官方链接' },
   officialSite: { en: 'Official Website', zh: '官方网站' },
   officialTwitter: { en: 'Official X (Twitter)', zh: '官方推特' },
@@ -2271,6 +2283,7 @@ const STRINGS = {
   arcTabGallery: { en: 'Gallery', zh: '画廊' },
   arcTabBgm: { en: 'Music', zh: '音乐' },
   arcInfoTitle: { en: 'Info', zh: '情报' },
+  arcSummaryNotice: { en: 'Auto-translated plot summary, adapted from namu.wiki (CC BY-NC-SA) — may contain errors.', zh: '以下简介为机器翻译，改编自 namu.wiki（CC BY-NC-SA），可能有误。' },
   arcEpisodesTitle: { en: 'Episodes', zh: '剧情' },
   arcGalleryTitle: { en: 'Gallery', zh: '画廊' },
   arcBgmTitle: { en: 'Music', zh: '相关音乐' },
@@ -2461,7 +2474,9 @@ class Component extends DCLogic {
     // arcEnIndex = story/en/index.json (wiki.gg titles + which stories have a script),
     // arcCommunity = story/community_en.json (the community sheet's titles + playthrough videos),
     // arcEnDetail = story/en/<slug>.json for the open story. null = not fetched, false = absent.
-    arcEnIndex: null, arcCommunity: null, arcEnDetail: null,
+    // arcSummaryEn = story/en/summary_en.json: a slug -> {desc[], sourceUrl} map of machine-translated
+    // plot summaries (namu.wiki) that fill the info panel for stories with no English script. English-only.
+    arcEnIndex: null, arcCommunity: null, arcEnDetail: null, arcSummaryEn: null,
     arcStory: null, arcDetail: null, arcDetailLoading: false, arcTab: 'info',
     arcEpisodeIndex: null, arcEpisode: null, arcEpisodeLoading: false,
     // Music Room (the music tab). `room` prefix throughout — `music*` already means the character
@@ -3561,12 +3576,14 @@ class Component extends DCLogic {
     this.arcEnIndexPending = true;
     Promise.all([
       fetch(ASSET_BASE + '/story/en/index.json').then(r => (r.ok ? r.json() : null)).catch(() => null),
-      fetch(ASSET_BASE + '/story/community_en.json').then(r => (r.ok ? r.json() : null)).catch(() => null)
-    ]).then(([en, community]) => {
+      fetch(ASSET_BASE + '/story/community_en.json').then(r => (r.ok ? r.json() : null)).catch(() => null),
+      fetch(ASSET_BASE + '/story/en/summary_en.json').then(r => (r.ok ? r.json() : null)).catch(() => null)
+    ]).then(([en, community, summary]) => {
       this.arcEnIndexPending = false;
       this.setState({
         arcEnIndex: (en && en.stories) || false,
-        arcCommunity: (community && community.stories) || false
+        arcCommunity: (community && community.stories) || false,
+        arcSummaryEn: (summary && summary.stories) || false
       });
       // A story may already be open (language toggled mid-read).
       if (this.state.arcStory) this.loadArcEnDetail(this.state.arcStory.slug);
@@ -4443,6 +4460,14 @@ class Component extends DCLogic {
     const arcDetail = this.state.arcDetail;
     const arcTab = this.state.arcTab;
     const arcInReader = this.state.arcEpisodeIndex !== null;
+    // Machine-translated plot summary (namu.wiki) for the info panel, English only. When present it
+    // replaces the Chinese `desc` there — the one English text some stories have — and shows an
+    // "auto-translated" notice above it. Never touches the episode reader (namu has no dialogue).
+    const arcSummaryMap = (this.state.lang === 'en' && this.state.arcSummaryEn) || null;
+    const arcSummaryEntry = (arcSummaryMap && arcStory) ? arcSummaryMap[arcStory.slug] : null;
+    const arcInfoDesc = (arcSummaryEntry && arcSummaryEntry.desc && arcSummaryEntry.desc.length)
+      ? arcSummaryEntry.desc
+      : ((arcDetail && arcDetail.desc) || []);
     // Community playthrough recordings for the open story. They're the only English there is for
     // the 29 stories nobody has transcribed, so they show whether or not a script exists.
     const arcCommunityEntry = (arcCommunityMap && arcStory) ? arcCommunityMap[arcStory.slug] : null;
@@ -4729,7 +4754,7 @@ class Component extends DCLogic {
       arcHeaderUrl: (arcDetail && arcDetail.header) ? 'url("' + ASSET_BASE + '/' + arcDetail.header + '")' : 'none',
       arcBackToStoriesLabel: this.t('arcBackToStories'),
       arcBackToStoriesBtn: () => this.closeArcStory(),
-      arcHasInfoTab: !!(arcDetail && arcDetail.desc && arcDetail.desc.length),
+      arcHasInfoTab: !!((arcDetail && arcDetail.desc && arcDetail.desc.length) || (arcSummaryEntry && arcSummaryEntry.desc && arcSummaryEntry.desc.length)),
       arcHasGalleryTab: !!(arcDetail && (arcDetail.orb || (arcDetail.gallery && arcDetail.gallery.length))),
       arcHasBgmTab: !!(arcDetail && arcDetail.bgm && arcDetail.bgm.length),
       arcTabInfoBg: arcTabBg('info'),
@@ -4754,7 +4779,9 @@ class Component extends DCLogic {
       arcShowGallery: !!arcDetail && arcTab === 'gallery',
       arcShowBgm: !!arcDetail && arcTab === 'bgm',
       arcInfoTitleLabel: this.t('arcInfoTitle'),
-      arcInfoBlocks: ((arcDetail && arcDetail.desc) || []).map(text => ({ text })),
+      arcInfoBlocks: arcInfoDesc.map(text => ({ text })),
+      arcShowSummaryNotice: !!(arcSummaryEntry && arcSummaryEntry.desc && arcSummaryEntry.desc.length),
+      arcSummaryNoticeText: this.t('arcSummaryNotice'),
       arcRelatedChars: arcRelatedChars,
       arcHasRelatedChars: arcRelatedChars.length > 0,
       arcRelatedKeywords: arcRelatedKeywords,
@@ -4939,6 +4966,7 @@ class Component extends DCLogic {
       creditWikiGgText: this.t('creditWikiGg'),
       creditCommunityText: this.t('creditCommunity'),
       creditEliyaText: this.t('creditEliya'),
+      creditNamuText: this.t('creditNamu'),
       creditOfficialText: this.t('creditOfficial'),
       officialSiteText: this.t('officialSite'),
       officialTwitterText: this.t('officialTwitter'),

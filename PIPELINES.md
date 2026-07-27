@@ -221,6 +221,42 @@ as everything above; report is `_eliya_gl_report.md`.
   `source: 'eliya'` marker (`wikiEnSourceText` / `wikiSourceEliya`); the Story tab's wiki.gg credit
   is unaffected.
 
+## namu.wiki summary pipeline (en.namu.wiki) — machine-translated plot summaries
+
+`npm run scrape:namu-en` (`scripts/scrape-namu-summaries.mjs`) fills the Story tab's **info panel**
+(`arcDetail.desc`) — which shows only Chinese in English mode — with English plot summaries for the
+main-story chapters that have **no English episode script anywhere** (wiki.gg stops at World 5). It
+writes one owned file, `Character Assets/story/en/summary_en.json` (`{stories:{slug:{desc[],
+sourceUrl}}}`), read by `loadArcEn()`; the front-end prefers it over the Chinese `desc` and shows a
+one-line "auto-translated, may contain errors" notice above it (`arcSummaryNotice`).
+
+- **This is summaries, NOT scripts.** namu carries a prose recap ("the story if you skip it"), one
+  paragraph per in-game episode, with **no speaker-by-speaker dialogue** — so it does not touch the
+  episode reader and does not close `wikigg-gaps.md` §1/§2 (those want line-by-line scripts).
+  Current output: **24 stories** — main-story **Chapters 6-10** plus **19 events**. Chapter scope is
+  deliberate (Worlds 1-5 already have full wiki.gg episodes, a bare summary would be a downgrade; and
+  namu's article stops at Chapter 10 — Korean/global never reached Worlds 11-12). Events are matched
+  by a hand-verified `EVENT_TITLE_MAP` (namu's MT event name → our eventID slug, checked against the
+  zh + English titles); the genuinely ambiguous ones (`Black Lightning's Waste Dragon`, bare
+  `advent subjugation`, `betrothal to you`) and the events newer than namu's page are **reported, not
+  guessed**, and two namu sections that are empty upstream drop out on their own.
+- **Double machine-translated + CC BY-NC-SA.** The text is JP game → Korean namu → English MT proxy,
+  and namu.wiki is CC BY-**NC**-SA (an NC clause, stricter than wiki.gg's CC BY-SA) — both facts are
+  stamped in the output (`machineTranslated`, `license`) and surfaced in that UI notice; each record
+  keeps its `sourceUrl`.
+- **Fetch is decoupled from parse, because namu is often unreachable.** From a mainland-China
+  network the TLS handshake is frequently reset; `politeFetch`'s retries usually get through
+  eventually, and the raw HTML caches under `scripts/.namu-cache/` (gitignored) so re-runs are
+  offline and byte-stable. If the live fetch can't connect at all, drop a browser-saved copy of the
+  page at the cache path the report prints and re-run — the parser reads cache identically.
+- **Parsing survives namu's hashed classes.** Section `<h#>` headings carry an outline number
+  ("2.7. Chapter 6 …"); each chapter's recap is the sibling `<div>`(s) up to the next heading
+  (`$(h).nextUntil('h1..h6')`). `cleanSummary` strips namu's fold/unfold toggle labels
+  ("[ View skip content ]") and escaped `<img>` markup, then splits the recap into one paragraph per
+  in-game episode (`"1-1 <title>- <body>"`). Same byte-stable `writeJsonIfChanged` / R2-invalidation
+  rules as the other pipelines; report is `_namu_summary_report.md`. `summary_en.json` ships to R2
+  under the existing `story/` include prefix — no `upload-to-r2.mjs` change needed.
+
 ## miaowm5 pipeline (worldflipper.miaowm5.com)
 
 miaowm5 is an open-source Svelte SPA (github.com/miaowm5/wf-encyclopedia) serving structured JSON

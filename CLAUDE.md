@@ -21,6 +21,7 @@ browser.
 | wiki.gg（英文） | `scrape:wiki-en` / `scrape:weapons-en` / `scrape:stories-en` | `wiki_en.json`、`story_en.json`、`Weapons/weapons_en.json`、`story/en/` |
 | community sheet（英文名/视频） | `fetch:community-en` | `units_en.json`、`story/community_en.json` |
 | eliya-bot GL（英文技能，补 bustOnly） | `fetch:eliya-gl` | `rarityN/<devName>/eliya_en.json`（60 个 `wiki_en.json` 缺失的角色） |
+| namu.wiki（英文剧情简介，机翻） | `scrape:namu-en` | `story/en/summary_en.json`（主线 6-10 章 + 19 个活动的 info 面板简介） |
 | miaowm5（美术 + 结构化数据） | `fetch:miaowm5` | 立绘/表情/像素 GIF、`head.png`、`story_heads/`、`icons/`、`wiki_zh.json` 的自有键 |
 | main story（剧情 + BGM） | `fetch:story` | `story/`（约 970MB，其中约 900MB 是 BGM） |
 | music index（本地派生，无网络） | `build:music-index` | `story/music_index.json`（每次 `fetch:story` 后必须重跑） |

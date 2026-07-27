@@ -81,6 +81,16 @@ does have a **community playthrough video**, which is what the Story tab links i
 files, not a wiki. Worlds 6-10 could also be transcribed onto wiki.gg by anyone willing — the
 pipeline would pick them up on the next run with no code change.
 
+**Partial fill (summaries, not scripts): namu.wiki.** `en.namu.wiki` carries a prose plot *recap*
+per episode — no speaker-by-speaker dialogue, so it cannot fill the missing *episode scripts* above,
+and this gap stays open. What it does supply is an English **info-panel summary** for the chapters
+and events that had none: `npm run scrape:namu-en` writes `story/en/summary_en.json` for **24
+stories** — main-story **Chapters 6-10** plus **19 events** (namu's article stops at Chapter 10;
+Worlds 11-12 have no namu page either). The text is double machine-translated and CC BY-NC-SA, so
+the front-end shows an "auto-translated" notice above it. See the namu.wiki summary pipeline in
+`PIPELINES.md`. A handful of events stay unmapped (ambiguous MT names, or events newer than namu's
+page); they're reported, not guessed.
+
 ## 2. Events with no English script — 21 of 29
 
 wiki.gg has pages for 9 of our 29 event/collab stories, but only **8 carry dialogue**: Poppet
