@@ -247,17 +247,16 @@
               </div>
             </sc-if>
             <sc-if value="{{ showRosterGrid }}" hint-placeholder-val="{{ true }}">
-              <!-- Only the columns near the scroll position are mounted (see gridWindow); these two
-                   spacers stand in for the rest, so the strip's scrollWidth — and every scroll
-                   position in it — is exactly what the fully-mounted grid had. -->
-              <div style="flex: none; width: {{ unitsLeadWidth }}; height: 1px;"></div>
               <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 116px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
                 <sc-for list="{{ visibleRoster }}" as="c" hint-placeholder-count="24">
                   <div onClick="{{ c.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
                     <div style="position: relative; width: 82px; height: 100px; flex: none;">
                       <!-- Framed square portrait on top, then the pixel sprite standing on its
                            pedestal — the game's own party-screen layout. -->
-                      <sc-if value="{{ c.hasHead }}" hint-placeholder-val="{{ true }}">
+                      <!-- `showHead`, not `hasHead`: the portrait is the strip's one expensive
+                           image (212x212, ~180KB decoded each) and is loaded only within the art
+                           window — see gridWindow. Everything else in the tile is unconditional. -->
+                      <sc-if value="{{ c.showHead }}" hint-placeholder-val="{{ true }}">
                         <img src="{{ c.headUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #F0F3F7; box-shadow: 0 1px 3px rgba(62,68,80,0.28); z-index: 2;">
                       </sc-if>
                       <!-- Pedestal: an elliptical top face the character stands on, over a
@@ -280,7 +279,6 @@
                   </div>
                 </sc-for>
               </div>
-              <div style="flex: none; width: {{ unitsTailWidth }}; height: 1px;"></div>
             </sc-if>
             <sc-if value="{{ showRosterEmpty }}" hint-placeholder-val="{{ false }}">
               <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ filterNoMatchText }}</div>
@@ -1610,8 +1608,6 @@
               </div>
             </sc-if>
             <sc-if value="{{ showArmGrid }}" hint-placeholder-val="{{ true }}">
-              <!-- Windowed exactly like the Units strip above — see gridWindow. -->
-              <div style="flex: none; width: {{ armLeadWidth }}; height: 1px;"></div>
               <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 116px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
                 <sc-for list="{{ visibleArmWeapons }}" as="w" hint-placeholder-count="24">
                   <div onClick="{{ w.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
@@ -1626,14 +1622,18 @@
                         <div style="position: absolute; left: 0; top: 0; width: 52px; height: 9px; border-radius: 50%; background: {{ w.pedestalTop }};"></div>
                         <img src="{{ w.rarityUrl }}" alt="{{ w.rarityLabel }}" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 2px; height: 7px; width: auto; z-index: 2;">
                       </div>
-                      <!-- Weapon icon standing on the pedestal -->
-                      <img src="{{ w.iconUrl }}" alt="{{ w.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
+                      <!-- Weapon icon standing on the pedestal. Gated on the art window like the
+                           roster's portrait (see gridWindow) — 384 96x96 icons is the other half
+                           of the memory peak. The pedestal, stars and name stay put, so a tile
+                           outside the window is still a tile, not a hole. -->
+                      <sc-if value="{{ w.showIcon }}" hint-placeholder-val="{{ true }}">
+                        <img src="{{ w.iconUrl }}" alt="{{ w.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
+                      </sc-if>
                     </div>
                     <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ w.displayName }}</div>
                   </div>
                 </sc-for>
               </div>
-              <div style="flex: none; width: {{ armTailWidth }}; height: 1px;"></div>
             </sc-if>
             <sc-if value="{{ showArmEmpty }}" hint-placeholder-val="{{ false }}">
               <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ armNoMatchText }}</div>
@@ -1976,23 +1976,32 @@ const SUPABASE_URL = 'https://lgxnpzdzhnfvxmrzgevg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxneG5wemR6aG5mdnhtcnpnZXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODczNjUsImV4cCI6MjA5OTc2MzM2NX0.FvC9ttc5rri71_URT-hRk4xG6gG-bTDyJK5g4-HP9k4';
 const VISITOR_STORAGE_KEY = 'wf_visitor_id';
 const ROSTER_BATCH = 60;
-// --- Windowing for the two horizontal 5-row strips (Units roster, Armaments library) ---------
+// --- Art window for the two horizontal 5-row strips (Units roster, Armaments library) ---------
 // Pagination alone was not enough on iOS. `visibleCount`/`armVisibleCount` only grow, and neither
-// resets on a tab change, so a user who has scrolled the roster keeps 485 tiles mounted — each
-// pinning a 212x212 head.png (~180KB decoded, ~82MB for the set) — and sc-if re-creates the whole
-// set in a single commit every time the tab is re-entered. Coming back from the Armaments library
-// (which has just pushed 384 more icons plus its two JSON files into memory, evicting the roster's
-// decoded images) put the peak over WebKit's per-tab budget and the tab was killed. Android's
-// limits are looser, which is why only iOS crashed.
+// resets on a tab change, so a user who has scrolled the roster keeps 485 tiles alive — each
+// pinning a 212x212 head.png, ~180KB decoded, **~82MB for the set** — and `sc-if` re-creates the
+// whole set in a single commit every time the tab is re-entered. Coming back from the Armaments
+// library (which has just added 384 icons and its two JSON files, evicting the roster's decoded
+// images) put the peak over WebKit's per-tab budget and iOS killed the tab. Android's looser
+// limits are why only iOS crashed.
 //
-// So only the columns near the current scroll position are mounted; two spacer divs stand in for
-// the rest, keeping scrollWidth — and therefore every scroll position, the wheel translation and
-// the scroll restore — byte-identical to the un-windowed strip. Mounted tiles are then bounded by
-// the viewport, not by how far the user has scrolled.
-const GRID_ROWS = 5;          // grid-template-rows: repeat(5, 116px)
-const GRID_COL_PITCH = 98;    // 92px grid-auto-columns + 6px column-gap
-const GRID_WINDOW_COLS = 8;   // buffer columns kept mounted on each side of the viewport
-const GRID_RECENTER_COLS = 3; // how far the scroll may drift before the window is rebuilt
+// **What is windowed is the artwork, not the tiles.** Every paged-in tile stays mounted at its own
+// place in the grid; only the one expensive image inside it (the roster's `head.png`, the weapon's
+// icon) is gated on being near the scroll position. Mounting a *slice* of tiles instead was tried
+// and is a trap here: `sc-for` keys its children by index (see walkFor in support.js), so a window
+// that slides by one column doesn't move any DOM — it rewrites the `src` of all ~105 mounted
+// images, turning a flick into hundreds of loads and decodes. Worse, the strip's geometry then
+// depends on the window being right, so any disagreement between the window and the real
+// scrollLeft paints an empty spacer and the strip appears to never load at all.
+//
+// Gating art keeps the item->element mapping fixed: scrolling only adds and removes the images
+// actually entering and leaving the window, and a wrong window costs nothing but a few missing
+// portraits for one frame — the pixel sprite, pedestal, stars and name are always there, because
+// all 482 sprites together decode to under 6MB.
+const GRID_ROWS = 5;           // grid-template-rows: repeat(5, 116px)
+const GRID_COL_PITCH = 98;     // 92px grid-auto-columns + 6px column-gap
+const GRID_WINDOW_COLS = 12;   // buffer columns kept loaded on each side of the viewport
+const GRID_RECENTER_COLS = 3;  // how far the scroll may drift before the window is recomputed
 // The Units grid stands each character's pixel sprite on a pedestal tinted by their attribute
 // (the game's own party screen colours its bases too). `top` is the elliptical face the sprite
 // stands on, `side` the trapezoid body below it that carries the rarity strip.
@@ -2091,7 +2100,7 @@ const FLIP_RISE_MS = 170;
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
   { date: '2026-07-28', items: [
-      { en: 'Fixed the crash on iOS when switching back to the character list after browsing the Armaments library. Both grids now keep only the tiles around your scroll position loaded, which cuts their memory use to a fraction — scrolling, filters and your place in the list are unchanged.', zh: '修复 iOS 上浏览武器库后切回角色列表时的崩溃。角色栏与武器栏现在只加载滚动位置附近的格子，内存占用大幅下降；滚动、筛选与浏览位置均与此前一致。' },
+      { en: 'Fixed the crash on iOS when switching back to the character list after browsing the Armaments library. Both grids now load portraits and weapon icons only around your scroll position, which cuts their memory use to a third — scrolling, filters and your place in the list are unchanged.', zh: '修复 iOS 上浏览武器库后切回角色列表时的崩溃。角色栏与武器栏现在只加载滚动位置附近的头像与武器图标，内存占用降至约三分之一；滚动、筛选与浏览位置均与此前一致。' },
       { en: 'The Art Gallery tab is open: all 64 story illustrations — 52 key visuals plus the 12 chapter orbs — on one wall, filterable by main story / event / collab.', zh: '「画廊」页正式开放：全部 64 张剧情插画（52 张主视觉图与 12 张章节宝珠）汇集于一面墙，可按主线 / 活动 / 联动筛选。' },
       { en: 'Tap any piece to view it full-screen at full resolution, and swipe to move through the wall.', zh: '点击任意作品即可全屏查看原图，左右滑动浏览下一张。' },
   ]},
@@ -2754,10 +2763,9 @@ class Component extends DCLogic {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const el = document.getElementById('units-scroll');
-        // The strip is windowed now, so a restore that silently doesn't land is no longer a
-        // cosmetic "wrong scroll position" — the mounted columns would be somewhere else and the
-        // user would be looking at a spacer. Retry while the element is still unmounted, then
-        // adopt whatever scrollLeft the element actually accepted as the truth the window follows.
+        // Retry while the element is still unmounted, then point the art window at whatever
+        // scrollLeft the element actually accepted, so the loaded portraits are the ones the user
+        // is about to look at rather than the ones they left.
         if (!el) { if (tries > 0) this.restoreUnitsScroll(tries - 1); return; }
         el.scrollLeft = this.unitsScrollLeft;
         this.syncGridWindow(el.scrollLeft, 'unitsWinCol');
@@ -2765,36 +2773,29 @@ class Component extends DCLogic {
     });
   }
 
-  // --- Horizontal-strip windowing (Units roster + Armaments library) --------------------------
+  // --- Strip art window (Units roster + Armaments library) ------------------------------------
   // See GRID_WINDOW_COLS. Both strips lay out identically (5 rows, 92px columns, 6px gap), so one
-  // pair of helpers drives both: gridWinCol turns a scroll offset into a first-mounted column, and
-  // gridWindow turns that column into the slice to render plus the two spacer widths.
+  // pair of helpers drives both: gridWinCol turns a scroll offset into a first-loaded column, and
+  // gridWindow turns that column into the item range whose art is worth holding in memory.
 
   gridWinCol(scrollLeft) {
     return Math.max(0, Math.floor(scrollLeft / GRID_COL_PITCH) - GRID_WINDOW_COLS);
   }
 
-  // `total` is the paginated item count (visibleCount / armVisibleCount), not the filtered total:
-  // the spacers stand in for columns that exist, and a not-yet-paged-in item has no column yet.
+  // `total` is the paginated item count (visibleCount / armVisibleCount) — an item that hasn't
+  // been paged in has no column and so can't be in the window.
   gridWindow(total, winCol) {
     const totalCols = Math.ceil(total / GRID_ROWS);
     // Viewport's worth of columns plus the buffer on both sides.
     const spanCols = Math.ceil(DESIGN_W / GRID_COL_PITCH) + GRID_WINDOW_COLS * 2;
     const from = Math.max(0, Math.min(winCol, totalCols - spanCols));
     const to = Math.min(totalCols, from + spanCols);
-    // lead + (rendered grid: n*92 + (n-1)*6) + tail == totalCols*98 - 6, i.e. exactly the width the
-    // un-windowed grid had. Anything else would move the scroll positions under the user.
-    return {
-      start: from * GRID_ROWS,
-      end: to * GRID_ROWS,
-      lead: from * GRID_COL_PITCH,
-      tail: Math.max(0, totalCols - to) * GRID_COL_PITCH
-    };
+    return { start: from * GRID_ROWS, end: to * GRID_ROWS };
   }
 
-  // Rebuild the window only once the scroll has drifted a few columns, rather than on every scroll
-  // event: renderVals rebuilds the whole tree, so one re-render per ~300px of scrolling is the
-  // point of the buffer.
+  // Recompute only once the scroll has drifted a few columns rather than on every scroll event:
+  // each change loads the art entering the window, so the buffer is what keeps a flick from
+  // requesting the whole roster.
   updateGridWindow(scrollLeft, key) {
     const want = this.gridWinCol(scrollLeft);
     if (Math.abs(want - this.state[key]) < GRID_RECENTER_COLS) return;
@@ -2810,10 +2811,9 @@ class Component extends DCLogic {
 
   // Backstop, run after every render. A strip only reports its position through onScroll, so a
   // remount that lands on a scrollLeft nobody told us about (the restore missing its frame, the
-  // browser clamping the position when a filter shrinks the list) would leave the mounted columns
-  // somewhere else entirely and paint a blank spacer. Healing is gated on the viewport being fully
-  // outside the buffered window, so the deliberate few-column drift the scroll handler allows
-  // never triggers a re-render here.
+  // browser clamping the position when a filter shrinks the list) would leave the loaded art a
+  // screen or more away from what's on show. Gated on the viewport being fully outside the buffer,
+  // so the deliberate few-column drift the scroll handler allows never re-renders through here.
   healStripWindows() {
     for (const [id, key] of [['units-scroll', 'unitsWinCol'], ['arms-scroll', 'armWinCol']]) {
       const el = document.getElementById(id);
@@ -4384,12 +4384,14 @@ class Component extends DCLogic {
     const filter = this.state.filter;
     const roster = this.filteredRoster();
     const pagedRoster = roster.slice(0, this.state.visibleCount);
-    // Only the columns around the scroll position are mounted (see gridWindow); the two spacers
-    // hold the strip's full width open. The status text still counts what's *paged in*, which is
-    // what the number has always meant — the window is invisible to the reader.
+    // Every paged-in tile renders; only `head.png` is gated on the art window (see gridWindow),
+    // which is what keeps 485 portraits from being decoded at once. The sprite, pedestal, stars and
+    // name are unconditional — all 482 sprites together are under 6MB — so the strip is never
+    // blank, whatever the window is doing.
     const unitsWin = this.gridWindow(pagedRoster.length, this.state.unitsWinCol);
-    const visibleRoster = pagedRoster.slice(unitsWin.start, unitsWin.end).map(c => ({
+    const visibleRoster = pagedRoster.map((c, i) => ({
       ...c,
+      showHead: c.hasHead && i >= unitsWin.start && i < unitsWin.end,
       displayName: (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName,
       hasMusic: !!(c.music && c.music.length),
       onSelect: () => this.goDetail(c)
@@ -4439,11 +4441,12 @@ class Component extends DCLogic {
     // matched (316 of 384), so the tile label is per-weapon rather than per-language.
     const armLangEn = this.state.lang === 'en';
     const armPaged = armWeaponsAll.slice(0, this.state.armVisibleCount);
-    // Same windowing as the roster strip above — this library is the other half of the iOS memory
+    // Same art window as the roster strip above — this library is the other half of the iOS memory
     // peak (384 icons), and it lays out identically, so it uses the same helper.
     const armWin = this.gridWindow(armPaged.length, this.state.armWinCol);
-    const armVisible = armPaged.slice(armWin.start, armWin.end).map(w => ({
+    const armVisible = armPaged.map((w, i) => ({
       ...w,
+      showIcon: i >= armWin.start && i < armWin.end,
       displayName: (armLangEn && w.en && w.en.nameEn) || w.nameZh,
       hasElement: !!w.elementIconUrl,
       onSelect: () => this.goArmDetail(w)
@@ -5348,8 +5351,6 @@ class Component extends DCLogic {
       showRosterGrid: !this.state.rosterLoading && !this.state.rosterError && roster.length > 0,
       showRosterEmpty: !this.state.rosterLoading && !this.state.rosterError && roster.length === 0,
       visibleRoster: visibleRoster,
-      unitsLeadWidth: unitsWin.lead + 'px',
-      unitsTailWidth: unitsWin.tail + 'px',
       unitsStatusText: unitsStatusText,
       handleRosterScroll: (e) => this.handleRosterScroll(e),
       // --- Units filter ---
@@ -5385,8 +5386,6 @@ class Component extends DCLogic {
       showArmError: !!this.state.armError,
       armError: this.state.armError,
       showArmGrid: !this.state.armError && armPaged.length > 0,
-      armLeadWidth: armWin.lead + 'px',
-      armTailWidth: armWin.tail + 'px',
       showArmEmpty: this.state.armLoaded && !this.state.armError && armWeaponsAll.length === 0,
       visibleArmWeapons: armVisible,
       armNoMatchText: this.t('armNoMatch'),

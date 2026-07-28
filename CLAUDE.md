@@ -127,7 +127,7 @@ The **Units** tab fetches `roster.json` once (`componentDidMount`), **sorts** it
 then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `devName` — the
 file's own order is just append history), and paginates client-side (`ROSTER_BATCH` = 60 per
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view. What is
-paged in is not what is mounted — see "Horizontal strip windowing" below before touching either
+paged in is not what has its portrait loaded — see "Strip art window" below before touching either
 strip's grid, its scroll handler or `restoreUnitsScroll`.
 
 **Every tab now has a real screen.** The `isSection` under-construction placeholder (and its
@@ -154,8 +154,8 @@ for; note `isArms`/`goArms`/`arms` (the section identifiers) predate this and me
   `repeat(5, 116px)` grid + pedestal tile (weapon icon on an element-tinted `PEDESTAL` with the
   rarity stars, element badge top-right), `ROSTER_BATCH` pagination via `handleArmScroll`, and the
   round filter button. `filteredWeapons()` is the single source for both `renderVals` and pagination
-  (like `filteredRoster()`), and the strip is windowed by the same helpers the roster uses (see
-  "Horizontal strip windowing") — this library is the other half of the iOS memory peak that fix
+  (like `filteredRoster()`), and its icons are gated by the same art window the roster's portraits
+  use (see "Strip art window") — this library is the other half of the iOS memory peak that fix
   exists for.
 - **The filter dialog is a port of the Units filter** with three groups — rarity, element (the six
   elements + a 无/`None` chip), and **role (能力)**. Role chips are derived from the loaded data
@@ -468,39 +468,48 @@ attribute via `PEDESTAL`, with `icons/rarity_{N}.png` centred on the body. Coupl
 - Row height (116px) is tuned against the scroller's 622px with ~10px slack; growing the tile
   means shrinking something else.
 
-#### Horizontal strip windowing (Units roster + Armaments library)
+#### Strip art window (Units roster + Armaments library)
 
-Both strips are the same 5-row, 92px-column, 6px-gap grid, and both mount only the columns near
-the scroll position — `gridWindow()` / `gridWinCol()` / `updateGridWindow()` serve both, keyed by
-`state.unitsWinCol` / `state.armWinCol`. **This is a crash fix, not a polish pass.** Pagination
-alone only ever grows (`visibleCount` / `armVisibleCount` reset on a filter, never on a tab
-change), so a user who had scrolled the roster kept all 485 tiles mounted — each pinning a 212x212
-`head.png`, ~180KB decoded, **~82MB for the set** — and `sc-if` re-created the whole set in one
-commit on every re-entry. Coming back from the Armaments library (which had just added 384 icons
-and its two JSON files, evicting the roster's decoded images) put the peak over WebKit's per-tab
-budget and iOS killed the tab; Android's looser limits are why only iOS crashed. Measured in
-headless Edge: the Units strip went from **1446 mounted `<img>` to 315**, the Armaments strip from
-1068 to 315.
+Both strips are the same 5-row, 92px-column, 6px-gap grid, so `gridWindow()` / `gridWinCol()` /
+`updateGridWindow()` serve both, keyed by `state.unitsWinCol` / `state.armWinCol`. **This is a
+crash fix, not a polish pass.** Pagination only ever grows (`visibleCount` / `armVisibleCount`
+reset on a filter, never on a tab change), so a user who had scrolled the roster kept all 485
+tiles alive — each pinning a 212x212 `head.png`, ~180KB decoded, **~82MB for the set** — and
+`sc-if` re-created the whole set in one commit on every re-entry. Coming back from the Armaments
+library (which had just added 384 icons and its two JSON files, evicting the roster's decoded
+images) put the peak over WebKit's per-tab budget and iOS killed the tab; Android's looser limits
+are why only iOS crashed.
 
-- **`lead + grid + tail` is exactly the un-windowed width** (`totalCols * 98 - 6`, with the two
-  spacer divs standing in for the unmounted columns). That equality is what lets the wheel
-  translation, the `scrollWidth - 500` pagination trigger and `restoreUnitsScroll` keep working
-  untouched — every scroll position still means the same tile.
-- **`gridWindow` takes the *paginated* count, not the filtered total.** A not-yet-paged-in item has
-  no column, so counting it would stretch the strip past what pagination has produced.
-- **The window and the strip's real `scrollLeft` must agree, or the user is looking at a spacer.**
-  Three things keep them in step: `updateGridWindow` on scroll (with a `GRID_RECENTER_COLS` drift
-  tolerance, so one re-render buys ~300px of scrolling — `renderVals` rebuilds the whole tree),
-  `syncGridWindow` inside `restoreUnitsScroll` (adopting whatever `scrollLeft` the element actually
-  accepted), and `healStripWindows()` in `componentDidUpdate` as the backstop for a remount that
-  lands on a position nobody reported. The backstop only fires when the viewport is fully outside
-  the buffered window, so ordinary drift never re-renders through it.
+**What is windowed is the artwork, not the tiles.** Every paged-in tile renders at its own place in
+the grid; only the one expensive image inside it is gated — `c.showHead` on the roster portrait,
+`w.showIcon` on the weapon icon. Measured in headless Edge: loaded portraits drop from 482 to ~145
+(~82MB → ~26MB) with all 482 tiles still mounted.
+
+- **Mounting a slice of tiles instead is a trap, and it was tried first — don't re-try it.**
+  `sc-for` keys its children by index (`walkFor` in `support.js`), so a window that slides by one
+  column moves no DOM: it rewrites the `src` of every mounted image, turning one flick into
+  hundreds of loads and decodes. It also makes the strip's geometry depend on the window (spacer
+  divs standing in for the absent columns), so any disagreement between the window and the real
+  `scrollLeft` paints an empty spacer and the strip looks like it never loads. Both were live bugs
+  in the shipped version of that approach.
+- **Gating art keeps the item→element mapping fixed**, so scrolling only adds and removes the
+  images actually entering and leaving the window, and a wrong window costs a few missing
+  portraits for a frame — nothing else. The pixel sprite, pedestal, stars and name are
+  unconditional, because all 482 sprites together decode to under 6MB.
+- **`gridWindow` takes the *paginated* count, not the filtered total** — an item that hasn't been
+  paged in has no column and can't be in the window.
+- Three things keep the window near the scroll position: `updateGridWindow` on scroll (with a
+  `GRID_RECENTER_COLS` drift tolerance — each change loads whatever art enters, so the buffer is
+  what stops a flick from requesting the whole roster), `syncGridWindow` inside
+  `restoreUnitsScroll` (adopting whatever `scrollLeft` the element actually accepted), and
+  `healStripWindows()` in `componentDidUpdate` as the backstop for a remount nobody reported. The
+  backstop only fires when the viewport is fully outside the buffer, so ordinary drift never
+  re-renders through it.
 - **The Armaments strip has no scroll restore**, so it remounts at 0 and `armWinCol` is rewound
-  with it — in `go('arms')` and in `closeArmDetail()`. A stale window there would paint a blank
-  strip, which is why `applyArmFilter` also puts `#arms-scroll` back to 0 itself rather than
-  leaving the browser to clamp it.
-- The strips are the only lists that need this: the gallery wall is 64 tiles and the story/music
-  lists are text.
+  with it — in `go('arms')` and `closeArmDetail()` — and `applyArmFilter` puts `#arms-scroll` back
+  to 0 itself rather than leaving the browser to clamp it.
+- The strips are the only lists that need this: the gallery wall is 64 tiles (and already serves
+  440px thumbnails) and the story/music lists are text.
 
 #### Character detail bottom sheet
 
