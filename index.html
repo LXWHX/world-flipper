@@ -96,6 +96,19 @@
       to   { transform: translate(-50%, 60%) rotate(360deg); }
     }
     @media (prefers-reduced-motion: reduce) { .wf-circle, .wf-flip-hint, .wf-flip-hint-card { animation: none !important; } }
+    /* Roster / Armaments strip tile. `content-visibility: auto` is the point of the class: it lets
+       the engine skip layout, paint and — critically on iOS — rasterization for tiles scrolled out
+       of view, without removing them from the DOM (so scrollWidth, scroll positions and the item→
+       element mapping are all untouched, unlike a virtualized list). `contain-intrinsic-size` is
+       the placeholder box a skipped tile reports, and must match the real one (92 wide, 100px art
+       box + 3px gap + ~13px label) or the grid would jump as tiles enter and leave. Ignored by
+       engines that don't support it, which is why it's safe to hand every tile. */
+    .wf-tile { content-visibility: auto; contain-intrinsic-size: 92px 116px; }
+    /* Remote-diagnosis switches, see DIAG. Each turns one suspect off so a tester on the device
+       that actually crashes can bisect it. */
+    .wf-diag-nocircle .wf-circle { display: none !important; }
+    .wf-diag-noshadow img { filter: none !important; }
+    .wf-diag-nocv .wf-tile { content-visibility: visible; }
     /* Music-player volume popup: click-toggled via roomVolOpen (drives the inline
        opacity/visibility). No :hover rule — it would pin the popup open while the cursor sits on
        the button, so a second click could never close it. */
@@ -249,7 +262,7 @@
             <sc-if value="{{ showRosterGrid }}" hint-placeholder-val="{{ true }}">
               <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 116px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
                 <sc-for list="{{ visibleRoster }}" as="c" hint-placeholder-count="24">
-                  <div onClick="{{ c.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
+                  <div onClick="{{ c.onSelect }}" class="wf-tile" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
                     <div style="position: relative; width: 82px; height: 100px; flex: none;">
                       <!-- Framed square portrait on top, then the pixel sprite standing on its
                            pedestal — the game's own party-screen layout. -->
@@ -1610,7 +1623,7 @@
             <sc-if value="{{ showArmGrid }}" hint-placeholder-val="{{ true }}">
               <div style="display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, 116px); grid-auto-columns: 92px; column-gap: 6px; row-gap: 8px; align-content: center;">
                 <sc-for list="{{ visibleArmWeapons }}" as="w" hint-placeholder-count="24">
-                  <div onClick="{{ w.onSelect }}" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
+                  <div onClick="{{ w.onSelect }}" class="wf-tile" style="width: 92px; display: flex; flex-direction: column; align-items: center; cursor: pointer;" style-hover="transform: translateY(-3px);">
                     <div style="position: relative; width: 82px; height: 100px; flex: none;">
                       <!-- Element badge, top-right (weapons with an element) -->
                       <sc-if value="{{ w.hasElement }}" hint-placeholder-val="{{ true }}">
@@ -1976,6 +1989,18 @@ const SUPABASE_URL = 'https://lgxnpzdzhnfvxmrzgevg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxneG5wemR6aG5mdnhtcnpnZXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODczNjUsImV4cCI6MjA5OTc2MzM2NX0.FvC9ttc5rri71_URT-hRk4xG6gG-bTDyJK5g4-HP9k4';
 const VISITOR_STORAGE_KEY = 'wf_visitor_id';
 const ROSTER_BATCH = 60;
+// --- Remote-diagnosis switches: ?diag=flag,flag ----------------------------------------------
+// An iOS renderer that gets killed can only be bisected on the device it dies on — there is no
+// console, no profiler and no way to reproduce it here (Chromium tiles and reclaims where WebKit
+// apparently does not). These let a tester turn one suspect off at a time and report which one
+// stops the crash. The active flags are echoed into the strip banners, so a tester can also tell
+// at a glance whether the phone is running this build at all or a cached older one.
+//   cap60     — stop paginating at 60 items, so the strip's scroll width stays ~1 screen
+//   noshadow  — drop every `filter: drop-shadow()` (each is an offscreen render surface)
+//   nocircle  — stop rendering the rotating magic circle (982x978, animated, several hosts)
+//   nocv      — turn off the tiles' content-visibility, to compare against it being on
+const DIAG = new Set(
+  (new URLSearchParams(location.search).get('diag') || '').split(',').map(s => s.trim()).filter(Boolean));
 // --- Art window for the two horizontal 5-row strips (Units roster, Armaments library) ---------
 // Pagination alone was not enough on iOS. `visibleCount`/`armVisibleCount` only grow, and neither
 // resets on a tab change, so a user who has scrolled the roster keeps 485 tiles alive — each
@@ -2888,6 +2913,9 @@ class Component extends DCLogic {
   }
 
   componentDidMount() {
+    // Diagnosis switches are plain body classes (see the .wf-diag-* rules) rather than per-element
+    // bindings, so they cost nothing when no flag is set.
+    for (const f of DIAG) document.body.classList.add('wf-diag-' + f);
     fetch(ASSET_BASE + '/roster.json')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status + ' fetching roster.json');
@@ -4383,7 +4411,11 @@ class Component extends DCLogic {
     // than raw entries — otherwise a narrow filter would page through mostly-hidden batches.
     const filter = this.state.filter;
     const roster = this.filteredRoster();
-    const pagedRoster = roster.slice(0, this.state.visibleCount);
+    // `cap60` holds the strip to one batch, so its scroll width stays about one screen — the test
+    // for whether the crash tracks how wide the scroller has grown.
+    const pageCap = n => (DIAG.has('cap60') ? Math.min(n, ROSTER_BATCH) : n);
+    const diagSuffix = DIAG.size ? ' · diag:' + [...DIAG].join(',') : '';
+    const pagedRoster = roster.slice(0, pageCap(this.state.visibleCount));
     // Every paged-in tile renders; only `head.png` is gated on the art window (see gridWindow),
     // which is what keeps 485 portraits from being decoded at once. The sprite, pedestal, stars and
     // name are unconditional — all 482 sprites together are under 6MB — so the strip is never
@@ -4400,7 +4432,7 @@ class Component extends DCLogic {
       ? this.t('loadingRoster')
       : this.state.rosterError
         ? this.t('failedToLoadRoster')
-        : pagedRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix');
+        : pagedRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix') + diagSuffix;
 
     // Chip lists for the filter dialog. Each carries its own label, icon and active flag, so the
     // template stays a plain sc-for with no lookups of its own.
@@ -4440,7 +4472,7 @@ class Component extends DCLogic {
     // Weapons have a Chinese name always and an English one only where the wiki.gg sidecar
     // matched (316 of 384), so the tile label is per-weapon rather than per-language.
     const armLangEn = this.state.lang === 'en';
-    const armPaged = armWeaponsAll.slice(0, this.state.armVisibleCount);
+    const armPaged = armWeaponsAll.slice(0, pageCap(this.state.armVisibleCount));
     // Same art window as the roster strip above — this library is the other half of the iOS memory
     // peak (384 icons), and it lays out identically, so it uses the same helper.
     const armWin = this.gridWindow(armPaged.length, this.state.armWinCol);
@@ -4455,7 +4487,7 @@ class Component extends DCLogic {
       ? this.t('loadingWeapons')
       : this.state.armError
         ? this.t('weaponsErrorTitle')
-        : armPaged.length + ' / ' + armWeaponsAll.length + this.t('armShownSuffix');
+        : armPaged.length + ' / ' + armWeaponsAll.length + this.t('armShownSuffix') + diagSuffix;
     const armDraft = this.state.armDraftFilter;
     const armChip = (group, value, label, iconUrl) => ({
       label, iconUrl: iconUrl || '', hasIcon: !!iconUrl,

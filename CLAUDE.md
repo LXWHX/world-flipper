@@ -510,6 +510,25 @@ the grid; only the one expensive image inside it is gated — `c.showHead` on th
   to 0 itself rather than leaving the browser to clamp it.
 - The strips are the only lists that need this: the gallery wall is 64 tiles (and already serves
   440px thumbnails) and the story/music lists are text.
+- **`.wf-tile` carries `content-visibility: auto`** on both strips' tiles, which is what lets the
+  engine skip layout, paint and rasterization for tiles scrolled out of view while they stay in
+  the DOM — so scrollWidth, scroll positions and the item→element mapping are all untouched. Its
+  `contain-intrinsic-size: 92px 116px` must keep matching the real tile box (92px column, 100px
+  art + 3px gap + ~13px label) or the grid shifts as tiles enter and leave; verified by the strips'
+  scrollWidth being unchanged (9524 units / 7564 arms).
+
+#### `?diag=` — bisecting an iOS crash from here
+
+iOS renderers that get killed can only be bisected on the device that kills them: there is no
+console, and headless Chromium tiles and reclaims where WebKit apparently does not, so the crash
+does not reproduce locally. `DIAG` parses `?diag=flag,flag` into body classes (`.wf-diag-*`) plus
+two `renderVals` behaviours, each turning off one suspect: `cap60` (stop paginating at 60, so the
+strip's scroll width stays about one screen), `noshadow` (drop every `filter: drop-shadow()` — each
+is an offscreen render surface), `nocircle` (stop rendering the rotating 982x978 magic circle), and
+`nocv` (turn the tiles' `content-visibility` back off, to compare against it being on). The active
+flags are echoed into both strip banners — which also tells a tester whether the phone is running
+the current build at all, or a cached older `index.html`. Costs nothing when no flag is set; keep
+it that way.
 
 #### Character detail bottom sheet
 
