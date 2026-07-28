@@ -270,7 +270,7 @@
                            image (212x212, ~180KB decoded each) and is loaded only within the art
                            window — see gridWindow. Everything else in the tile is unconditional. -->
                       <sc-if value="{{ c.showHead }}" hint-placeholder-val="{{ true }}">
-                        <img src="{{ c.headUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #F0F3F7; box-shadow: 0 1px 3px rgba(62,68,80,0.28); z-index: 2;">
+                        <img src="{{ c.headSrc }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #F0F3F7; box-shadow: 0 1px 3px rgba(62,68,80,0.28); z-index: 2;">
                       </sc-if>
                       <!-- Pedestal: an elliptical top face the character stands on, over a
                            trapezoid body carrying the game's own rarity stars. They're sized by
@@ -281,7 +281,9 @@
                         <div style="position: absolute; left: 0; top: 0; width: 52px; height: 9px; border-radius: 50%; background: {{ c.pedestalTop }};"></div>
                         <img src="{{ c.rarityUrl }}" alt="{{ c.rarityLabel }}" style="position: absolute; left: 50%; transform: translateX(-50%); bottom: 2px; height: 7px; width: auto; z-index: 2;">
                       </div>
-                      <img src="{{ c.thumbUrl }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: 44px; height: 44px; object-fit: contain; object-position: bottom; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
+                      <sc-if value="{{ c.showThumb }}" hint-placeholder-val="{{ true }}">
+                        <img src="{{ c.thumbSrc }}" alt="{{ c.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: 44px; height: 44px; object-fit: contain; object-position: bottom; image-rendering: pixelated; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.25)); z-index: 2;">
+                      </sc-if>
                       <sc-if value="{{ c.hasMusic }}" hint-placeholder-val="{{ false }}">
                         <div style="position: absolute; right: 0; top: 0; z-index: 3; width: 15px; height: 15px; border-radius: 50%; background: #FFA726; box-shadow: 0 1px 0 rgba(62,68,80,0.25); display: flex; align-items: center; justify-content: center;">
                           <svg width="8" height="8" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="1" height="5" fill="#FFFFFF"></rect><rect x="4" y="0" width="3" height="1" fill="#FFFFFF"></rect><rect x="4" y="1" width="2" height="1" fill="#FFFFFF"></rect><rect x="0" y="5" width="3" height="3" fill="#FFFFFF"></rect><rect x="5" y="4" width="3" height="3" fill="#FFFFFF"></rect></svg>
@@ -1640,7 +1642,7 @@
                            of the memory peak. The pedestal, stars and name stay put, so a tile
                            outside the window is still a tile, not a hole. -->
                       <sc-if value="{{ w.showIcon }}" hint-placeholder-val="{{ true }}">
-                        <img src="{{ w.iconUrl }}" alt="{{ w.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
+                        <img src="{{ w.iconSrc }}" alt="{{ w.displayName }}" loading="lazy" style="position: absolute; left: 50%; bottom: 11px; transform: translateX(-50%); width: 54px; height: 54px; object-fit: contain; object-position: bottom; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.28)); z-index: 2;">
                       </sc-if>
                     </div>
                     <div style="margin-top: 3px; font-size: 9px; font-weight: 800; color: #3E4450; text-align: center; max-width: 88px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ w.displayName }}</div>
@@ -2023,6 +2025,21 @@ const DIAG = new Set(
 // actually entering and leaving the window, and a wrong window costs nothing but a few missing
 // portraits for one frame — the pixel sprite, pedestal, stars and name are always there, because
 // all 482 sprites together decode to under 6MB.
+// How many strip images may be fetched at once. The strips' tiles carry one image each that is
+// unique per item (the roster's head.png, the weapon's icon), and nothing throttled them: opening
+// the Armaments library fired 40 requests at once, paging it to 384 peaked at 255, and switching
+// back to the roster — which remounts 482 tiles with a portrait and a sprite each — peaked at 354
+// (measured over a local HTTP server; `file://` hides this entirely). Desktop shrugs that off. iOS
+// does not: hundreds of parallel HTTP/2 streams, each with its buffer and each decoding on
+// arrival, is what was killing the renderer, which is why the crash only ever happened while the
+// strip was still loading and never once everything was cached.
+//
+// 8 is chosen to stay near what a browser would open per host on its own while still finishing a
+// 60-tile batch in well under a second; the point is the ceiling, not the exact number.
+const ART_MAX_INFLIGHT = 8;
+// Newly loaded art is shown in batches rather than one re-render per image: renderVals rebuilds
+// the whole tree, and 482 individual renders would cost more than the loads.
+const ART_BATCH_MS = 120;
 const GRID_ROWS = 5;           // grid-template-rows: repeat(5, 116px)
 const GRID_COL_PITCH = 98;     // 92px grid-auto-columns + 6px column-gap
 const GRID_WINDOW_COLS = 12;   // buffer columns kept loaded on each side of the viewport
@@ -2125,7 +2142,7 @@ const FLIP_RISE_MS = 170;
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
   { date: '2026-07-28', items: [
-      { en: 'Fixed the crash on iOS when switching back to the character list after browsing the Armaments library. Both grids now load portraits and weapon icons only around your scroll position, which cuts their memory use to a third — scrolling, filters and your place in the list are unchanged.', zh: '修复 iOS 上浏览武器库后切回角色列表时的崩溃。角色栏与武器栏现在只加载滚动位置附近的头像与武器图标，内存占用降至约三分之一；滚动、筛选与浏览位置均与此前一致。' },
+      { en: 'Fixed the crash while the character and weapon lists were still loading. They used to fire hundreds of image requests at once — 255 when paging through the Armaments library, 354 when switching back to the roster — which is what killed the page on iOS; now they fetch a few at a time. Portraits and icons are also only loaded around your scroll position. Scrolling, filters and your place in the list are unchanged.', zh: '修复角色栏与武器栏「加载过程中」的崩溃。此前它们会一次性发出数百个图片请求（翻完武器库峰值 255 个，切回角色栏 354 个），这正是 iOS 上页面被强制重载的原因；现在改为少量并发逐批加载，且只加载滚动位置附近的头像与图标。滚动、筛选与浏览位置均与此前一致。' },
       { en: 'The Art Gallery tab is open: all 64 story illustrations — 52 key visuals plus the 12 chapter orbs — on one wall, filterable by main story / event / collab.', zh: '「画廊」页正式开放：全部 64 张剧情插画（52 张主视觉图与 12 张章节宝珠）汇集于一面墙，可按主线 / 活动 / 联动筛选。' },
       { en: 'Tap any piece to view it full-screen at full resolution, and swipe to move through the wall.', zh: '点击任意作品即可全屏查看原图，左右滑动浏览下一张。' },
   ]},
@@ -2658,8 +2675,11 @@ class Component extends DCLogic {
     // grid's roster/filter state. armDetail null = the 武器库 library grid; set = a 武器详情 page.
     armWeapons: [], armLoading: false, armLoaded: false, armEnLoaded: false, armError: null, armVisibleCount: ROSTER_BATCH,
     armDetail: null,
-    // First mounted grid column of each strip (see gridWindow) — the scroll handlers move these.
+    // First loaded grid column of each strip (see gridWindow) — the scroll handlers move these.
     unitsWinCol: 0, armWinCol: 0,
+    // Bumped when a batch of strip art finishes loading, which is what tells renderVals to hand
+    // those URLs to their tiles (see the strip art loader).
+    artVersion: 0,
     armFilterOpen: false, armFilter: { ...EMPTY_ARM_FILTER }, armDraftFilter: { ...EMPTY_ARM_FILTER },
 
     // --- Art tab (画廊): the gallery wall. Everything here is `gal`-prefixed because artIndex /
@@ -2798,6 +2818,54 @@ class Component extends DCLogic {
     });
   }
 
+  // --- Strip art loader: at most ART_MAX_INFLIGHT requests in flight --------------------------
+  // A tile never gets a `src` the browser hasn't already fetched: renderVals asks for a URL
+  // through artSrc(), which hands back the URL once it is loaded and an empty string until then,
+  // queueing it meanwhile. The fetching is done by plain `new Image()` off to the side, so the
+  // gate needs no load events plumbed through the template, and by the time the real <img> gets
+  // the URL it is served from cache. See ART_MAX_INFLIGHT for what this is for.
+
+  artLoaded = new Set();   // urls the browser has fetched (this session)
+  artInflight = new Set(); // urls being fetched right now
+  artWanted = [];          // urls this render asked for, in the order they appear on screen
+
+  artSrc(url) {
+    if (!url) return '';
+    if (this.artLoaded.has(url)) return url;
+    this.artWanted.push(url);
+    return '';
+  }
+
+  // Called after a commit, never during renderVals: the queue is rebuilt from whatever the last
+  // render actually asked for, so scrolling away from a batch de-prioritizes it instead of leaving
+  // the gate working through art nobody is looking at any more.
+  pumpArt() {
+    for (const url of this.artWanted) {
+      if (this.artInflight.size >= ART_MAX_INFLIGHT) break;
+      if (this.artLoaded.has(url) || this.artInflight.has(url)) continue;
+      this.artInflight.add(url);
+      const img = new Image();
+      const done = () => {
+        this.artInflight.delete(url);
+        this.artLoaded.add(url);
+        this.scheduleArtRender();
+        this.pumpArt();
+      };
+      // An error is "done" too: retrying a 404 forever would hold a slot hostage.
+      img.onload = done;
+      img.onerror = done;
+      img.src = url;
+    }
+  }
+
+  scheduleArtRender() {
+    if (this.artRenderTimer) return;
+    this.artRenderTimer = setTimeout(() => {
+      this.artRenderTimer = 0;
+      this.setState(s => ({ artVersion: s.artVersion + 1 }));
+    }, ART_BATCH_MS);
+  }
+
   // --- Strip art window (Units roster + Armaments library) ------------------------------------
   // See GRID_WINDOW_COLS. Both strips lay out identically (5 rows, 92px columns, 6px gap), so one
   // pair of helpers drives both: gridWinCol turns a scroll offset into a first-loaded column, and
@@ -2916,6 +2984,9 @@ class Component extends DCLogic {
     // Diagnosis switches are plain body classes (see the .wf-diag-* rules) rather than per-element
     // bindings, so they cost nothing when no flag is set.
     for (const f of DIAG) document.body.classList.add('wf-diag-' + f);
+    // componentDidUpdate does the pumping from then on; the roster arrives by setState, so this is
+    // only for a first render that already had something to ask for.
+    this.pumpArt();
     fetch(ASSET_BASE + '/roster.json')
       .then(r => {
         if (!r.ok) throw new Error('HTTP ' + r.status + ' fetching roster.json');
@@ -3055,6 +3126,10 @@ class Component extends DCLogic {
     this.nudgeRoomPaint('room-mini');
     this.nudgeRoomPaint('room-mini-arrow');
     this.healStripWindows();
+    // Start whatever art this render asked for, up to the in-flight ceiling. Done here rather than
+    // in renderVals so the queue reflects a committed render, and so renderVals stays side-effect
+    // free apart from filling artWanted.
+    this.pumpArt();
   }
 
   nudgeRoomPaint(id) {
@@ -4416,18 +4491,29 @@ class Component extends DCLogic {
     const pageCap = n => (DIAG.has('cap60') ? Math.min(n, ROSTER_BATCH) : n);
     const diagSuffix = DIAG.size ? ' · diag:' + [...DIAG].join(',') : '';
     const pagedRoster = roster.slice(0, pageCap(this.state.visibleCount));
-    // Every paged-in tile renders; only `head.png` is gated on the art window (see gridWindow),
-    // which is what keeps 485 portraits from being decoded at once. The sprite, pedestal, stars and
-    // name are unconditional — all 482 sprites together are under 6MB — so the strip is never
-    // blank, whatever the window is doing.
+    // Every paged-in tile renders; its two images are gated twice over — on the art window (see
+    // gridWindow), so only tiles near the scroll position ask for art at all, and then on the
+    // loader (see artSrc), so at most ART_MAX_INFLIGHT of those are being fetched at any moment.
+    // The pedestal, stars and name are unconditional, so a tile always occupies its box.
+    // Every render rebuilds the wanted-art queue in on-screen order (see pumpArt).
+    this.artWanted = [];
     const unitsWin = this.gridWindow(pagedRoster.length, this.state.unitsWinCol);
-    const visibleRoster = pagedRoster.map((c, i) => ({
-      ...c,
-      showHead: c.hasHead && i >= unitsWin.start && i < unitsWin.end,
-      displayName: (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName,
-      hasMusic: !!(c.music && c.music.length),
-      onSelect: () => this.goDetail(c)
-    }));
+    const visibleRoster = pagedRoster.map((c, i) => {
+      const inWin = i >= unitsWin.start && i < unitsWin.end;
+      // Both of the tile's own images go through the gate: 482 tiles carry a portrait and a
+      // sprite each, and it was the two together that peaked at 354 parallel requests.
+      const headSrc = this.artSrc(c.hasHead && inWin ? c.headUrl : '');
+      const thumbSrc = this.artSrc(inWin ? c.thumbUrl : '');
+      return {
+        ...c,
+        headSrc, thumbSrc,
+        showHead: !!headSrc,
+        showThumb: !!thumbSrc,
+        displayName: (this.state.lang === 'zh' && c.zhName) ? c.zhName : c.enName,
+        hasMusic: !!(c.music && c.music.length),
+        onSelect: () => this.goDetail(c)
+      };
+    });
     const unitsStatusText = this.state.rosterLoading
       ? this.t('loadingRoster')
       : this.state.rosterError
@@ -4476,13 +4562,17 @@ class Component extends DCLogic {
     // Same art window as the roster strip above — this library is the other half of the iOS memory
     // peak (384 icons), and it lays out identically, so it uses the same helper.
     const armWin = this.gridWindow(armPaged.length, this.state.armWinCol);
-    const armVisible = armPaged.map((w, i) => ({
-      ...w,
-      showIcon: i >= armWin.start && i < armWin.end,
-      displayName: (armLangEn && w.en && w.en.nameEn) || w.nameZh,
-      hasElement: !!w.elementIconUrl,
-      onSelect: () => this.goArmDetail(w)
-    }));
+    const armVisible = armPaged.map((w, i) => {
+      const iconSrc = this.artSrc(i >= armWin.start && i < armWin.end ? w.iconUrl : '');
+      return {
+        ...w,
+        iconSrc,
+        showIcon: !!iconSrc,
+        displayName: (armLangEn && w.en && w.en.nameEn) || w.nameZh,
+        hasElement: !!w.elementIconUrl,
+        onSelect: () => this.goArmDetail(w)
+      };
+    });
     const armStatusText = this.state.armLoading
       ? this.t('loadingWeapons')
       : this.state.armError

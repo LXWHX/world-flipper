@@ -517,6 +517,30 @@ the grid; only the one expensive image inside it is gated — `c.showHead` on th
   art + 3px gap + ~13px label) or the grid shifts as tiles enter and leave; verified by the strips'
   scrollWidth being unchanged (9524 units / 7564 arms).
 
+#### Strip art loader (what actually fixed the iOS crash)
+
+The crash was never the total decoded size — it was **request concurrency while the strips load**,
+which is why it only ever happened mid-load and never once everything was cached. Nothing throttled
+the tiles' images: measured over a local HTTP server (`file://` hides this entirely), opening the
+Armaments library fired **40** parallel image requests, paging it to 384 peaked at **255**, and
+switching back to the roster — 482 tiles with a portrait and a sprite each — peaked at **354**.
+Desktop absorbs that; iOS killed the renderer (white screen / self-reload, on both Chrome and Quark,
+which are both WebKit). With the loader the same three points measure 16 / 16 / 10.
+
+- **A tile never gets a `src` the browser hasn't already fetched.** `renderVals` asks for a URL via
+  `artSrc()`, which returns the URL once loaded and `''` until then, recording it in `artWanted`.
+  `pumpArt()` (called from `componentDidUpdate`, so it works off a committed render, never from
+  inside `renderVals`) fetches through plain `new Image()`, at most `ART_MAX_INFLIGHT` at a time.
+  By the time the real `<img>` receives the URL it is served from cache.
+- **The queue is rebuilt from every render in on-screen order**, so scrolling away from a batch
+  de-prioritizes it instead of leaving the gate working through art nobody is looking at.
+- Loads are published in batches (`ART_BATCH_MS`, one `artVersion` bump), because `renderVals`
+  rebuilds the whole tree and 482 individual re-renders would cost more than the fetches.
+- **`upload-to-r2.mjs` now sets `Cache-Control`** (`immutable` for the per-character/per-hash
+  assets, 5 minutes for `roster.json`, which is re-uploaded every run). Without it R2 serves no
+  caching hint at all, so the burst is paid on every visit and one `<img>` can even fetch the same
+  file twice. Existing objects only pick it up when re-uploaded.
+
 #### `?diag=` — bisecting an iOS crash from here
 
 iOS renderers that get killed can only be bisected on the device that kills them: there is no

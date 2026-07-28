@@ -24,6 +24,16 @@ const MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
 // startup rather than bandwidth — the workers spend most of their time waiting. 8 keeps the
 // ~8k-file emotion/story asset push to roughly an hour instead of ~4.
 const CONCURRENCY = 8;
+// Cache-Control for every object. Without it R2 serves the assets with no caching hint at all, so
+// a browser re-requests each portrait and icon on every visit — which is what makes the front-end's
+// request burst (see ART_MAX_INFLIGHT in index.html) a permanent cost instead of a first-visit one,
+// and can even make one <img> fetch the same file twice. Nothing here is ever edited in place under
+// the same key: the assets are per-character/per-hash files, and roster.json is the one exception —
+// it is re-uploaded on every run (see `pending` below), so it gets a short TTL of its own.
+// NOTE: existing objects only pick this up when they are uploaded again (`--force` re-uploads
+// everything, which for the ~970MB story tree is an hours-long push — new files get it for free).
+const CACHE_LONG = 'public, max-age=31536000, immutable';
+const CACHE_SHORT = 'public, max-age=300';
 const FORCE = process.argv.includes('--force');
 const WRANGLER_BIN = path.resolve(
   'node_modules/.bin',
@@ -102,7 +112,10 @@ function quoteArg(a) {
 
 function uploadOne({ abs, key }) {
   return new Promise((resolve, reject) => {
-    const args = ['r2', 'object', 'put', `${BUCKET}/${key}`, '--file', abs, '--remote'];
+    const args = [
+      'r2', 'object', 'put', `${BUCKET}/${key}`, '--file', abs, '--remote',
+      '--cache-control', key === 'roster.json' ? CACHE_SHORT : CACHE_LONG
+    ];
     const isWin = process.platform === 'win32';
     const child = spawn(
       isWin ? quoteArg(WRANGLER_BIN) : WRANGLER_BIN,
