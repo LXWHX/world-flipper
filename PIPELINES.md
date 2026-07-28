@@ -414,3 +414,44 @@ rules as the fetchers, and the `story/` include prefix ships it to R2 automatica
 duplicated track (the anniversary countdown, in 5 albums) is legitimate album membership, not a
 bug to dedupe.
 
+## gallery index (`scripts/build-gallery-index.mjs`)
+
+`npm run build:gallery-index` derives `Character Assets/story/gallery_index.json` + the
+thumbnails under `story/thumbs/` — the Art tab's gallery wall — from `story/index.json` +
+`story/detail/*.json`. Local files only, no network; **re-run it after any `fetch:story` run**
+or the wall goes stale. The `story/` include prefix ships both to R2 automatically, so
+`upload-to-r2.mjs` needs no change.
+
+Output is a **flat** array of 64 rows (52 gallery images + 12 chapter orbs), in `index.json`
+story order, each story's orb first and then its `gallery[]`:
+
+```jsonc
+{ "slug": "main_chapter_3", "title": "…", "category": "main", "kind": "main",
+  "type": "gallery",                            // "gallery" | "orb"
+  "path":  "story/gallery/main_chapter_3/0.png",
+  "thumb": "story/thumbs/gallery/main_chapter_3/0.webp",
+  "w": 1356, "h": 1920,
+  "name": "…", "desc": "…" }                    // orb rows only; omitted, not nulled, otherwise
+```
+
+- **`w`/`h` are the whole point.** The front-end packs the wall into two masonry columns
+  arithmetically and needs the dimensions before the first paint; nothing in the detail files
+  carries them. (That the detail files are also 872 KB for 64 tiles is the lesser reason.)
+- **Gallery order comes from the detail file's `gallery` array, never `readdir`** — a directory
+  listing sorts lexicographically, so `event_1stanv` would come out `0, 1, 10, 2, 3, …`.
+- `.jfif` files are plain JPEG (sharp reads them directly), and none of the 64 carry EXIF
+  orientation, so there's no auto-orient step.
+- Titles are stored in **Chinese**; the front-end resolves English through `arcTitleFor` at render
+  time, which is why each row keeps `slug` *and* `title`. Orb `name`/`desc` exist only in Chinese —
+  no source has an English orb.
+- **Thumbnails are 440px webp q78** (~2.3 MB for all 64, against 55 MB of sources) and follow the
+  composited-image rule: **present means done**, so a re-run writes nothing. **Changing the width
+  or quality therefore means deleting `story/thumbs/` first**, or passing `--force`.
+- Missing source files are warned and dropped from the index, not fatal; a missing detail file
+  warns and skips the story. `writeJsonIfChanged` + `invalidateR2` on the JSON and on every
+  thumbnail actually written, so a dry re-run is a zero-diff no-op.
+- Flags: `--force` (regenerate existing thumbnails), `--no-thumbs` (index only).
+- `sharp` is a declared devDependency for this script (it reads the dimensions and writes the
+  thumbnails). It was already on disk as a transitive dep of wrangler; relying on that would have
+  broken on the next `npm install`.
+

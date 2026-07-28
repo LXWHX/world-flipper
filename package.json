@@ -12,6 +12,7 @@
     "fetch:miaowm5": "node scripts/fetch-miaowm5.mjs",
     "fetch:story": "node scripts/fetch-main-story.mjs",
     "build:music-index": "node scripts/build-music-index.mjs",
+    "build:gallery-index": "node scripts/build-gallery-index.mjs",
     "scrape:stories-en": "node scripts/scrape-wiki-gg-stories.mjs",
     "fetch:community-en": "node scripts/fetch-community-en.mjs",
     "fetch:eliya-gl": "node scripts/fetch-eliya-gl.mjs",
@@ -21,6 +22,7 @@
     "cheerio": "^1.2.0",
     "gifenc": "^1.0.3",
     "pngjs": "^7.0.0",
+    "sharp": "^0.34.5",
     "socket.io-client": "^4.8.3",
     "wrangler": "^4.0.0"
   }

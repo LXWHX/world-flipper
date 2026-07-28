@@ -32,10 +32,9 @@
       font-family: 'M PLUS Rounded 1c', sans-serif; background: #EAEAEA;
       touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%;
     }
-    @keyframes wfFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
     @keyframes wfPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
     /* The "come play" cue on the home red flip button: a little speech bubble bobbing at its
-       top-right corner (reusing wfFloat) with a mini card inside that rocks left-right (wfSwipeCard),
+       top-right corner (wfHintBob) with a mini card inside that rocks left-right (wfSwipeCard),
        miming the deck's swipe gesture. pointer-events: none keeps the button the single click target. */
     @keyframes wfSwipeCard {
       0%, 100% { transform: translateX(-3px) rotate(-8deg); }
@@ -1337,6 +1336,67 @@
         </div>
       </sc-if>
 
+      <!-- ===== ART SCREEN (the gallery wall) =====
+           Every story illustration on one filterable masonry wall. The two columns are packed in
+           renderVals from the dimensions story/gallery_index.json carries, so nothing is measured
+           and nothing reflows; each tile's aspect-ratio reserves its box before the image lands. -->
+      <sc-if value="{{ isArt }}" hint-placeholder-val="{{ false }}">
+        <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column;">
+
+          <!-- Section banner, same strip the story/music screens use; picture-frame glyph to match
+               the Art button in the bottom tab bar. -->
+          <div style="flex: none; position: relative; margin: 14px 0 0 -6px; width: 82%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12); display: flex; align-items: center; gap: 12px;">
+            <div style="width: 42px; height: 42px; border-radius: 50%; flex: none; background: {{ sectionColor }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
+              <svg width="20" height="20" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="1" y="2" width="8" height="6" fill="#FFFFFF"></rect><rect x="2" y="5" width="2" height="2" fill="{{ sectionColor }}"></rect><rect x="4" y="4" width="4" height="3" fill="{{ sectionColor }}"></rect><rect x="6" y="3" width="1" height="1" fill="{{ sectionColor }}"></rect></svg>
+            </div>
+            <div>
+              <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">{{ sectionLabel }}</div>
+              <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ sectionDesc }}</div>
+            </div>
+          </div>
+
+          <!-- Category chips: 全部 / 主线 / 活动 / 联动 (the same ARC_CATEGORIES the story tab uses) -->
+          <div style="flex: none; display: flex; gap: 6px; padding: 12px 14px 4px;">
+            <sc-for list="{{ galCategoryChips }}" as="gc" hint-placeholder-count="4">
+              <button onClick="{{ gc.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ gc.bg }}; border-radius: 999px; padding: 7px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ gc.label }}</button>
+            </sc-for>
+          </div>
+          <div style="flex: none; padding: 0 16px 2px; text-align: right; font-size: 10px; font-weight: 800; color: #B7BECC;">{{ galCountText }}</div>
+
+          <div id="gallery-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 20px;">
+            <sc-if value="{{ galShowLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galLoadingText }}</div>
+            </sc-if>
+            <sc-if value="{{ galShowError }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galErrorText }}</div>
+            </sc-if>
+            <sc-if value="{{ galShowEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galEmptyText }}</div>
+            </sc-if>
+
+            <!-- Two columns, each already packed shortest-first by galColumns() -->
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+              <sc-for list="{{ galColumns }}" as="gcol" hint-placeholder-count="2">
+                <div style="flex: 1; min-width: 0;">
+                  <sc-for list="{{ gcol.tiles }}" as="gt" hint-placeholder-count="4">
+                    <div onClick="{{ gt.onClick }}" style="position: relative; width: 100%; margin-bottom: 8px; border-radius: 10px; overflow: hidden; cursor: pointer; background: #EAEAEA; box-shadow: 1px 1px 5px rgba(0,0,0,0.35);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
+                      <img src="{{ gt.thumbUrl }}" alt="{{ gt.alt }}" loading="lazy" decoding="async" style="display: block; width: 100%; aspect-ratio: {{ gt.w }} / {{ gt.h }}; object-fit: cover;">
+                      <sc-if value="{{ gt.isOrb }}" hint-placeholder-val="{{ false }}">
+                        <div style="position: absolute; top: 5px; right: 5px; font-size: 9px; font-weight: 800; color: #FFFFFF; background: rgba(240,82,110,0.92); border-radius: 999px; padding: 2px 7px;">{{ galOrbLabel }}</div>
+                      </sc-if>
+                      <!-- The caption has to be an overlay, not a block below the image: its height
+                           would depend on how the story title wraps, which would make the packer's
+                           tile height an estimate and let the two columns drift apart. -->
+                      <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 8px 5px; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); font-size: 10px; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gt.caption }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
       <!-- ===== MUSIC ROOM SCREEN (the music tab) ===== -->
       <sc-if value="{{ isMusic }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column;">
@@ -1762,29 +1822,35 @@
         </div>
       </sc-if>
 
-      <!-- ===== SECTION SCREENS (nav shell placeholders) ===== -->
-      <sc-if value="{{ isSection }}" hint-placeholder-val="{{ false }}">
-        <div data-screen-label="{{ sectionLabel }}" style="position: absolute; inset: 0; display: flex; flex-direction: column; overflow-y: auto;">
-          <!-- Section banner -->
-          <div style="flex: none; position: relative; margin: 14px 0 0 -6px; width: 82%; background: #FFFFFF; padding: 12px 18px 12px 22px; clip-path: polygon(0 0, 100% 0, 90% 100%, 0 100%); box-shadow: 0 4px 0 rgba(62, 68, 80, 0.12); display: flex; align-items: center; gap: 12px;">
-            <div style="width: 42px; height: 42px; border-radius: 50%; flex: none; background: {{ sectionColor }}; box-shadow: inset 0 -4px 0 rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center;">
-              <svg width="20" height="20" viewBox="0 0 8 8" style="shape-rendering: crispedges;"><rect x="3" y="0" width="2" height="2" fill="#FFFFFF"></rect><rect x="1" y="2" width="6" height="2" fill="#FFFFFF"></rect><rect x="2" y="4" width="4" height="2" fill="#FFFFFF"></rect><rect x="3" y="6" width="2" height="2" fill="#FFFFFF"></rect></svg>
-            </div>
-            <div>
-              <div style="font-size: 19px; font-weight: 900; color: #3E4450; line-height: 1.1;">{{ sectionLabel }}</div>
-              <div style="font-size: 11px; font-weight: 700; color: #8A93A5;">{{ sectionDesc }}</div>
-            </div>
+      <!-- ===== GALLERY VIEWER (the Art tab's full-screen image view) =====
+           Same dialog convention as the filter/news/about dialogs — z-index 100, backdrop click
+           closes, inner panels stopDialogClick — with one deliberate deviation: the backdrop is
+           dark rather than the dialogs' rgba(255,255,255,0.5), because a white scrim washes out
+           full-bleed artwork. No .wf-circle either, for the reason the two art stages have none. -->
+      <sc-if value="{{ galViewerOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeGalViewer }}" style="position: absolute; inset: 0; z-index: 100; background: rgba(20,22,28,0.94); display: flex; flex-direction: column;">
+          <div style="flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px;">
+            <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">{{ galViewerCounter }}</div>
+            <div onClick="{{ closeGalViewer }}" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #FFFFFF; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-active="transform: translateY(1px);">✕</div>
           </div>
 
-          <!-- Placeholder content card -->
-          <div style="flex: none; margin: 20px 14px; background: #FFFFFF; border-radius: 18px; box-shadow: 0 4px 0 rgba(62,68,80,0.12); padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
-            <div style="animation: wfFloat 3s ease-in-out infinite;">
-              <svg width="56" height="56" viewBox="0 0 10 10" style="shape-rendering: crispedges;"><rect x="4" y="0" width="2" height="2" fill="{{ sectionColor }}"></rect><rect x="2" y="2" width="6" height="2" fill="{{ sectionColor }}"></rect><rect x="1" y="4" width="8" height="2" fill="{{ sectionColor }}" opacity="0.55"></rect><rect x="2" y="6" width="2" height="2" fill="{{ sectionColor }}"></rect><rect x="6" y="6" width="2" height="2" fill="{{ sectionColor }}"></rect></svg>
-            </div>
-            <div style="font-size: 17px; font-weight: 900; color: #3E4450;">{{ underConstructionTitle }}</div>
-            <div style="font-size: 12.5px; font-weight: 700; color: #8A93A5; max-width: 260px;">{{ sectionBody }}</div>
-            <image-slot id="{{ sectionSlotId }}" shape="rounded" radius="14" placeholder="{{ imageSlotPlaceholder }}" style="width: 100%; height: 150px;"></image-slot>
-            <button onClick="{{ goHome }}" style="border: none; cursor: pointer; background: linear-gradient(180deg, #5FC0EC 0%, #3FA6DD 100%); color: #FFFFFF; border-radius: 999px; padding: 10px 26px; font-family: inherit; font-weight: 800; font-size: 13px; box-shadow: 0 3px 0 #2A80B5, inset 0 2px 0 rgba(255,255,255,0.4);" style-active="transform: translateY(2px); box-shadow: 0 1px 0 #2A80B5;">{{ backToHomeLabel }}</button>
+          <!-- The stage shows the full-resolution image; the wall's tiles show 440px webp thumbs,
+               so the 55 MB of originals is only ever paid one deliberate tap at a time. -->
+          <div onClick="{{ stopDialogClick }}" onPointerDown="{{ galViewerDown }}" style="flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 0 8px; touch-action: none;">
+            <img src="{{ galViewerUrl }}" alt="{{ galViewerAlt }}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; -webkit-user-drag: none;">
+            <div onClick="{{ galViewerPrev }}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #FFFFFF; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-active="filter: brightness(1.3);">‹</div>
+            <div onClick="{{ galViewerNext }}" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #FFFFFF; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-active="filter: brightness(1.3);">›</div>
+          </div>
+
+          <div onClick="{{ stopDialogClick }}" style="flex: none; margin: 10px; background: #FFFFFF; border-radius: 12px; padding: 10px 12px;">
+            <div style="font-size: 12.5px; font-weight: 800; color: #3E4450;">{{ galViewerTitle }}</div>
+            <!-- Orb name/desc exist only in Chinese (no source has an English orb), so they stay
+                 Chinese in English mode — the site's per-field fallback, and exactly what the story
+                 archive's own gallery panel already does. The badge above is localized. -->
+            <sc-if value="{{ galViewerHasOrb }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 12px; font-weight: 800; color: #F0526E; margin-top: 4px;">{{ galViewerName }}</div>
+              <div style="font-size: 11px; font-weight: 600; color: #8A93A5; white-space: pre-line; line-height: 1.45; margin-top: 2px; max-height: 5.5em; overflow-y: auto;">{{ galViewerDesc }}</div>
+            </sc-if>
           </div>
         </div>
       </sc-if>
@@ -1999,6 +2065,10 @@ const FLIP_RISE_MS = 170;
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-28', items: [
+      { en: 'The Art Gallery tab is open: all 64 story illustrations — 52 key visuals plus the 12 chapter orbs — on one wall, filterable by main story / event / collab.', zh: '「画廊」页正式开放：全部 64 张剧情插画（52 张主视觉图与 12 张章节宝珠）汇集于一面墙，可按主线 / 活动 / 联动筛选。' },
+      { en: 'Tap any piece to view it full-screen at full resolution, and swipe to move through the wall.', zh: '点击任意作品即可全屏查看原图，左右滑动浏览下一张。' },
+  ]},
   { date: '2026-07-27', items: [
       { en: 'The Story archive’s Info tab now reads in English for the chapters that have no English script — main story Worlds 6-10 and 19 events — with plot summaries machine-translated from namu.wiki (marked as auto-translated).', zh: '故事档案「情报」页现可用英文阅读此前无英文剧本的章节——主线世界 6–10 及 19 个活动——剧情简介机翻自 namu.wiki（页内标注为机翻）。' },
       { en: 'Added English skills, leader buffs and abilities for 60 more characters — the roster additions that no wiki documents — sourced from the Eliya-bot Global database.', zh: '为另外 60 名角色补上英文技能、队长技与能力（这些是各大 wiki 均未收录的新增角色），资料来自 Eliya-bot 国际服数据库。' },
@@ -2158,13 +2228,6 @@ const STRINGS = {
   filterRacePlants: { en: 'Plant', zh: '植物' },
   skillBtn: { en: 'Skill', zh: '技能' },
   specialBtn: { en: 'Special', zh: '必杀' },
-  underConstruction: { en: 'Under Construction', zh: '建设中' },
-  underConstructionBody: {
-    en: 'This wing of the museum opens soon. Content for {label} will live here.',
-    zh: '敬请期待，「{label}」相关内容即将上线。'
-  },
-  imageSlotPlaceholder: { en: 'Drop a preview image for this section', zh: '为该版块添加预览图片' },
-  backToHome: { en: 'Back to Home', zh: '返回首页' },
   overlaySkill: { en: 'SKILL', zh: '技能' },
   overlaySpecial: { en: 'SPECIAL', zh: '必杀' },
   artBase: { en: 'Base', zh: '普通' },
@@ -2173,7 +2236,7 @@ const STRINGS = {
   trackArrange: { en: 'Arrange', zh: '编曲' },
   langToggle: { en: '中文', zh: 'EN' },
   sectionArtLabel: { en: 'Art Gallery', zh: '画廊' },
-  sectionArtDesc: { en: 'Key visuals, character art & pixel sprites', zh: '主视觉图、角色立绘与像素动画' },
+  sectionArtDesc: { en: 'Key visuals & chapter orbs from every story', zh: '全部剧情的主视觉图与章节宝珠' },
   sectionUnitsLabel: { en: 'Characters', zh: '角色' },
   sectionUnitsDesc: { en: 'Unit profiles & episodes', zh: '角色资料与剧情' },
   sectionStoryLabel: { en: 'Story Archive', zh: '剧情档案' },
@@ -2291,6 +2354,13 @@ const STRINGS = {
   arcLoadingEpisode: { en: 'Loading episode…', zh: '剧情加载中…' },
   arcNoEpisodes: { en: 'No episodes available yet.', zh: '暂无剧情数据。' },
   arcBackToStories: { en: 'Stories', zh: '剧情列表' },
+  // Art tab (the gallery wall). The category chips reuse arcFilterAll/Main/Event/Collab above —
+  // it's the same ARC_CATEGORIES table.
+  galLoading: { en: 'Loading gallery…', zh: '画廊加载中…' },
+  galLoadError: { en: 'Failed to load the gallery index.', zh: '画廊索引加载失败。' },
+  galEmpty: { en: 'No artwork in this category.', zh: '该分类暂无插画。' },
+  galCount: { en: '{n} images', zh: '{n} 张' },
+  galOrbLabel: { en: 'Chapter Orb', zh: '章节宝珠' },
   // Community playthrough videos (the Google Sheet the fetch:community-en pipeline reads). They
   // stand in for the stories nobody has transcribed, so the copy has to be honest about what the
   // link is: someone else's recording, on YouTube, sometimes without English.
@@ -2528,7 +2598,16 @@ class Component extends DCLogic {
     // grid's roster/filter state. armDetail null = the 武器库 library grid; set = a 武器详情 page.
     armWeapons: [], armLoading: false, armLoaded: false, armEnLoaded: false, armError: null, armVisibleCount: ROSTER_BATCH,
     armDetail: null,
-    armFilterOpen: false, armFilter: { ...EMPTY_ARM_FILTER }, armDraftFilter: { ...EMPTY_ARM_FILTER }
+    armFilterOpen: false, armFilter: { ...EMPTY_ARM_FILTER }, armDraftFilter: { ...EMPTY_ARM_FILTER },
+
+    // --- Art tab (画廊): the gallery wall. Everything here is `gal`-prefixed because artIndex /
+    // toggleArt / showArtToggle / detailArt* / loadArtStats all already exist and mean the detail
+    // hero's awaken toggle or the Flip voting feature — an unprefixed name would rewire one of
+    // them. (isArt/goArt keep their names: they're the tab's navigation, not this feature.)
+    galIndex: null,        // array once loaded, false after a failed fetch
+    galLoading: false,
+    galCategory: 'all',
+    galViewer: null        // index into galFiltered(), null = viewer closed
   };
 
   audio = new Audio();
@@ -2624,7 +2703,7 @@ class Component extends DCLogic {
       this.loadUnitsEn();
       if (this.state.sheetPanel === 'story') this.loadStory();
       if (this.state.armLoaded) this.loadWeaponsEn();
-      if (this.state.tab === 'story') this.loadArcEn();
+      if (this.state.tab === 'story' || this.state.tab === 'art') this.loadArcEn();
     }
   }
 
@@ -2912,6 +2991,10 @@ class Component extends DCLogic {
     if (tab === 'units') this.restoreUnitsScroll();
     if (tab === 'arms') this.loadWeapons();
     if (tab === 'story') { this.loadArcIndex(); this.loadArcEn(); }
+    // The wall's captions are story titles, so it needs the same English sidecars the story tab
+    // fetches. loadArcEn is gated on lang === 'en' and idempotent, so this is free in Chinese and
+    // already cached if the user visited the story tab first.
+    if (tab === 'art') { this.loadGalleryIndex(); this.loadArcEn(); }
     if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
     if (tab === 'music') this.loadRoomAlbums();
   }
@@ -3613,6 +3696,20 @@ class Component extends DCLogic {
       });
   }
 
+  // English story titles come from two sources that cover different halves of the archive:
+  // wiki.gg has the ten main chapters and the nine events it transcribed, the community sheet has
+  // an English name for every event. Falls back to the Chinese title, story by story. Takes
+  // anything carrying `slug` + `title`, which is why the gallery index stores both rather than a
+  // pre-resolved title — the Art tab's wall resolves its captions through here too.
+  arcTitleFor(story) {
+    if (!story) return '';
+    const en = (this.state.lang === 'en' && this.state.arcEnIndex) || null;
+    const community = (this.state.lang === 'en' && this.state.arcCommunity) || null;
+    const enEntry = en && en[story.slug];
+    const communityEntry = community && community[story.slug];
+    return (enEntry && enEntry.title) || (communityEntry && communityEntry.title) || story.title;
+  }
+
   loadArcIndex() {
     if (this.state.arcIndex || this.state.arcIndexLoading) return;
     this.setState({ arcIndexLoading: true, arcIndexError: null });
@@ -3724,6 +3821,77 @@ class Component extends DCLogic {
       const el = document.getElementById('story-scroll');
       if (el) el.scrollTop = 0;
     });
+  }
+
+  // --- Art tab (画廊): the gallery wall -------------------------------------------------------
+  // Every story illustration the site ships, on one filterable masonry wall: the 52 gallery images
+  // plus the 12 chapter orbs, which otherwise are only reachable one story at a time through the
+  // story archive's own gallery panel (22 stories have exactly one image). Fed by
+  // story/gallery_index.json — a local derivation of the 42 detail files (scripts/build-gallery-index.mjs)
+  // that exists because those files are 872 KB for 64 tiles and, more importantly, carry no pixel
+  // dimensions: the two-column packer below needs w/h before the first paint or the wall reflows.
+
+  loadGalleryIndex() {
+    if (this.state.galIndex !== null || this.state.galLoading) return;
+    this.setState({ galLoading: true });
+    fetch(ASSET_BASE + '/story/gallery_index.json')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => this.setState({ galIndex: (data && data.images) || [], galLoading: false }))
+      .catch(err => {
+        console.error('[art] failed to load story/gallery_index.json', err);
+        this.setState({ galIndex: false, galLoading: false });
+      });
+  }
+
+  // The single source for renderVals and for anything paginating later — the same discipline
+  // filteredRoster()/filteredWeapons() keep. 64 images needs no pagination; revisit past ~200.
+  galFiltered() {
+    const all = this.state.galIndex || [];
+    const cat = this.state.galCategory;
+    return cat === 'all' ? all : all.filter(im => im.category === cat);
+  }
+
+  // galViewer is an index into the *filtered* list, so it has to be cleared here: the same index
+  // means a different image once the category changes.
+  setGalCategory(category) {
+    this.setState({ galCategory: category, galViewer: null });
+    this.scrollGalTop();
+  }
+
+  scrollGalTop() {
+    requestAnimationFrame(() => {
+      const el = document.getElementById('gallery-scroll');
+      if (el) el.scrollTop = 0;
+    });
+  }
+
+  openGalViewer(i) { this.setState({ galViewer: i }); }
+  closeGalViewer() { this.setState({ galViewer: null }); }
+
+  // Wraps at both ends, like roomStep's manual prev/next.
+  galViewerStep(delta) {
+    const n = this.galFiltered().length;
+    if (!n) return;
+    this.setState(s => ({ galViewer: ((s.galViewer + delta) % n + n) % n }));
+  }
+
+  // Swipe between images. Follows the sheetPointerDown convention (window listeners so the gesture
+  // survives leaving the element, deltas divided by state.scale because the whole 430px canvas is
+  // CSS-scaled) with one deliberate simplification: nothing is committed until pointerup, so the
+  // drag causes zero renders. renderVals rebuilds the roster tiles and story lists on every render,
+  // which is what forced the Flip deck's drag into rAF-coalescing — this one sidesteps it entirely.
+  galViewerDown(e) {
+    const startX = e.clientX, startY = e.clientY;
+    const up = (ev) => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const dx = (ev.clientX - startX) / this.state.scale;
+      const dy = (ev.clientY - startY) / this.state.scale;
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+      this.galViewerStep(dx < 0 ? 1 : -1);
+    };
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   }
 
   // --- Music Room (the music tab) ------------------------------------------------------------
@@ -4429,21 +4597,13 @@ class Component extends DCLogic {
     // The list is filtered by the single-select category chip row; 'all' is inert. Stories whose
     // banner sprite the atlas didn't have render as a text tile instead (as upstream does).
     const arcCategory = this.state.arcCategory;
-    // English story titles come from two sources that cover different halves of the archive:
-    // wiki.gg has the ten main chapters and the nine events it transcribed, the community sheet
-    // has an English name for every event. Falls back to the Chinese title, story by story.
-    const arcEnIndexMap = (this.state.lang === 'en' && this.state.arcEnIndex) || null;
+    // Title resolution (wiki.gg -> community sheet -> Chinese) lives in this.arcTitleFor, which the
+    // Art tab's gallery wall shares. The community map is still needed here for the video rows.
     const arcCommunityMap = (this.state.lang === 'en' && this.state.arcCommunity) || null;
-    const arcTitleFor = (story) => {
-      if (!story) return '';
-      const en = arcEnIndexMap && arcEnIndexMap[story.slug];
-      const community = arcCommunityMap && arcCommunityMap[story.slug];
-      return (en && en.title) || (community && community.title) || story.title;
-    };
     const arcStoryItems = (this.state.arcIndex || [])
       .filter(s => arcCategory === 'all' || s.category === arcCategory)
       .map(s => ({
-        title: arcTitleFor(s),
+        title: this.arcTitleFor(s),
         hasBanner: !!s.banner,
         noBanner: !s.banner,
         bannerUrl: s.banner ? ASSET_BASE + '/' + s.banner : '',
@@ -4521,6 +4681,40 @@ class Component extends DCLogic {
           return { speaker: d.speaker, color: d.color, text: d.text, hasAvatar: !!headUrl, headUrl };
         });
     const arcTabBg = id => (arcTab === id ? accent : '#F0F3F7');
+
+    // --- Art tab: the gallery wall --------------------------------------------------------------
+    // Two-column masonry, packed here rather than by CSS. `column-count: 2` fills column-wise
+    // (1..n down the left, then the rest down the right), which on a scrolling wall means you pass
+    // the whole first half before reaching item 2's neighbour; `column-fill: auto` would fix the
+    // order but needs a fixed container height, which a filtered list doesn't have. Since
+    // gallery_index.json carries every image's w/h, packing is pure arithmetic: no measuring, no
+    // reflow, and each tile's aspect-ratio reserves its exact box on the first frame.
+    //
+    //   430 canvas - 14px padding each side = 402 inner; minus the 8px gutter, halved -> 197px.
+    const galOnTab = tab === 'art';
+    const galImages = this.galFiltered();
+    const galViewerImage = (this.state.galViewer !== null && galImages[this.state.galViewer]) || null;
+    const galColumns = [{ h: 0, tiles: [] }, { h: 0, tiles: [] }];
+    if (galOnTab) {
+      const GAL_COL_W = 197, GAL_GAP = 8;
+      galImages.forEach((im, i) => {
+        // Exact, because the caption is an overlay rather than a block below the image — a
+        // wrapping title would turn this into an estimate and drift the two columns apart.
+        const tileH = Math.round(GAL_COL_W * im.h / im.w);
+        // Ties go left, so the reading order runs left, right, left, right.
+        const col = galColumns[0].h <= galColumns[1].h ? galColumns[0] : galColumns[1];
+        col.tiles.push({
+          thumbUrl: ASSET_BASE + '/' + (im.thumb || im.path),
+          w: im.w,
+          h: im.h,
+          alt: im.title,
+          caption: this.arcTitleFor(im),
+          isOrb: im.type === 'orb',
+          onClick: () => this.openGalViewer(i)
+        });
+        col.h += tileH + GAL_GAP;
+      });
+    }
 
     // --- Music Room ---------------------------------------------------------------------------
     // The list view-models only build while the tab is showing: unlike the arc block's fixed 42
@@ -4649,10 +4843,6 @@ class Component extends DCLogic {
       isHome: tab === 'home',
       isUnits: tab === 'units',
       isDetail: tab === 'detail',
-      // 'story', 'flip', 'music' and 'arms' have their own real screens now (the story archive, the
-      // art-voting deck, the music room and the weapon library), so they drop out of the
-      // under-construction placeholder that still backs art.
-      isSection: !!sec && tab !== 'units' && tab !== 'detail' && tab !== 'story' && tab !== 'flip' && tab !== 'music' && tab !== 'arms',
       isStory: tab === 'story',
 
       // Flip (弹弹): the art-voting deck.
@@ -4750,7 +4940,7 @@ class Component extends DCLogic {
       arcNoStoriesText: this.t('arcNoStories'),
 
       // Story archive: detail header + tab switcher
-      arcTitle: arcTitleFor(arcStory),
+      arcTitle: this.arcTitleFor(arcStory),
       arcHeaderUrl: (arcDetail && arcDetail.header) ? 'url("' + ASSET_BASE + '/' + arcDetail.header + '")' : 'none',
       arcBackToStoriesLabel: this.t('arcBackToStories'),
       arcBackToStoriesBtn: () => this.closeArcStory(),
@@ -4827,6 +5017,39 @@ class Component extends DCLogic {
           onClick: () => this.roomToggleTrack(q, i)
         }));
       })(),
+
+      // --- Art tab: the gallery wall ------------------------------------------------------------
+      // Everything is `gal`-prefixed; see the state block for why. The view-models below only build
+      // while the tab is showing — renderVals runs on every render regardless of tab, and packing
+      // 64 tiles for nobody is the same waste the Music Room library views already guard against.
+      isArt: tab === 'art',
+      galCategoryChips: galOnTab ? ARC_CATEGORIES.map(c => ({
+        label: this.t(c.labelKey),
+        bg: this.state.galCategory === c.id ? '#ffcf8f' : '#FAFAFA',
+        onClick: () => this.setGalCategory(c.id)
+      })) : [],
+      galColumns: galOnTab ? galColumns : [],
+      galCountText: this.t('galCount').replace('{n}', String(galImages.length)),
+      galOrbLabel: this.t('galOrbLabel'),
+      galShowLoading: this.state.galLoading,
+      galShowError: this.state.galIndex === false,
+      galShowEmpty: !this.state.galLoading && Array.isArray(this.state.galIndex) && galImages.length === 0,
+      galLoadingText: this.t('galLoading'),
+      galErrorText: this.t('galLoadError'),
+      galEmptyText: this.t('galEmpty'),
+
+      galViewerOpen: !!galViewerImage,
+      galViewerUrl: galViewerImage ? ASSET_BASE + '/' + galViewerImage.path : '',
+      galViewerAlt: galViewerImage ? this.arcTitleFor(galViewerImage) : '',
+      galViewerTitle: galViewerImage ? this.arcTitleFor(galViewerImage) : '',
+      galViewerCounter: galViewerImage ? (this.state.galViewer + 1) + ' / ' + galImages.length : '',
+      galViewerHasOrb: !!(galViewerImage && galViewerImage.name),
+      galViewerName: (galViewerImage && galViewerImage.name) || '',
+      galViewerDesc: (galViewerImage && galViewerImage.desc) || '',
+      closeGalViewer: () => this.closeGalViewer(),
+      galViewerPrev: () => this.galViewerStep(-1),
+      galViewerNext: () => this.galViewerStep(1),
+      galViewerDown: (e) => this.galViewerDown(e),
 
       // Music Room: library view (section chips + search + the two lists)
       isMusic: roomOnTab,
@@ -4993,10 +5216,6 @@ class Component extends DCLogic {
       rosterErrorHint: this.t('rosterErrorHint'),
       skillBtnLabel: this.t('skillBtn'),
       specialBtnLabel: this.t('specialBtn'),
-      underConstructionTitle: this.t('underConstruction'),
-      sectionBody: sec ? this.t('underConstructionBody').replace('{label}', sec.label) : '',
-      imageSlotPlaceholder: this.t('imageSlotPlaceholder'),
-      backToHomeLabel: this.t('backToHome'),
       tabHomeLabel: this.t('tabHome'),
       tabArtLabel: this.t('tabArt'),
       tabUnitsLabel: this.t('tabUnits'),
@@ -5007,7 +5226,6 @@ class Component extends DCLogic {
       sectionLabel: sec ? sec.label : '',
       sectionDesc: sec ? sec.desc : '',
       sectionColor: sec ? sec.color : '#3E4450',
-      sectionSlotId: 'section-preview-' + tab,
       rosterLoading: this.state.rosterLoading,
       rosterError: this.state.rosterError,
       showRosterGrid: !this.state.rosterLoading && !this.state.rosterError && roster.length > 0,

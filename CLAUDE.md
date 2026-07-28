@@ -25,6 +25,7 @@ browser.
 | miaowm5（美术 + 结构化数据） | `fetch:miaowm5` | 立绘/表情/像素 GIF、`head.png`、`story_heads/`、`icons/`、`wiki_zh.json` 的自有键 |
 | main story（剧情 + BGM） | `fetch:story` | `story/`（约 970MB，其中约 900MB 是 BGM） |
 | music index（本地派生，无网络） | `build:music-index` | `story/music_index.json`（每次 `fetch:story` 后必须重跑） |
+| gallery index（本地派生，无网络） | `build:gallery-index` | `story/gallery_index.json` + `story/thumbs/`（同上，每次 `fetch:story` 后必须重跑） |
 
 三条跨管线铁律（细节见 `PIPELINES.md`）：写入一律走 `writeIfChanged`/`writeJsonIfChanged`，
 空跑零 diff；合成图片（`head.png`、`story_heads/`、`icons/`）存在即跳过，**改合成逻辑必须先删旧文件**；
@@ -127,8 +128,12 @@ then attribute in `ELEMENT_ORDER` = Fire/Water/Thunder/Wind/Light/Dark, then `de
 file's own order is just append history), and paginates client-side (`ROSTER_BATCH` = 60 per
 scroll batch via `handleRosterScroll`). `goDetail(c)` opens the per-character detail view.
 
-`isSection` is the under-construction placeholder that now backs only **art**; `units`, `detail`,
-`story`, `flip`, `music` and `arms` are excluded from it because they have real screens.
+**Every tab now has a real screen.** The `isSection` under-construction placeholder (and its
+`underConstruction*` / `backToHome` / `imageSlotPlaceholder` strings, the `sectionSlotId` val and
+the `wfFloat` keyframe) was deleted when the art tab shipped its gallery wall — `art` was its last
+consumer. `sections`/`sectionLabel`/`sectionDesc`/`sectionColor` stay: the real screens use them
+for their banners. `image-slot.js` now has no `<image-slot>` in the template at all; the tag stays
+because it's authoring-tool scaffold, inert at runtime.
 
 The home screen's centre red button opens **`flip`**, not `units` — Units keeps its bottom-tab-bar
 button and its menu entry, which is the only reason repointing it strands nothing.
@@ -214,6 +219,60 @@ panel**, which is a different feature — read the prefix before assuming which 
   no longer stop it, since room audio deliberately rides across tabs.)
 - The category chip row (全部/主线/活动/联动) filters on the `category` the pipeline stamps;
   single-select, `all` inert. `ARC_CATEGORIES` is the table.
+
+#### Art tab (画廊) — the gallery wall
+
+Every story illustration the site ships, on one filterable two-column masonry wall: the **52
+gallery images plus the 12 chapter orbs**, 64 in total (per-category image counts, not story
+counts: main 23 / event 35 / collab 6). Not banners, not headers, not character art. It exists
+because the same images are otherwise reachable only one story at a time through the story
+archive's own gallery panel, and 22 of the 28 stories with a gallery have exactly one image.
+
+- **Everything is `gal`-prefixed, and this is the load-bearing rule of the whole feature.**
+  `artIndex`, `toggleArt`, `showArtToggle`, `artToggleLabel` and `detailArt*` mean the *detail
+  hero's awaken toggle*; `loadArtStats`/`flipStats` mean *Flip voting*. An unprefixed `art*` name
+  in a feature about art would silently rewire one of them — the same hazard `arc`, `flip`, `arm`
+  and `room` exist for. `isArt`/`goArt`/`sections.art` keep their names because they're the tab's
+  navigation, not this feature (the `isArms`/`goArms` carve-out again).
+- **`story/gallery_index.json` exists for two reasons, and the second is the real one**: the data
+  lives only in the 42 `story/detail/*.json` files (872 KB to render 64 tiles), and those files
+  **carry no pixel dimensions at all**. The packer needs `w`/`h` before the first paint. See the
+  gallery-index pipeline in `PIPELINES.md`.
+- **The masonry is packed in `renderVals`, not by CSS.** `column-count: 2` fills *column-wise*
+  (1…n down the left, then the rest down the right), so on a scrolling wall you pass the whole
+  first half before reaching item 2's neighbour; `column-fill: auto` fixes the order but needs a
+  fixed container height, which a filtered list doesn't have. With w/h known it's arithmetic:
+  430 − 14px padding each side = 402 inner, minus the 8px gutter, halved → **197px columns**;
+  `tileH = round(197 * h / w)`; each image goes to the shorter column, ties left so the reading
+  order runs left, right, left, right. Balance lands within ~2% on all four filters. Each tile's
+  `aspect-ratio: w / h` reserves its exact box on the first frame, so nothing reflows as images
+  land.
+- **The caption is an overlay, not a block under the image** — a below-image caption's height
+  depends on how the story title wraps, which would make `tileH` an estimate and drift the two
+  columns apart. It's a single ellipsised line on a bottom gradient.
+- **Tiles show 440px webp thumbnails (~2.3 MB for the wall); the viewer shows the original.** The
+  64 sources total 55 MB, several over 3 MB each, against a 197px column — full resolution is only
+  ever paid one deliberate tap at a time.
+- `galFiltered()` is the single source for `renderVals` and for any future pagination (the
+  `filteredRoster()`/`filteredWeapons()` discipline). **64 tiles needs no pagination**; revisit
+  past ~200. The chip row reuses `ARC_CATEGORIES` and its four labels verbatim — no new strings.
+- **`galViewer` is an index into the *filtered* list**, which is why `setGalCategory` clears it:
+  the same index means a different image once the category changes.
+- The viewer follows the dialog convention (z-index 100, backdrop click closes, `stopDialogClick`
+  on the panels) with **one deliberate deviation: a dark backdrop**, because the dialogs'
+  `rgba(255,255,255,0.5)` washes out full-bleed artwork. No `.wf-circle`, for the reason the two
+  art stages have none. Prev/next wrap at both ends, like `roomStep`.
+- **The swipe commits nothing until pointerup.** It follows the `sheetPointerDown` convention
+  (window listeners, deltas ÷ `state.scale`, `touch-action: none`) but records `startX` in a local
+  and ignores every move event, so the drag causes **zero** renders — sidestepping the
+  every-render-rebuilds-the-roster problem that forced the Flip deck's drag into rAF-coalescing.
+- **English**: captions and the viewer title resolve through `this.arcTitleFor()` — promoted from
+  a `renderVals`-local closure to a class method so both features share it; it takes anything with
+  `slug` + `title`, which is why the index stores both rather than a pre-resolved title. `go('art')`
+  and `toggleLang()` call `loadArcEn()` (gated on `lang === 'en'`, idempotent, free in Chinese).
+  **Orb `name`/`desc` stay Chinese in English mode** — no source has an English orb, it's the
+  site's per-field fallback, and the story archive's own gallery panel already renders them that
+  way. The `galOrbLabel` badge is localized, so an English reader is still told what the thing is.
 
 #### Flip tab (弹弹) — art voting
 
@@ -486,9 +545,11 @@ changing asset references.** `Character Assets/`, `WF OST/`, and `node_modules/`
 only `roster.json`, `story_heads.json`, `units_en.json`, `rarityN/*`, `story_heads/*`, and
 `story/*` reach R2 — any new asset type must be added to `upload-to-r2.mjs`'s include rules or it
 silently never ships.
-Every path inside `story/index.json` and `story/detail/*.json` is stored relative to
-`Character Assets/` (i.e. it mirrors the R2 key), so `ASSET_BASE + '/' + p` resolves on both
-branches with no per-branch special-casing.
+Every path inside `story/index.json`, `story/detail/*.json` and `story/gallery_index.json` is
+stored relative to `Character Assets/` (i.e. it mirrors the R2 key), so `ASSET_BASE + '/' + p`
+resolves on both branches with no per-branch special-casing. `story/gallery_index.json` and the
+`story/thumbs/` art the Art tab reads ride the existing `story/` include prefix — no
+`upload-to-r2.mjs` change was needed for them.
 
 **`WEAPON_BASE` is the parallel switch for the weapons library**, defined right next to
 `ASSET_BASE`: `file://`/`localhost` → local `Weapons/`; else → the same R2 root with a `/Weapons`
