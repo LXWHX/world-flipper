@@ -69,6 +69,59 @@ runtime — not for feature edits.
   `renderVals()`** — a new template binding means a new key in that object. `data-props`
   (entity-encoded JSON) is design-tool metadata and defines `this.props` defaults.
 
+### File map: `index.html` + the `wf-*.js` page files
+
+The page logic is split one file per tab. `index.html` keeps only what the runtime forces it to
+keep, plus the shared shell:
+
+| 文件 | 内容 |
+| --- | --- |
+| `index.html` | the template, the `class Component` shell (`state` + instance fields), the shared methods (`t`/`toggleLang`/`sections`/`go`/`componentDidMount`/`componentDidUpdate`/`updateScale`/`headUrlForSpeaker`), and the `renderVals()` aggregate |
+| `wf-core.js` | `ASSET_BASE`/`WEAPON_BASE`/`X_BASE`, `DESIGN_W`/`DESIGN_H`/`computeLayout`, Supabase config, `STRINGS`, and the tables more than one page reads (`ELEMENT_ORDER`, `PEDESTAL`, `FILTER_RARITIES`, `GRID_*`, `ART_*`, `DIALOG_PLATE_DEFAULT`) |
+| `wf-units.js` | roster, the five filter groups, and the strip art window + loader (`artSrc`/`pumpArt`/`gridWindow` — Armaments and the X wall call into these) |
+| `wf-detail.js` | the bottom sheet, panel switcher, emotion layers, character story, voice |
+| `wf-arms.js` | 武器库 / 武器详情 (`arm*`) |
+| `wf-story.js` | the story archive (`arc*`) |
+| `wf-art.js` | the gallery wall (`gal*`) + the official X wall (`twt*`) |
+| `wf-music.js` | Music Room + the floating mini-player (`room*`), and the shared audio engine |
+| `wf-flip.js` | 弹弹 art voting (`flip*`) |
+| `wf-chrome.js` | changelog, News/About, visit counters, home/menu, the bottom tab bar |
+
+How it holds together, and why it has to be this shape:
+
+- **The template and the `class Component` declaration cannot leave `index.html`.**
+  `parseDcDocument` (`support.js:24`) reads the template block's `innerHTML` and the
+  `data-dc-script` block's `textContent` — an external `src=` script has empty `textContent`. The
+  runtime's own sibling-component mechanism (`<Foo/>` → `fetch('./Foo.dc.html')`, `support.js:1442`)
+  is not an option either: `fetch` is blocked on `file://`.
+- **The `wf-*.js` are plain classic scripts, loaded in `<head>` before `support.js`.** A top-level
+  `const` there lands in the global lexical environment, and the `data-dc-script` body is evaluated
+  by `new Function` in global scope (`support.js:743`) — so both sides see each other with no
+  prefixing. `wf-core.js` must stay first (`ARM_ELEMENTS` reads `ELEMENT_ORDER` at load time).
+- **Methods are attached with `Object.assign(Component.prototype, WF_…)`** after the class. No
+  method uses `super`, so this is verbatim. One difference: methods attached this way are
+  *enumerable*, class-body methods are not — nothing does `for…in` over an instance today.
+- **Each page owns its constants**, next to the methods that use them — only genuinely shared
+  tables go in `wf-core.js`. A page whose constant turns out to be shared moves it to core
+  (that's how `FILTER_RARITIES` got there: the weapon filter reuses the Units rarity chips).
+- **`renderVals()` is an aggregate of per-page `xVals(ctx)` slices.** `ctx` is `{ tab, accent, sec }`
+  — the only locals that were ever shared across sections; everything else a slice needs it
+  re-derives from `this`. **A shared `renderVals` closure has to be promoted to a real method**
+  before its section moves out (`roomIsPlaying` was; `arcTitleFor` already had been).
+- **The slice call order in `renderVals` is load-bearing**: `this.artWanted = []` runs once before
+  them all, and `unitsVals` → `armsVals` → `artVals` is the order the three `artSrc` call sites
+  enqueue in, which *is* the strip art loading priority. Key order is not load-bearing (verified: no
+  duplicate keys across the whole `vals`), but evaluation order is.
+- **Never write the template block's literal opening tag in an HTML comment in `index.html`.**
+  `boot()` re-fetches the page and finds the template with a *regex* (`support.js:39`), which does
+  not know about comments — a stray one swallows the `<head>` scripts into the template. This was a
+  live bug during the split.
+- **Adding a page** = a new `wf-*.js` + its `xVals(ctx)` + one line in `renderVals` + one
+  `<script>` tag + one name in the `Object.assign`.
+- **Cost accepted:** code outside the `data-dc-script` block is invisible to the omelette design
+  tool. The tool's source isn't in this repo and the site is hand-maintained, so this is fine — but
+  it does mean the split is one-way as far as that tool is concerned.
+
 ### Backgrounds: the magic circle
 
 The backdrop is a port of miaowm5's `ui/magicCircle.svelte` — `icons/circle.png` on a 25s linear
@@ -149,6 +202,8 @@ button and its menu entry, which is the only reason repointing it strands nothin
 
 #### Armaments tab (武器库 / 武器详情) — the weapon library
 
+代码在 `wf-arms.js`（见上面的文件地图）。
+
 A port of the Units grid/filter over `Weapons/weapons.json` (see the weapons pipeline in `PIPELINES.md`).
 Everything is **`arm`-prefixed** (state/handlers/`renderVals` keys) so none of it collides with the
 Units roster/filter — same discipline the story archive's `arc` and Flip's `flip` prefixes exist
@@ -184,6 +239,8 @@ for; note `isArms`/`goArms`/`arms` (the section identifiers) predate this and me
   see Asset loading below).
 
 #### Story tab (the story archive)
+
+代码在 `wf-story.js`（见上面的文件地图）。
 
 A port of miaowm5's `/story`, fed by the main-story pipeline in `PIPELINES.md`. Everything is `arc`-prefixed
 (state, handlers, `renderVals` keys) so none of it collides with the **character sheet's own story
@@ -232,6 +289,8 @@ panel**, which is a different feature — read the prefix before assuming which 
   single-select, `all` inert. `ARC_CATEGORIES` is the table.
 
 #### Art tab (画廊) — two gallery walls behind a source toggle
+
+代码在 `wf-art.js`（见上面的文件地图）。
 
 The tab hosts **two independent walls**, picked by `state.galSource` (`'story' | 'x'`) through the
 pill toggle above the chip row: the story-illustration wall below (64 items, `gal`-prefixed) and the
@@ -295,6 +354,8 @@ archive's own gallery panel, and 22 of the 28 stories with a gallery have exactl
   way. The `galOrbLabel` badge is localized, so an English reader is still told what the thing is.
 
 #### Art tab, second source (官方推特) — the X media wall
+
+代码在 `wf-art.js`（见上面的文件地图）。
 
 Every image and video the game's official Twitter/X account posted, 2019-11 to 2024-03: **1429
 files, 1343 images + 86 videos, ~540 MB**, self-hosted on R2 under an `X/` key prefix (`X_BASE`, the
@@ -361,6 +422,8 @@ roots**, because a live cookie jar lives two levels above the shipped folder.
 
 #### Flip tab (弹弹) — art voting
 
+代码在 `wf-flip.js`（见上面的文件地图）。
+
 A Tinder-style swipe deck over every illustration in the game: right = like, left = dislike, down =
 skip, tap = open that character's sheet. All three are counted per illustration and shown on the
 deck and on the detail hero. Backed by Supabase (`supabase-art-votes.sql`), not by any pipeline —
@@ -426,6 +489,8 @@ it reuses art that already ships.
   goes back to the Units grid.
 
 #### Music Room (the music tab)
+
+代码在 `wf-music.js`（见上面的文件地图）。
 
 A player over the two music libraries the site already ships: the roster's `music` mp3s
 (character themes, ~150 characters, `head.png` as row art) and the world/event BGM albums in
@@ -511,6 +576,8 @@ as harmless vestigial state.)
 
 #### Units filter
 
+代码在 `wf-units.js`（见上面的文件地图）。
+
 A port of miaowm5's `dialog/filterCharacter.svelte` (round `icons/filer.jpg` button, top-left).
 Five groups — name, rarity, element, gender, race — OR within a group, AND across groups, empty
 group inert ("nothing picked" = "show everything"). Notes:
@@ -535,6 +602,8 @@ group inert ("nothing picked" = "show everything"). Notes:
 
 #### Units grid tile
 
+代码在 `wf-units.js`（图块本身在 `index.html` 的模板里）（见上面的文件地图）。
+
 Note `backFromDetail()` returns to `state.detailReturnTab` (Units or Flip), not unconditionally to
 Units — see the Flip section above.
 
@@ -550,6 +619,8 @@ attribute via `PEDESTAL`, with `icons/rarity_{N}.png` centred on the body. Coupl
   means shrinking something else.
 
 #### Strip art window (Units roster + Armaments library)
+
+代码在 `wf-units.js`（见上面的文件地图）。
 
 Both strips are the same 5-row, 92px-column, 6px-gap grid, so `gridWindow()` / `gridWinCol()` /
 `updateGridWindow()` serve both, keyed by `state.unitsWinCol` / `state.armWinCol`. **This is a
@@ -603,6 +674,8 @@ the grid; only the one expensive image inside it is gated — `c.showHead` on th
 
 #### Strip art loader (what actually fixed the iOS crash)
 
+代码在 `wf-units.js`（见上面的文件地图）。
+
 The crash was never the total decoded size — it was **request concurrency while the strips load**,
 which is why it only ever happened mid-load and never once everything was cached. Nothing throttled
 the tiles' images: measured over a local HTTP server (`file://` hides this entirely), opening the
@@ -634,6 +707,8 @@ magnitude under the range that killed the renderer.
   file twice. Existing objects only pick it up when re-uploaded.
 
 #### Character detail bottom sheet
+
+代码在 `wf-detail.js`（见上面的文件地图）。
 
 The sheet (`SHEET_HEIGHT` = 620px) splits into a fixed top strip (drag handle + name/star row,
 carrying `sheetPointerDown` and `touch-action: none`) and a `flex: 1; overflow-y: auto` body —
@@ -677,6 +752,8 @@ characters get the stacked 570x690 bust (`showBustHero`, `normal` face) with the
 (`showArtToggle`). The bust rides the lazy `wiki_zh.json` fetch, so the hero paints a beat late.
 
 #### Emotion layers (faces vs. overlays)
+
+代码在 `wf-detail.js`（见上面的文件地图）。
 
 `story_zh.json`'s `emotion` is a **comma-separated layer stack** (e.g. `"normal,sweat"` — face,
 then overlay, over the shared `base_N.png`). ~7% of lines carry an overlay, so resolving `emotion`
