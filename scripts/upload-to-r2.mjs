@@ -4,6 +4,7 @@
 // Usage:
 //   node scripts/upload-to-r2.mjs                 upload everything that isn't already recorded as uploaded
 //   node scripts/upload-to-r2.mjs --force          re-upload everything, ignoring the resume manifest
+//   node scripts/upload-to-r2.mjs --dry-run        print what would be uploaded and exit, uploading nothing
 
 import { spawn } from 'node:child_process';
 import { readdirSync, statSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -19,6 +20,16 @@ const SOURCE_DIR = path.resolve('Character Assets');
 // Assets/, not under it — so it's collected separately and uploaded under a Weapons/ key prefix
 // (matching the front-end's WEAPON_BASE). weapons.json + icons/*.png.
 const WEAPONS_DIR = path.resolve('Weapons');
+// The official @world_flipper X (Twitter) media archive — the Art tab's second gallery wall — is
+// likewise a sibling, uploaded under an X/ key prefix matching the front-end's X_BASE.
+//
+// The collect root is the *deep* media folder, not X/, and that is a security boundary rather than
+// a tidiness choice: X/x.com_cookies.txt (a live session cookie jar) and X/gallery-dl.exe sit three
+// levels above it, so no walk started here can reach them. The `_`-prefix rule that keeps Weapons/'s
+// dev-only reports out would not have excluded either one. The extension allow-list below is the
+// second lock and the assertion in buildFileList() is the third.
+const X_DIR = path.resolve('X/gallery-dl/twitter/world_flipper');
+const X_ALLOWED_EXT = new Set(['.jpg', '.jpeg', '.png', '.mp4', '.webp', '.json']);
 const MANIFEST_PATH = path.resolve('scripts/.r2-upload-manifest.json');
 // Each upload spawns its own `wrangler` process, so throughput is dominated by process
 // startup rather than bandwidth — the workers spend most of their time waiting. 8 keeps the
@@ -34,7 +45,12 @@ const CONCURRENCY = 8;
 // everything, which for the ~970MB story tree is an hours-long push — new files get it for free).
 const CACHE_LONG = 'public, max-age=31536000, immutable';
 const CACHE_SHORT = 'public, max-age=300';
+// Keys that are rewritten in place under a stable name, so the path-keyed manifest would otherwise
+// skip real content changes forever. They get the short TTL *and* are always re-uploaded (`pending`
+// below). Everything else is a per-character/per-hash file that never changes under its own key.
+const SHORT_CACHE_KEYS = new Set(['roster.json', 'X/x_index.json']);
 const FORCE = process.argv.includes('--force');
+const DRY_RUN = process.argv.includes('--dry-run');
 const WRANGLER_BIN = path.resolve(
   'node_modules/.bin',
   process.platform === 'win32' ? 'wrangler.cmd' : 'wrangler'
@@ -90,6 +106,33 @@ function buildFileList() {
     }
   }
 
+  // The X media wall: the originals, thumbs/ and x_index.json (see X_DIR for why the root is the
+  // deep folder). The allow-list is by extension because this folder, like Weapons/, has no
+  // include list — everything in it ships.
+  if (existsSync(X_DIR)) {
+    for (const abs of collectFiles(X_DIR, X_DIR, [])) {
+      if (!X_ALLOWED_EXT.has(path.extname(abs).toLowerCase())) continue;
+      if (path.basename(abs).startsWith('_')) continue;
+      out.push({ abs, key: 'X/' + path.relative(X_DIR, abs).split(path.sep).join('/') });
+    }
+  }
+
+  // Last lock, over the whole list from every collector: nothing credential- or executable-shaped
+  // is ever published, whatever a future include rule does. Nothing currently uploaded matches it,
+  // so it can only fire on a mistake.
+  //
+  // Extension is the substantive test — every credential format worth worrying about (cookie jars,
+  // .env, PEM keys, HAR captures) has one of these. The name test is scoped to .json on purpose:
+  // that is the one shipped extension a secrets file could plausibly wear, and matching the word
+  // anywhere in a path instead flags real assets — `rarity4/secret_observer/` is a character.
+  for (const f of out) {
+    const base = path.basename(f.key);
+    const credentialName = base.toLowerCase().endsWith('.json') && /cookie|token|secret|credential/i.test(base);
+    if (/\.(exe|dll|bat|cmd|ps1|sh|txt|env|pem|key|har)$/i.test(base) || credentialName) {
+      throw new Error(`refusing to upload ${f.key} — check the collect roots in buildFileList()`);
+    }
+  }
+
   return out;
 }
 
@@ -114,7 +157,7 @@ function uploadOne({ abs, key }) {
   return new Promise((resolve, reject) => {
     const args = [
       'r2', 'object', 'put', `${BUCKET}/${key}`, '--file', abs, '--remote',
-      '--cache-control', key === 'roster.json' ? CACHE_SHORT : CACHE_LONG
+      '--cache-control', SHORT_CACHE_KEYS.has(key) ? CACHE_SHORT : CACHE_LONG
     ];
     const isWin = process.platform === 'win32';
     const child = spawn(
@@ -142,9 +185,21 @@ async function main() {
   const done = loadManifest();
   // roster.json is small and changes often (character/music data edits) without its filename
   // ever changing, so the path-keyed manifest would otherwise skip real content changes forever.
-  const pending = files.filter((f) => f.key === 'roster.json' || !done.has(f.key));
+  const pending = files.filter((f) => SHORT_CACHE_KEYS.has(f.key) || !done.has(f.key));
 
   console.log(`${files.length} files total, ${pending.length} pending (${done.size} already uploaded).`);
+
+  // --dry-run is the only cheap way to eyeball a large batch of new keys before pushing hundreds of
+  // megabytes — and the only way to see what the collect roots actually picked up.
+  if (DRY_RUN) {
+    let bytes = 0;
+    for (const f of pending) {
+      bytes += statSync(f.abs).size;
+      console.log(`  ${f.key}`);
+    }
+    console.log(`--dry-run: ${pending.length} file(s), ${(bytes / 1048576).toFixed(1)} MB. Nothing uploaded.`);
+    process.exit(0);
+  }
 
   let cursor = 0;
   let failures = 0;

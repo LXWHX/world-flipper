@@ -455,3 +455,68 @@ story order, each story's orb first and then its `gallery[]`:
   thumbnails). It was already on disk as a transitive dep of wrangler; relying on that would have
   broken on the next `npm install`.
 
+
+## X media index (`scripts/build-x-index.mjs`)
+
+`npm run build:x-index` derives `X/gallery-dl/twitter/world_flipper/x_index.json` + the thumbnails
+under `thumbs/` — the Art tab's **second** gallery wall, the official @world_flipper archive — from
+the media files `gallery-dl` already downloaded. Local files only, no network.
+
+**This pipeline has no scraper half in this repo.** The 1429 files were fetched with the standalone
+`gallery-dl` binary and are just present on disk; re-scraping is a manual step, and re-running this
+script afterwards indexes whatever is there.
+
+```jsonc
+{ "source": "x.com/world_flipper", "account": "world_flipper", "media": [
+  { "file": "1765663775401836851_1.jpg", "thumb": "thumbs/1765663775401836851_1.webp",
+    "w": 1447, "h": 2048, "ts": 1709750400000 },
+  { "file": "1697085863463932311_1.mp4", "thumb": "thumbs/1697085863463932311_1.webp",
+    "w": 1280, "h": 720, "ts": 1692787200000, "video": true }   // omitted, not nulled, on images
+]}
+```
+
+- **A file's name is the entire record.** `gallery-dl` wrote no JSON sidecars, so there are no
+  captions, titles, alt text or tags anywhere — only what `<tweetId>_<n>.<ext>` encodes. The
+  snowflake id gives the post time (`Number((BigInt(id) >> 22n) + 1288834974657n)`) and the
+  permalink; that is why the wall's tiles are captioned with a date and why the filter offers
+  **year and media type** and nothing else. Don't go looking for a richer source: there isn't one
+  short of re-scraping with metadata enabled.
+- **One row per file, not per tweet** — the masonry packs files, and 70 tweets carry 2-4 images.
+  `_1..._4` is the part number; the front-end derives the tweet id back out for the permalink.
+- Sorted **`ts` descending, then part ascending**, at build time, so the front-end never sorts 1429
+  rows and a multi-image tweet's parts stay adjacent and in posting order.
+- **`w`/`h` are the whole point**, exactly as for the gallery index: the packer needs them before
+  the first paint.
+- **Videos are measured off their poster frame, and there is deliberately no `ffprobe`.**
+  `ffprobe`'s `stream=width,height` is pre-rotation and ignores the `rotate` side data, so a rotated
+  clip would get transposed `w`/`h` and a wrong-shaped tile; `ffmpeg` auto-rotates on decode, so
+  decoding one frame and handing it to `sharp` is both correct and one subprocess fewer. The frame
+  is taken at **1s, falling back to 0** — frame 0 of a promo clip is very often a black fade-in, and
+  a black poster is indistinguishable from a broken tile.
+- **Thumbnails are 440px webp q78**, same as the gallery index, and follow the composited-image
+  rule: **present means done**. Changing width/quality means deleting `thumbs/` first, or `--force`.
+- Unmeasurable files are warned and dropped rather than shipped — a `w` or `h` of 0 would make the
+  packer divide by zero and hand the wall an `Infinity` column height.
+- Flags: `--force`, `--no-thumbs`, `--limit=N` (dev; suppresses the index write), `--videos-only`
+  (re-do just the 86 poster extractions; also suppresses the index write, since a video-only pass
+  would otherwise drop every image row).
+- **`invalidateR2` here keys on `'X/' + relative(X_DIR, …)`, not on `Character Assets/`.** Copying
+  `build-gallery-index.mjs`'s version verbatim computes keys that match nothing in the manifest, so
+  the re-upload silently never happens.
+- `ffmpeg-static` is a declared devDependency for this script (~80 MB platform binary on install);
+  `sharp` does the images and the resizing.
+
+### Upload boundary (this one is a security boundary)
+
+`upload-to-r2.mjs` collects **`X/gallery-dl/twitter/world_flipper/`**, not `X/`, and ships it under
+an `X/` key prefix matching the front-end's `X_BASE`. The root is deep on purpose:
+**`X/x.com_cookies.txt` is a live x.com session cookie jar** and `X/gallery-dl.exe` is a 24 MB
+binary, both three levels above the collect root and therefore unreachable by construction. The
+`_`-prefix rule that keeps `Weapons/`'s dev-only reports out would **not** have excluded either.
+Two more locks back it up: an extension allow-list on this collector, and an assertion over the
+whole file list that refuses any executable- or credential-shaped key from any collector. `X/` is
+also gitignored in full.
+
+`X/x_index.json` is rewritten in place under a stable key, so — like `roster.json` — it is in
+`SHORT_CACHE_KEYS`: a 5-minute TTL and always re-uploaded, since the path-keyed manifest would
+otherwise skip real content changes forever.

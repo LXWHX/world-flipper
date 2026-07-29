@@ -26,6 +26,7 @@ browser.
 | main story（剧情 + BGM） | `fetch:story` | `story/`（约 970MB，其中约 900MB 是 BGM） |
 | music index（本地派生，无网络） | `build:music-index` | `story/music_index.json`（每次 `fetch:story` 后必须重跑） |
 | gallery index（本地派生，无网络） | `build:gallery-index` | `story/gallery_index.json` + `story/thumbs/`（同上，每次 `fetch:story` 后必须重跑） |
+| X media index（本地派生，无网络） | `build:x-index` | `X/gallery-dl/twitter/world_flipper/x_index.json` + `thumbs/`（官方推特存档；抓取由独立的 `gallery-dl` 完成，本仓库只做索引） |
 
 三条跨管线铁律（细节见 `PIPELINES.md`）：写入一律走 `writeIfChanged`/`writeJsonIfChanged`，
 空跑零 diff；合成图片（`head.png`、`story_heads/`、`icons/`）存在即跳过，**改合成逻辑必须先删旧文件**；
@@ -42,6 +43,12 @@ browser.
   everything. **`Weapons/` has no include list** — the whole folder ships — so anything dev-only
   written in there must be `_`-prefixed, which the collector skips explicitly. (`Character Assets/`
   needs no such rule: its top level is an allow-list, so a stray file there is ignored by default.)
+  It also ships **`X/gallery-dl/twitter/world_flipper/` under an `X/` key prefix** (matching
+  `X_BASE`) — note the collect root is that deep folder, **not `X/`**, because `X/x.com_cookies.txt`
+  is a live session cookie jar and `X/gallery-dl.exe` is a binary; see the upload-boundary note in
+  `PIPELINES.md` before touching those rules. `--dry-run` prints the pending keys and total size
+  without uploading. `SHORT_CACHE_KEYS` (`roster.json`, `X/x_index.json`) are the keys rewritten in
+  place: 5-minute TTL and always re-uploaded, since the manifest is path-keyed.
 - No lint/test/build commands exist.
 
 ## Architecture
@@ -224,7 +231,16 @@ panel**, which is a different feature — read the prefix before assuming which 
 - The category chip row (全部/主线/活动/联动) filters on the `category` the pipeline stamps;
   single-select, `all` inert. `ARC_CATEGORIES` is the table.
 
-#### Art tab (画廊) — the gallery wall
+#### Art tab (画廊) — two gallery walls behind a source toggle
+
+The tab hosts **two independent walls**, picked by `state.galSource` (`'story' | 'x'`) through the
+pill toggle above the chip row: the story-illustration wall below (64 items, `gal`-prefixed) and the
+official-Twitter archive (1429 items, `twt`-prefixed, its own section further down). They take turns
+owning `#gallery-scroll` the way the story tab's two views share `#story-scroll`, and each keeps its
+own filter, count and viewer — the X set outnumbers the story set 22 to 1, so a single merged wall
+would bury the story art. `galPack()` is the masonry packer both share.
+
+##### The story wall
 
 Every story illustration the site ships, on one filterable two-column masonry wall: the **52
 gallery images plus the 12 chapter orbs**, 64 in total (per-category image counts, not story
@@ -277,6 +293,71 @@ archive's own gallery panel, and 22 of the 28 stories with a gallery have exactl
   **Orb `name`/`desc` stay Chinese in English mode** — no source has an English orb, it's the
   site's per-field fallback, and the story archive's own gallery panel already renders them that
   way. The `galOrbLabel` badge is localized, so an English reader is still told what the thing is.
+
+#### Art tab, second source (官方推特) — the X media wall
+
+Every image and video the game's official Twitter/X account posted, 2019-11 to 2024-03: **1429
+files, 1343 images + 86 videos, ~540 MB**, self-hosted on R2 under an `X/` key prefix (`X_BASE`, the
+third sibling-folder switch after `ASSET_BASE` and `WEAPON_BASE`). Fed by `x_index.json` — see the
+X-media pipeline in `PIPELINES.md`, and **read its upload-boundary note before touching the collect
+roots**, because a live cookie jar lives two levels above the shipped folder.
+
+- **Everything is `twt`-prefixed**, for the reason the `gal` block above gives — `art*` was already
+  taken twice over — and a bare `x*` would read as the `x-dc` runtime. `galSource`/`galPack` keep
+  the `gal` prefix because they belong to the tab, not to this wall.
+- **The archive has no captions, titles, alt text or tags** — a filename is the whole record. So the
+  tile caption is the post date, and **year + media type are the only two filter axes that exist**.
+  Don't design UI that assumes more metadata without re-scraping first.
+- **The filter is the Units/Armaments dialog, not a chip row**: round 38px button with a count
+  badge, `twtFilter`/`twtDraftFilter` draft-commit pair, `cloneTwtFilter` copying the group arrays,
+  OR within a group and AND across, empty group inert. **Year chips are derived from the loaded
+  data** (the `armRoleChips` rule), so a re-scrape that adds a year just works. `applyTwtFilter`
+  resets `twtVisibleCount`, `twtWinTop`, `twtViewer` *and* `#gallery-scroll`'s `scrollTop` — all
+  four describe the previous result set.
+- The `year` is stamped onto each row **in `loadXIndex`**, the way `loadWeapons` stamps `roleTokens`.
+  Deriving it in `renderVals` would be 1429 `Date` constructions on every render of any tab.
+- **Pagination alone is not enough, and `artSrc` does not save you** — it bounds request
+  *concurrency*, not *residency*. `twtVisibleCount` only grows and `loading="lazy"` only defers the
+  *first* load (it never unloads), so scrolling the wall would otherwise leave every thumbnail it
+  ever paged in attached to its tile. The fix is the vertical analogue of `gridWindow`: `galPack`
+  hands each tile its top offset `y`, and only tiles within `TWT_WIN_PX` of `twtWinTop` get a real
+  URL. **Measured in headless Edge after scrolling the whole wall: 1429 tiles mounted, 57 holding
+  an image, 1372 loaded-then-released (`naturalWidth === 0`).**
+- **Size the risk honestly.** The 1429 thumbnails are **36.9 MB encoded** and **575 MB decoded** at
+  `w*h*4` (mean 412 KB each — 1402 of the 1429 are landscape 16:9, so a portrait-shaped estimate
+  overstates this ~2.6x). Decoded is a *ceiling*, not an expectation: engines discard decoded data
+  for offscreen images on their own, so the un-windowed cost is somewhere in that range rather than
+  at the top of it. It still clears the 82 MB roster peak that actually killed iOS tabs, which is
+  why the window is here — but don't quote the ceiling as the expected number.
+- Videos contribute nothing to the wall: tiles carry webp posters, and exactly one `<video>` exists
+  at a time, in the viewer.
+- Out-of-window tiles get `src=""`. `img.src` then *reflects* the document URL, but the HTML spec
+  special-cases an empty `src` to skip fetching — verified: one document entry in the resource
+  timeline (the navigation), not one per tile. It is also what `artSrc` already does on both strips.
+- **`handleGalScroll` must NOT divide `scrollTop` by `state.scale`.** That convention belongs to
+  *pointer* coordinates (the sheet and Flip drags), which arrive in screen px. `scrollTop` is a
+  layout metric in the element's own box and a CSS transform doesn't touch layout, so it already is
+  the design px `galPack` works in. Dividing put the window ~17% past the real position, which at
+  the foot of a 79,576px wall missed the end by ~13,600px and left every tile there art-less — it
+  looked like the wall simply stopped loading. This was a live bug, caught by the measurement above.
+- Shortest-column packing is **prefix-stable** — placing `items[0..N)` is exactly the first N
+  placements of packing the whole list — so paging in another batch never re-flows what's on screen.
+- **Do not put `content-visibility: auto` on these tiles.** It needs a fixed
+  `contain-intrinsic-size` and every tile here is a different height.
+- **The viewer is its own block, not a retrofit of the gallery viewer** — it switches between an
+  `<img>` and the file's first `<video>`, and carries a date + permalink instead of orb flavour
+  text. Three traps: **boolean DOM attributes must arrive as truthy strings** (`twtVideoControls:
+  'controls'`) because `compileAttr` passes a bare `controls` through as `""`, which React drops,
+  and `{{ true }}` is a path lookup for a key named `true`; **`stopTwtVideo()` runs synchronously
+  before every state change that moves off a video** (step, close, source switch, filter apply,
+  leaving the tab) because the element is reused and a new `src` alone leaves the old clip audible;
+  and **the swipe bails on videos**, or a horizontal drag would step the viewer instead of scrubbing
+  the native seek bar. The video is tap-to-play, never autoplaying and never muted — which is also
+  the only thing iOS permits for anything with audio.
+- Attribution is kept in two places, matching the site's wiki.gg/namu convention: the per-item
+  `在 X 查看` permalink (rebuilt from the filename's tweet id) and the `twtSource` credit line.
+- **English**: only chrome is localized, plus the viewer's long date (`twtDateLong`). There is no
+  content to translate. Tile captions stay ISO `YYYY-MM-DD` in both languages.
 
 #### Flip tab (弹弹) — art voting
 
@@ -505,9 +586,12 @@ the grid; only the one expensive image inside it is gated — `c.showHead` on th
   `healStripWindows()` in `componentDidUpdate` as the backstop for a remount nobody reported. The
   backstop only fires when the viewport is fully outside the buffer, so ordinary drift never
   re-renders through it.
-- **The Armaments strip has no scroll restore**, so it remounts at 0 and `armWinCol` is rewound
-  with it — in `go('arms')` and `closeArmDetail()` — and `applyArmFilter` puts `#arms-scroll` back
-  to 0 itself rather than leaving the browser to clamp it.
+- **The Armaments strip restores its scroll the same way the roster does**: `armsScrollLeft` is
+  recorded in `handleArmScroll` and re-applied by `restoreArmsScroll()` (the `restoreUnitsScroll`
+  double-rAF + retry + `syncGridWindow` shape) from `closeArmDetail()` and `go('arms')` — the strip
+  unmounts whenever a weapon detail opens or the tab is left, so it would otherwise come back at 0.
+  `applyArmFilter` zeroes both `armsScrollLeft` and `#arms-scroll` itself (plus `armWinCol`), since
+  the old position belongs to the previous result set.
 - The strips are the only lists that need this: the gallery wall is 64 tiles (and already serves
   440px thumbnails) and the story/music lists are text.
 - **`.wf-tile` carries `content-visibility: auto`** on both strips' tiles, which is what lets the
@@ -525,13 +609,21 @@ the tiles' images: measured over a local HTTP server (`file://` hides this entir
 Armaments library fired **40** parallel image requests, paging it to 384 peaked at **255**, and
 switching back to the roster — 482 tiles with a portrait and a sprite each — peaked at **354**.
 Desktop absorbs that; iOS killed the renderer (white screen / self-reload, on both Chrome and Quark,
-which are both WebKit). With the loader the same three points measure 16 / 16 / 10.
+which are both WebKit). With the loader the same three points measured 16 / 16 / 10 while
+`ART_MAX_INFLIGHT` was 8; it is 16 now, so the ceiling is about double that — still an order of
+magnitude under the range that killed the renderer.
 
 - **A tile never gets a `src` the browser hasn't already fetched.** `renderVals` asks for a URL via
   `artSrc()`, which returns the URL once loaded and `''` until then, recording it in `artWanted`.
   `pumpArt()` (called from `componentDidUpdate`, so it works off a committed render, never from
   inside `renderVals`) fetches through plain `new Image()`, at most `ART_MAX_INFLIGHT` at a time.
   By the time the real `<img>` receives the URL it is served from cache.
+- **`ART_MAX_INFLIGHT` is bounded by this site's own measurement, not by "6 per host".** That 6 is
+  an HTTP/1.1 *connection* limit and doesn't apply — R2 is HTTP/2, so everything shares one
+  connection and the real ceiling is the server's `SETTINGS_MAX_CONCURRENT_STREAMS` (RFC 7540 says
+  ≥100). The number that matters is the 255-354 range above. The **pixel sprite is deliberately not
+  gated** (a tile without it looks broken, and all 482 sprites decode to under 6MB), so the peak is
+  the constant plus a few ungated sprite requests.
 - **The queue is rebuilt from every render in on-screen order**, so scrolling away from a batch
   de-prioritizes it instead of leaving the gate working through art nobody is looking at.
 - Loads are published in batches (`ART_BATCH_MS`, one `artVersion` bump), because `renderVals`
@@ -540,19 +632,6 @@ which are both WebKit). With the loader the same three points measure 16 / 16 / 
   assets, 5 minutes for `roster.json`, which is re-uploaded every run). Without it R2 serves no
   caching hint at all, so the burst is paid on every visit and one `<img>` can even fetch the same
   file twice. Existing objects only pick it up when re-uploaded.
-
-#### `?diag=` — bisecting an iOS crash from here
-
-iOS renderers that get killed can only be bisected on the device that kills them: there is no
-console, and headless Chromium tiles and reclaims where WebKit apparently does not, so the crash
-does not reproduce locally. `DIAG` parses `?diag=flag,flag` into body classes (`.wf-diag-*`) plus
-two `renderVals` behaviours, each turning off one suspect: `cap60` (stop paginating at 60, so the
-strip's scroll width stays about one screen), `noshadow` (drop every `filter: drop-shadow()` — each
-is an offscreen render surface), `nocircle` (stop rendering the rotating 982x978 magic circle), and
-`nocv` (turn the tiles' `content-visibility` back off, to compare against it being on). The active
-flags are echoed into both strip banners — which also tells a tester whether the phone is running
-the current build at all, or a cached older `index.html`. Costs nothing when no flag is set; keep
-it that way.
 
 #### Character detail bottom sheet
 
@@ -647,6 +726,13 @@ suffix. It can't ride `ASSET_BASE` because `Weapons/` is a **sibling** of `Chara
 under it — `upload-to-r2.mjs` collects that top-level folder separately and uploads it under a
 `Weapons/` key prefix that matches this. `weapons.json` stores icon paths relative to `WEAPON_BASE`
 (`icons/<hash>.png`), same as the story paths mirror their R2 key.
+
+**`X_BASE` is the third such switch**, for the Art tab's X media wall: `file://`/`localhost` →
+local `X/gallery-dl/twitter/world_flipper`; else → the same R2 root with an `/X` suffix. Same
+reasoning as `WEAPON_BASE` — `X/` is another sibling of `Character Assets/` — and `x_index.json`
+stores `file`/`thumb` relative to it. **The local path is deliberately the deep folder**: the
+collect root in `upload-to-r2.mjs` matches it, which is what keeps `X/x.com_cookies.txt` (a live
+session cookie jar) and `X/gallery-dl.exe` structurally unreachable. `X/` is gitignored in full.
 
 `roster.json` entries carry `devName`, `enName`, `jpName`, `rarity`, `attribute`, `thumb`,
 optional `music` (mp3 filenames, ~150 characters), `hasHead` (the `head.png` URL is derived from

@@ -104,11 +104,6 @@
        box + 3px gap + ~13px label) or the grid would jump as tiles enter and leave. Ignored by
        engines that don't support it, which is why it's safe to hand every tile. */
     .wf-tile { content-visibility: auto; contain-intrinsic-size: 92px 116px; }
-    /* Remote-diagnosis switches, see DIAG. Each turns one suspect off so a tester on the device
-       that actually crashes can bisect it. */
-    .wf-diag-nocircle .wf-circle { display: none !important; }
-    .wf-diag-noshadow img { filter: none !important; }
-    .wf-diag-nocv .wf-tile { content-visibility: visible; }
     /* Music-player volume popup: click-toggled via roomVolOpen (drives the inline
        opacity/visibility). No :hover rule — it would pin the popup open while the cursor sits on
        the button, so a second click could never close it. */
@@ -1373,44 +1368,104 @@
             </div>
           </div>
 
-          <!-- Category chips: 全部 / 主线 / 活动 / 联动 (the same ARC_CATEGORIES the story tab uses) -->
-          <div style="flex: none; display: flex; gap: 6px; padding: 12px 14px 4px;">
-            <sc-for list="{{ galCategoryChips }}" as="gc" hint-placeholder-count="4">
-              <button onClick="{{ gc.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ gc.bg }}; border-radius: 999px; padding: 7px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ gc.label }}</button>
+          <!-- Source toggle: the 64 story illustrations vs. the official @world_flipper archive.
+               Two independent walls sharing one scroller, so neither dilutes the other's counts,
+               filters or viewer — the X set outnumbers the story set 22 to 1. -->
+          <div style="flex: none; display: flex; gap: 6px; padding: 10px 14px 0;">
+            <sc-for list="{{ galSourceChips }}" as="gs" hint-placeholder-count="2">
+              <button onClick="{{ gs.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 900; font-size: 12px; color: {{ gs.color }}; background: {{ gs.bg }}; border-radius: 999px; padding: 8px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ gs.label }}</button>
             </sc-for>
           </div>
-          <div style="flex: none; padding: 0 16px 2px; text-align: right; font-size: 10px; font-weight: 800; color: #B7BECC;">{{ galCountText }}</div>
 
-          <div id="gallery-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 20px;">
-            <sc-if value="{{ galShowLoading }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galLoadingText }}</div>
-            </sc-if>
-            <sc-if value="{{ galShowError }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galErrorText }}</div>
-            </sc-if>
-            <sc-if value="{{ galShowEmpty }}" hint-placeholder-val="{{ false }}">
-              <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galEmptyText }}</div>
-            </sc-if>
-
-            <!-- Two columns, each already packed shortest-first by galColumns() -->
-            <div style="display: flex; gap: 8px; align-items: flex-start;">
-              <sc-for list="{{ galColumns }}" as="gcol" hint-placeholder-count="2">
-                <div style="flex: 1; min-width: 0;">
-                  <sc-for list="{{ gcol.tiles }}" as="gt" hint-placeholder-count="4">
-                    <div onClick="{{ gt.onClick }}" style="position: relative; width: 100%; margin-bottom: 8px; border-radius: 10px; overflow: hidden; cursor: pointer; background: #EAEAEA; box-shadow: 1px 1px 5px rgba(0,0,0,0.35);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
-                      <img src="{{ gt.thumbUrl }}" alt="{{ gt.alt }}" loading="lazy" decoding="async" style="display: block; width: 100%; aspect-ratio: {{ gt.w }} / {{ gt.h }}; object-fit: cover;">
-                      <sc-if value="{{ gt.isOrb }}" hint-placeholder-val="{{ false }}">
-                        <div style="position: absolute; top: 5px; right: 5px; font-size: 9px; font-weight: 800; color: #FFFFFF; background: rgba(240,82,110,0.92); border-radius: 999px; padding: 2px 7px;">{{ galOrbLabel }}</div>
-                      </sc-if>
-                      <!-- The caption has to be an overlay, not a block below the image: its height
-                           would depend on how the story title wraps, which would make the packer's
-                           tile height an estimate and let the two columns drift apart. -->
-                      <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 8px 5px; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); font-size: 10px; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gt.caption }}</div>
-                    </div>
-                  </sc-for>
-                </div>
+          <sc-if value="{{ galShowStory }}" hint-placeholder-val="{{ true }}">
+            <!-- Category chips: 全部 / 主线 / 活动 / 联动 (the same ARC_CATEGORIES the story tab uses) -->
+            <div style="flex: none; display: flex; gap: 6px; padding: 12px 14px 4px;">
+              <sc-for list="{{ galCategoryChips }}" as="gc" hint-placeholder-count="4">
+                <button onClick="{{ gc.onClick }}" style="flex: 1; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 11.5px; color: #3E4450; background: {{ gc.bg }}; border-radius: 999px; padding: 7px 4px; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-active="transform: translateY(1px);">{{ gc.label }}</button>
               </sc-for>
             </div>
+            <div style="flex: none; padding: 0 16px 2px; text-align: right; font-size: 10px; font-weight: 800; color: #B7BECC;">{{ galCountText }}</div>
+          </sc-if>
+
+          <!-- The X wall has no chip row: with no captions, titles or tags in the archive, year and
+               media type are the only axes, and they live in the filter dialog (the Units/Armaments
+               pattern) rather than a row that would need seven chips across 430px. -->
+          <sc-if value="{{ galShowX }}" hint-placeholder-val="{{ false }}">
+            <div style="flex: none; display: flex; align-items: center; gap: 8px; padding: 12px 14px 4px;">
+              <div onClick="{{ openTwtFilter }}" style="position: relative; flex: none; width: 34px; height: 34px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 2px 0 rgba(62,68,80,0.25), 0 2px 8px rgba(30,80,110,0.25); display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="transform: translateY(-2px);" style-active="transform: translateY(1px);">
+                <img src="icons/filer.jpg" alt="{{ filterTitleText }}" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;">
+                <sc-if value="{{ hasTwtFilterCount }}" hint-placeholder-val="{{ false }}">
+                  <div style="position: absolute; right: -2px; top: -2px; min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; border-radius: 8px; background: #F0526E; color: #FFFFFF; font-size: 9px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 0 rgba(62,68,80,0.25);">{{ twtFilterCount }}</div>
+                </sc-if>
+              </div>
+              <div style="flex: 1; min-width: 0; font-size: 9.5px; font-weight: 800; color: #B7BECC; line-height: 1.3;">{{ twtSourceText }}</div>
+              <div style="flex: none; font-size: 10px; font-weight: 800; color: #B7BECC;">{{ twtCountText }}</div>
+            </div>
+          </sc-if>
+
+          <div id="gallery-scroll" onScroll="{{ handleGalScroll }}" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 20px;">
+            <sc-if value="{{ galShowStory }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ galShowLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galLoadingText }}</div>
+              </sc-if>
+              <sc-if value="{{ galShowError }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galErrorText }}</div>
+              </sc-if>
+              <sc-if value="{{ galShowEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galEmptyText }}</div>
+              </sc-if>
+
+              <!-- Two columns, each already packed shortest-first by galPack() -->
+              <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <sc-for list="{{ galColumns }}" as="gcol" hint-placeholder-count="2">
+                  <div style="flex: 1; min-width: 0;">
+                    <sc-for list="{{ gcol.tiles }}" as="gt" hint-placeholder-count="4">
+                      <div onClick="{{ gt.onClick }}" style="position: relative; width: 100%; margin-bottom: 8px; border-radius: 10px; overflow: hidden; cursor: pointer; background: #EAEAEA; box-shadow: 1px 1px 5px rgba(0,0,0,0.35);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
+                        <img src="{{ gt.thumbUrl }}" alt="{{ gt.alt }}" loading="lazy" decoding="async" style="display: block; width: 100%; aspect-ratio: {{ gt.w }} / {{ gt.h }}; object-fit: cover;">
+                        <sc-if value="{{ gt.isOrb }}" hint-placeholder-val="{{ false }}">
+                          <div style="position: absolute; top: 5px; right: 5px; font-size: 9px; font-weight: 800; color: #FFFFFF; background: rgba(240,82,110,0.92); border-radius: 999px; padding: 2px 7px;">{{ galOrbLabel }}</div>
+                        </sc-if>
+                        <!-- The caption has to be an overlay, not a block below the image: its height
+                             would depend on how the story title wraps, which would make the packer's
+                             tile height an estimate and let the two columns drift apart. -->
+                        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 8px 5px; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); font-size: 10px; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ gt.caption }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <!-- The X wall. Same markup rather than a shared block, because the tile fields
+                 genuinely differ (a ▶ badge instead of the orb badge, a date instead of a story
+                 title) and only one of the two walls is ever mounted. -->
+            <sc-if value="{{ galShowX }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ twtShowLoading }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ twtLoadingText }}</div>
+              </sc-if>
+              <sc-if value="{{ twtShowError }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ twtErrorText }}</div>
+              </sc-if>
+              <sc-if value="{{ twtShowEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ twtEmptyText }}</div>
+              </sc-if>
+
+              <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <sc-for list="{{ twtColumns }}" as="tcol" hint-placeholder-count="2">
+                  <div style="flex: 1; min-width: 0;">
+                    <sc-for list="{{ tcol.tiles }}" as="tt" hint-placeholder-count="6">
+                      <div onClick="{{ tt.onClick }}" style="position: relative; width: 100%; margin-bottom: 8px; border-radius: 10px; overflow: hidden; cursor: pointer; background: #EAEAEA; box-shadow: 1px 1px 5px rgba(0,0,0,0.35);" style-active="transform: translateY(2px); box-shadow: 0 0 2px rgba(0,0,0,0.5);">
+                        <img src="{{ tt.thumbUrl }}" alt="{{ tt.alt }}" loading="lazy" decoding="async" style="display: block; width: 100%; aspect-ratio: {{ tt.w }} / {{ tt.h }}; object-fit: cover;">
+                        <sc-if value="{{ tt.isVideo }}" hint-placeholder-val="{{ false }}">
+                          <div style="position: absolute; top: 6px; right: 6px; width: 22px; height: 22px; border-radius: 50%; background: rgba(0,0,0,0.55); color: #FFFFFF; font-size: 9px; display: flex; align-items: center; justify-content: center;">▶</div>
+                        </sc-if>
+                        <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 16px 8px 5px; background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0) 100%); font-size: 10px; font-weight: 800; color: #FFFFFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ tt.caption }}</div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
           </div>
         </div>
       </sc-if>
@@ -1878,6 +1933,83 @@
         </div>
       </sc-if>
 
+      <!-- ===== X MEDIA FILTER (the Art tab's X wall) =====
+           A port of the Armaments filter: same draft/commit dialog, two groups instead of four.
+           OR within a group, AND across, an empty group inert. -->
+      <sc-if value="{{ twtFilterOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeTwtFilter }}" style="position: absolute; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.5);">
+          <div onClick="{{ stopDialogClick }}" style="position: relative; z-index: 0; width: 90%; max-height: 80%; background: linear-gradient(to top, #EFF0F2 0, #FAFAFA 2em, #FAFAFA 100%); border: 2px solid #FFFFFF; border-radius: 16px; box-shadow: 0 0 8px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden; padding: 14px; box-sizing: border-box; color: #3E4450;">
+            <div class="wf-circle wf-circle-dialog"></div>
+            <div style="flex: none; text-align: center; padding-bottom: 11px; border-bottom: 2px solid #DEDEDE; font-size: 15px; font-weight: 900;">{{ filterTitleText }}</div>
+            <div style="flex: 1; overflow-y: auto; padding: 0 7px 20px;">
+              <!-- Year -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ twtFilterYearTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ twtYearChips }}" as="ch" hint-placeholder-count="6">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px 12px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3); font-size: 12px; font-weight: 700;" style-hover="filter: brightness(0.96);">
+                    <span>{{ ch.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <!-- Type -->
+              <div style="display: flex; align-items: center; padding: 14px 0 10px;">
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_left.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: right;"></div>
+                <div style="padding: 0 7px; font-size: 13px; font-weight: 800; white-space: nowrap;">{{ twtFilterTypeTitle }}</div>
+                <div style="flex: 1; height: 14px; background-image: url('icons/title_border_right.png'); background-size: auto 100%; background-repeat: no-repeat; background-position: left;"></div>
+              </div>
+              <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 7px; margin-bottom: 7px;">
+                <sc-for list="{{ twtTypeChips }}" as="ch" hint-placeholder-count="2">
+                  <div onClick="{{ ch.onToggle }}" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; background: {{ ch.chipBg }}; white-space: nowrap; padding: 8px 12px; box-sizing: border-box; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3); font-size: 12px; font-weight: 700;" style-hover="filter: brightness(0.96);">
+                    <span>{{ ch.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="flex: none; display: flex; flex-wrap: wrap; justify-content: center; border-top: 2px solid #DEDEDE; padding-top: 14px; padding-bottom: 7px; gap: 7px 14px;">
+              <div onClick="{{ closeTwtFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #E93551; border: 2px solid #F04064; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterCancelText }}</div>
+              <div onClick="{{ applyTwtFilter }}" style="padding: 7px 34px; color: #FFFFFF; border-radius: 7px; background: #2DC4B6; border: 2px solid #38D0C6; font-size: 13px; font-weight: 800; cursor: pointer; box-shadow: 1px 1px 5px rgba(0,0,0,0.3);" style-hover="filter: brightness(1.06);">{{ filterOkText }}</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ===== X MEDIA VIEWER (the Art tab's X wall, full screen) =====
+           The gallery viewer's conventions, kept as its own block rather than threading six more
+           sc-ifs through the working one: this one has to switch between an <img> and a <video>,
+           and carries a date + permalink instead of an orb's flavour text. -->
+      <sc-if value="{{ twtViewerOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeTwtViewer }}" style="position: absolute; inset: 0; z-index: 100; background: rgba(20,22,28,0.94); display: flex; flex-direction: column;">
+          <div style="flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px;">
+            <div style="font-size: 11px; font-weight: 800; color: rgba(255,255,255,0.7);">{{ twtViewerCounter }}</div>
+            <div onClick="{{ closeTwtViewer }}" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.15); color: #FFFFFF; font-size: 15px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-active="transform: translateY(1px);">✕</div>
+          </div>
+
+          <div onClick="{{ stopDialogClick }}" onPointerDown="{{ twtViewerDown }}" style="flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; padding: 0 8px; touch-action: none;">
+            <!-- The first <video> in the file. Deliberately not autoplaying and not muted: this is
+                 tap-to-play, which is also the only thing iOS allows for anything with audio.
+                 preload="metadata" because these run to 7.6 MB and the user may just be paging past.
+                 The boolean attributes come in as truthy strings — see twtVideoControls. -->
+            <sc-if value="{{ twtViewerIsVideo }}" hint-placeholder-val="{{ false }}">
+              <video id="twt-video" src="{{ twtViewerUrl }}" poster="{{ twtViewerPoster }}" controls="{{ twtVideoControls }}" playsInline="{{ twtVideoPlaysInline }}" preload="metadata" style="max-width: 100%; max-height: 100%; border-radius: 8px; background: #000000;"></video>
+            </sc-if>
+            <sc-if value="{{ twtViewerIsImage }}" hint-placeholder-val="{{ true }}">
+              <img src="{{ twtViewerUrl }}" alt="{{ twtViewerAlt }}" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; -webkit-user-drag: none;">
+            </sc-if>
+            <div onClick="{{ twtViewerPrev }}" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #FFFFFF; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="filter: brightness(1.3);">‹</div>
+            <div onClick="{{ twtViewerNext }}" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.16); color: #FFFFFF; font-size: 20px; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="filter: brightness(1.3);">›</div>
+          </div>
+
+          <div onClick="{{ stopDialogClick }}" style="flex: none; margin: 10px; background: #FFFFFF; border-radius: 12px; padding: 10px 12px;">
+            <div style="font-size: 12.5px; font-weight: 800; color: #3E4450;">{{ twtViewerDate }}</div>
+            <a href="{{ twtViewerLink }}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 6px; font-size: 11.5px; font-weight: 800; color: #3FA6DD; text-decoration: none;">{{ twtViewerLinkText }}</a>
+          </div>
+        </div>
+      </sc-if>
+
       <!-- ===== MENU OVERLAY (white card list) ===== -->
       <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
         <div data-screen-label="Menu" style="position: absolute; inset: 0; z-index: 40; background: rgba(40, 60, 80, 0.35); display: flex; justify-content: flex-end;" onClick="{{ closeMenu }}">
@@ -1991,18 +2123,6 @@ const SUPABASE_URL = 'https://lgxnpzdzhnfvxmrzgevg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxneG5wemR6aG5mdnhtcnpnZXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODczNjUsImV4cCI6MjA5OTc2MzM2NX0.FvC9ttc5rri71_URT-hRk4xG6gG-bTDyJK5g4-HP9k4';
 const VISITOR_STORAGE_KEY = 'wf_visitor_id';
 const ROSTER_BATCH = 60;
-// --- Remote-diagnosis switches: ?diag=flag,flag ----------------------------------------------
-// An iOS renderer that gets killed can only be bisected on the device it dies on — there is no
-// console, no profiler and no way to reproduce it here (Chromium tiles and reclaims where WebKit
-// apparently does not). These let a tester turn one suspect off at a time and report which one
-// stops the crash. The active flags are echoed into the strip banners, so a tester can also tell
-// at a glance whether the phone is running this build at all or a cached older one.
-//   cap60     — stop paginating at 60 items, so the strip's scroll width stays ~1 screen
-//   noshadow  — drop every `filter: drop-shadow()` (each is an offscreen render surface)
-//   nocircle  — stop rendering the rotating magic circle (982x978, animated, several hosts)
-//   nocv      — turn off the tiles' content-visibility, to compare against it being on
-const DIAG = new Set(
-  (new URLSearchParams(location.search).get('diag') || '').split(',').map(s => s.trim()).filter(Boolean));
 // --- Art window for the two horizontal 5-row strips (Units roster, Armaments library) ---------
 // Pagination alone was not enough on iOS. `visibleCount`/`armVisibleCount` only grow, and neither
 // resets on a tab change, so a user who has scrolled the roster keeps 485 tiles alive — each
@@ -2034,9 +2154,17 @@ const DIAG = new Set(
 // arrival, is what was killing the renderer, which is why the crash only ever happened while the
 // strip was still loading and never once everything was cached.
 //
-// 8 is chosen to stay near what a browser would open per host on its own while still finishing a
-// 60-tile batch in well under a second; the point is the ceiling, not the exact number.
-const ART_MAX_INFLIGHT = 8;
+// 16 is picked against the two numbers that actually bound this. The familiar "6 per host" is an
+// HTTP/1.1 connection limit (Chrome and Safari both cap at 6) and does not apply here: R2 is
+// HTTP/2, so everything shares one connection and the real ceiling is the server's
+// SETTINGS_MAX_CONCURRENT_STREAMS, which RFC 7540 says should be at least 100. The other number is
+// this site's own: the renderer died somewhere in the 255-354 range measured above. 16 sits a full
+// order of magnitude below that while roughly halving the time to fill a 60-tile batch — the point
+// is the ceiling, not the exact number.
+// Note the pixel sprite (neutral.gif) deliberately does NOT go through this gate: a tile without it
+// looks broken, and all 482 sprites decode to under 6MB. So the momentary peak is this number plus
+// a handful of ungated sprite requests, not this number exactly.
+const ART_MAX_INFLIGHT = 16;
 // Newly loaded art is shown in batches rather than one re-render per image: renderVals rebuilds
 // the whole tree, and 482 individual renders would cost more than the loads.
 const ART_BATCH_MS = 120;
@@ -2101,6 +2229,49 @@ function armRoleTokens(role) {
   return (role || '').split(/[,，、/]/).map(s => s.trim()).filter(Boolean);
 }
 
+// --- The official X (Twitter) media wall (画廊's second source) --------------------------------
+// X/gallery-dl/twitter/world_flipper/ is another sibling of Character Assets/, so like WEAPON_BASE
+// this can't ride ASSET_BASE; upload-to-r2.mjs ships that folder under an X/ key prefix matching
+// the live URL here, and every path in x_index.json is relative to this base.
+//
+// Everything for this feature is `twt`-prefixed, for the reason the gal block states: `gal*` is
+// the story wall, `art*` is already the detail hero's awaken toggle and the Flip voting feature,
+// and a bare `x*` would read as the x-dc runtime.
+const X_BASE = location.protocol === 'file:' || location.hostname === 'localhost'
+  ? 'X/gallery-dl/twitter/world_flipper'
+  : 'https://pub-e1f9dd7473954e4b9b7d20b302cddb4a.r2.dev/X';
+const TWT_STATUS_URL = 'https://x.com/world_flipper/status/';
+const TWT_BATCH = 60;
+// The wall's art window, in design px: how far above and below the viewport a tile's thumbnail is
+// worth holding. See the strip art window above — same problem, vertical. Pagination alone is not
+// enough here: `twtVisibleCount` only grows and `loading="lazy"` only defers the *first* load
+// (it never unloads), so scrolling the whole 1429-tile wall would otherwise leave every thumbnail
+// it ever paged in attached to its tile — 36.9MB encoded, up to 575MB decoded, for the session.
+const TWT_WIN_PX = 1600;
+// Re-window only after this much scroll — each change loads whatever art enters the window, so
+// this is what stops a flick from requesting the whole wall (GRID_RECENTER_COLS' job on the strips).
+const TWT_WIN_DRIFT = 400;
+const GAL_SOURCES = ['story', 'x'];
+// The archive carries no captions, titles or tags — gallery-dl wrote no sidecars, so a file's name
+// is the whole record (see build-x-index.mjs). Year and media type are the only two axes the data
+// can support, and they are this filter's two groups. Years are derived from the loaded data
+// rather than hardcoded, the way the weapon filter's 能力 chips are.
+const EMPTY_TWT_FILTER = { year: [], type: [] };
+function cloneTwtFilter(f) {
+  return { year: f.year.slice(), type: f.type.slice() };
+}
+const TWT_TYPES = ['image', 'video'];
+function twtDate(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function twtDateLong(ts, lang) {
+  const d = new Date(ts);
+  return lang === 'zh'
+    ? d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日'
+    : d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 const PLATFORM_FILES = ['walk_front.gif', 'kachidoki.gif', 'walk_back.gif'];
 // The sheet now also hosts the wiki text data inline (scrollable), so it's much taller than the
 // old "peek" card — tall enough to show most of a character's info at the expanded snap point,
@@ -2141,6 +2312,11 @@ const FLIP_RISE_MS = 170;
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-29', items: [
+      { en: 'The Art Gallery has a second wall: every image and video the official @world_flipper account posted on X, from November 2019 to March 2024 — 1,429 pieces in all (1,343 images and 86 videos), newest first. Switch between it and the story illustrations at the top of the page.', zh: '「画廊」页新增第二面墙：官方推特 @world_flipper 自 2019 年 11 月至 2024 年 3 月发布的全部图片与视频，共 1429 条（1343 张图片、86 段视频），按时间由新到旧排列。可在页面顶部与「剧情画廊」相互切换。' },
+      { en: 'That wall filters by year and by images or video. Tap any piece to see it at full size or play it, and every one links back to the original post.', zh: '该墙可按年份与「图片 / 视频」筛选；点击任意一条即可查看原图或播放视频，每条均可跳转至原推文。' },
+      { en: 'The character and weapon lists load about twice as fast. Yesterday’s crash fix was deliberately cautious about how many images it fetched at once; now that the cause is confirmed, the limit has been raised to a level still far below what the page can take.', zh: '角色栏与武器栏的加载速度提升约一倍。昨日修复崩溃时对同时加载的图片数量取值偏保守，现已确认成因，遂将上限调高——距离页面的承受极限仍有很大余量。' },
+  ]},
   { date: '2026-07-28', items: [
       { en: 'Fixed the crash while the character and weapon lists were still loading. They used to fire hundreds of image requests at once — 255 when paging through the Armaments library, 354 when switching back to the roster — which is what killed the page on iOS; now they fetch a few at a time. Portraits and icons are also only loaded around your scroll position. Scrolling, filters and your place in the list are unchanged.', zh: '修复角色栏与武器栏「加载过程中」的崩溃。此前它们会一次性发出数百个图片请求（翻完武器库峰值 255 个，切回角色栏 354 个），这正是 iOS 上页面被强制重载的原因；现在改为少量并发逐批加载，且只加载滚动位置附近的头像与图标。滚动、筛选与浏览位置均与此前一致。' },
       { en: 'The Art Gallery tab is open: all 64 story illustrations — 52 key visuals plus the 12 chapter orbs — on one wall, filterable by main story / event / collab.', zh: '「画廊」页正式开放：全部 64 张剧情插画（52 张主视觉图与 12 张章节宝珠）汇集于一面墙，可按主线 / 活动 / 联动筛选。' },
@@ -2438,6 +2614,21 @@ const STRINGS = {
   galEmpty: { en: 'No artwork in this category.', zh: '该分类暂无插画。' },
   galCount: { en: '{n} images', zh: '{n} 张' },
   galOrbLabel: { en: 'Chapter Orb', zh: '章节宝珠' },
+  // The Art tab's source toggle and the official X media wall. Nothing here is content — the
+  // archive has no captions, titles or tags at all (see X_BASE) — so it's all chrome. The filter
+  // dialog reuses filterTitle/filterOk/filterCancel; year chips are labelled with the bare year.
+  galSourceStory: { en: 'Story Art', zh: '剧情画廊' },
+  galSourceX: { en: 'Official X', zh: '官方推特' },
+  twtTypeimage: { en: 'Images', zh: '图片' },
+  twtTypevideo: { en: 'Video', zh: '视频' },
+  twtFilterYear: { en: 'Year', zh: '年份' },
+  twtFilterType: { en: 'Type', zh: '类型' },
+  twtLoading: { en: 'Loading media…', zh: '媒体加载中…' },
+  twtLoadError: { en: 'Failed to load the media index.', zh: '媒体索引加载失败。' },
+  twtEmpty: { en: 'Nothing matches this filter.', zh: '该筛选暂无内容。' },
+  twtCount: { en: '{n} posts', zh: '{n} 条' },
+  twtOpenOnX: { en: 'View on X →', zh: '在 X 查看 →' },
+  twtSource: { en: 'Official posts from @world_flipper on X', zh: '来自 X 官方账号 @world_flipper' },
   // Community playthrough videos (the Google Sheet the fetch:community-en pipeline reads). They
   // stand in for the stories nobody has transcribed, so the copy has to be honest about what the
   // link is: someone else's recording, on YouTube, sometimes without English.
@@ -2689,7 +2880,18 @@ class Component extends DCLogic {
     galIndex: null,        // array once loaded, false after a failed fetch
     galLoading: false,
     galCategory: 'all',
-    galViewer: null        // index into galFiltered(), null = viewer closed
+    galViewer: null,       // index into galFiltered(), null = viewer closed
+    // Which of the two walls the tab is showing. They share #gallery-scroll and never coexist,
+    // the way the story tab's two views take turns owning #story-scroll.
+    galSource: 'story',
+
+    // --- The official X media wall (the Art tab's second source). `twt`-prefixed; see X_BASE.
+    twtIndex: null,        // array once loaded, false after a failed fetch
+    twtLoading: false,
+    twtVisibleCount: TWT_BATCH,
+    twtWinTop: 0,          // top of the art window, in design px
+    twtViewer: null,       // index into twtFiltered(), null = viewer closed
+    twtFilterOpen: false, twtFilter: { ...EMPTY_TWT_FILTER }, twtDraftFilter: { ...EMPTY_TWT_FILTER }
   };
 
   audio = new Audio();
@@ -2814,6 +3016,22 @@ class Component extends DCLogic {
         if (!el) { if (tries > 0) this.restoreUnitsScroll(tries - 1); return; }
         el.scrollLeft = this.unitsScrollLeft;
         this.syncGridWindow(el.scrollLeft, 'unitsWinCol');
+      });
+    });
+  }
+
+  // The Armaments library strip unmounts the same way (opening a weapon detail, or leaving the
+  // tab), so it gets the same treatment as the roster: remember the position, re-apply it on
+  // remount, and point the art window at whatever scrollLeft the element actually accepted.
+  armsScrollLeft = 0;
+
+  restoreArmsScroll(tries = 3) {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById('arms-scroll');
+        if (!el) { if (tries > 0) this.restoreArmsScroll(tries - 1); return; }
+        el.scrollLeft = this.armsScrollLeft;
+        this.syncGridWindow(el.scrollLeft, 'armWinCol');
       });
     });
   }
@@ -2981,9 +3199,6 @@ class Component extends DCLogic {
   }
 
   componentDidMount() {
-    // Diagnosis switches are plain body classes (see the .wf-diag-* rules) rather than per-element
-    // bindings, so they cost nothing when no flag is set.
-    for (const f of DIAG) document.body.classList.add('wf-diag-' + f);
     // componentDidUpdate does the pumping from then on; the roster arrives by setState, so this is
     // only for a first render that already had something to ask for.
     this.pumpArt();
@@ -3182,18 +3397,21 @@ class Component extends DCLogic {
     // tab keeps it going in the floating mini-player — nothing to stop here.
     // A fly-out timer that outlives the screen would advance a deck nobody's looking at.
     if (this.state.tab === 'flip' && tab !== 'flip') this.clearFlipTimers();
+    // A <video> left playing behind another screen keeps its audio going (see stopTwtVideo).
+    if (this.state.tab === 'art' && tab !== 'art') this.stopTwtVideo();
     // Landing on the Armaments tab (via nav or menu) always shows the library, not a stale detail.
-    // Landing on Armaments also rewinds its strip window: unlike the Units strip there's no scroll
-    // restore, so the remounted #arms-scroll starts at 0 and a stale window would put the mounted
-    // columns off to the right of what the user is looking at.
-    this.setState({ tab: tab, menuOpen: false, ...(tab === 'arms' ? { armDetail: null, armWinCol: 0 } : {}) });
+    this.setState({ tab: tab, menuOpen: false, ...(tab === 'arms' ? { armDetail: null } : {}) });
     if (tab === 'units') this.restoreUnitsScroll();
-    if (tab === 'arms') this.loadWeapons();
+    if (tab === 'arms') { this.loadWeapons(); this.restoreArmsScroll(); }
     if (tab === 'story') { this.loadArcIndex(); this.loadArcEn(); }
     // The wall's captions are story titles, so it needs the same English sidecars the story tab
     // fetches. loadArcEn is gated on lang === 'en' and idempotent, so this is free in Chinese and
     // already cached if the user visited the story tab first.
-    if (tab === 'art') { this.loadGalleryIndex(); this.loadArcEn(); }
+    if (tab === 'art') {
+      this.loadGalleryIndex(); this.loadArcEn();
+      // Idempotent, and only fetches if the user left the tab on the X wall.
+      if (this.state.galSource === 'x') this.loadXIndex();
+    }
     if (tab === 'flip') { this.ensureFlipDeck(); this.loadArtStats(); }
     if (tab === 'music') this.loadRoomAlbums();
   }
@@ -3680,6 +3898,7 @@ class Component extends DCLogic {
 
   handleArmScroll(e) {
     const el = e.currentTarget;
+    this.armsScrollLeft = el.scrollLeft;
     this.updateGridWindow(el.scrollLeft, 'armWinCol');
     if (el.scrollLeft + el.clientWidth < el.scrollWidth - 500) return;
     const total = this.filteredWeapons().length;
@@ -3688,8 +3907,8 @@ class Component extends DCLogic {
 
   goArmDetail(w) { this.setState({ armDetail: w }); }
   // The library strip unmounts while a weapon detail is open, so it comes back scrolled to 0 —
-  // the window has to rewind with it (see go()).
-  closeArmDetail() { this.setState({ armDetail: null, armWinCol: 0 }); }
+  // put the user back where they were, the way the Units grid does (see restoreArmsScroll).
+  closeArmDetail() { this.setState({ armDetail: null }); this.restoreArmsScroll(); }
 
   // Weapon filter dialog — same draft/commit + toggle semantics as the Units filter, on armFilter.
   openArmFilter() {
@@ -3701,6 +3920,9 @@ class Component extends DCLogic {
       armFilterOpen: false, armFilter: cloneArmFilter(s.armDraftFilter),
       armVisibleCount: ROSTER_BATCH, armWinCol: 0
     }));
+    // The old position belongs to the previous result set — drop it, or leaving and coming back
+    // would restore a scrollLeft the new, shorter strip can't support.
+    this.armsScrollLeft = 0;
     const el = document.getElementById('arms-scroll');
     if (el) el.scrollLeft = 0;
   }
@@ -4076,6 +4298,34 @@ class Component extends DCLogic {
     });
   }
 
+  // The two-column masonry both walls use. Packed here rather than by CSS: `column-count: 2` fills
+  // column-wise (1..n down the left, then the rest down the right), so on a scrolling wall you pass
+  // the whole first half before reaching item 2's neighbour; `column-fill: auto` fixes the order but
+  // needs a fixed container height, which a filtered list doesn't have. Since both indexes carry
+  // every image's w/h, packing is pure arithmetic: no measuring, no reflow, and each tile's
+  // aspect-ratio reserves its exact box on the first frame.
+  //
+  //   430 canvas - 14px padding each side = 402 inner; minus the 8px gutter, halved -> 197px.
+  //
+  // Shortest-column packing is prefix-stable — placing items[0..N) is exactly the first N placements
+  // of packing the whole list, because each decision depends only on the items before it — so paging
+  // another batch into the X wall never re-flows anything already on screen. `makeTile` gets the
+  // tile's top offset and height in design px, which is what that wall's art window reads.
+  galPack(items, makeTile) {
+    const COL_W = 197, GAP = 8;
+    const cols = [{ h: 0, tiles: [] }, { h: 0, tiles: [] }];
+    items.forEach((im, i) => {
+      // Exact, because the caption is an overlay rather than a block below the image — a wrapping
+      // title would turn this into an estimate and drift the two columns apart.
+      const tileH = Math.round(COL_W * im.h / im.w);
+      // Ties go left, so the reading order runs left, right, left, right.
+      const col = cols[0].h <= cols[1].h ? cols[0] : cols[1];
+      col.tiles.push(makeTile(im, i, col.h, tileH));
+      col.h += tileH + GAP;
+    });
+    return cols;
+  }
+
   openGalViewer(i) { this.setState({ galViewer: i }); }
   closeGalViewer() { this.setState({ galViewer: null }); }
 
@@ -4103,6 +4353,133 @@ class Component extends DCLogic {
     };
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
+  }
+
+  // --- Art tab: the official X media wall -----------------------------------------------------
+  // The archive of every image and video the game's official Twitter/X account posted, on the same
+  // two-column masonry the story wall uses, behind a source toggle so neither dilutes the other
+  // (1429 items against 64). Fed by X/x_index.json — see build-x-index.mjs, and X_BASE for why
+  // everything here is `twt`-prefixed.
+
+  loadXIndex() {
+    if (this.state.twtIndex !== null || this.state.twtLoading) return;
+    this.setState({ twtLoading: true });
+    fetch(X_BASE + '/x_index.json')
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
+        const media = (data && data.media) || [];
+        // Stamp the year once, here, the way loadWeapons stamps roleTokens: the filter chips need a
+        // plain comparable string, and deriving it in renderVals would be 1429 Date constructions
+        // on every render of any tab.
+        for (const m of media) m.year = String(new Date(m.ts).getFullYear());
+        this.setState({ twtIndex: media, twtLoading: false });
+      })
+      .catch(err => {
+        console.error('[art] failed to load x_index.json', err);
+        this.setState({ twtIndex: false, twtLoading: false });
+      });
+  }
+
+  // The single source for renderVals, pagination and the viewer — filteredRoster()/filteredWeapons()
+  // discipline. OR within a group, AND across groups, an empty group inert.
+  twtFiltered() {
+    const all = this.state.twtIndex || [];
+    const f = this.state.twtFilter;
+    if (!f.year.length && !f.type.length) return all;
+    return all.filter(m =>
+      (!f.year.length || f.year.includes(m.year)) &&
+      (!f.type.length || f.type.includes(m.video ? 'video' : 'image')));
+  }
+
+  // Both walls share #gallery-scroll, and a viewer index points into whichever filtered list it was
+  // opened from — so switching source clears both and starts at the top.
+  setGalSource(src) {
+    if (this.state.galSource === src) return;
+    this.stopTwtVideo();
+    this.setState({ galSource: src, galViewer: null, twtViewer: null });
+    if (src === 'x') this.loadXIndex();
+    this.scrollGalTop();
+  }
+
+  // The vertical counterpart of handleRosterScroll: page in another batch near the end, and move
+  // the art window with the scroll. Both setStates are guarded — an unguarded one here would
+  // re-render the whole tree on every scroll event. No-ops on the story wall (64 tiles, no window).
+  handleGalScroll(e) {
+    if (this.state.galSource !== 'x') return;
+    const el = e.currentTarget;
+    // No `/ state.scale` here, unlike the sheet and Flip drags: those divide *pointer* coordinates,
+    // which arrive in screen px. scrollTop is a layout metric in the element's own box, and a CSS
+    // transform doesn't touch layout — so it is already the design px galPack works in. Dividing
+    // put the window ~17% past the real position, which at the foot of a 79,576px wall missed the
+    // end by ~13,600px and left every tile there without art.
+    const top = el.scrollTop;
+    if (Math.abs(top - this.state.twtWinTop) > TWT_WIN_DRIFT) this.setState({ twtWinTop: top });
+    if (el.scrollTop + el.clientHeight < el.scrollHeight - 600) return;
+    const total = this.twtFiltered().length;
+    if (this.state.twtVisibleCount >= total) return;
+    this.setState(s => ({ twtVisibleCount: Math.min(total, s.twtVisibleCount + TWT_BATCH) }));
+  }
+
+  openTwtViewer(i) { this.setState({ twtViewer: i }); }
+  closeTwtViewer() { this.stopTwtVideo(); this.setState({ twtViewer: null }); }
+
+  // The <video> element is a single node inside an sc-if, not a keyed list item, so it is reused
+  // across an index change: handing it a new src alone leaves the old clip playing for a beat and,
+  // on iOS, audible. Detach synchronously, before the state change that swaps the item.
+  stopTwtVideo() {
+    const v = document.getElementById('twt-video');
+    if (!v) return;
+    try { v.pause(); v.removeAttribute('src'); v.load(); } catch (_) {}
+  }
+
+  twtViewerStep(delta) {
+    const n = this.twtFiltered().length;
+    if (!n) return;
+    this.stopTwtVideo();
+    this.setState(s => ({ twtViewer: ((s.twtViewer + delta) % n + n) % n }));
+  }
+
+  // galViewerDown's zero-render swipe, with one addition: on a video it does nothing, because a
+  // horizontal drag there belongs to the native seek bar. The ‹ › buttons still move.
+  twtViewerDown(e) {
+    const cur = this.twtFiltered()[this.state.twtViewer];
+    if (cur && cur.video) return;
+    const startX = e.clientX, startY = e.clientY;
+    const up = (ev) => {
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      const dx = (ev.clientX - startX) / this.state.scale;
+      const dy = (ev.clientY - startY) / this.state.scale;
+      if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+      this.twtViewerStep(dx < 0 ? 1 : -1);
+    };
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  // X media filter dialog — the Units/Armaments filter's draft/commit semantics on twtFilter.
+  openTwtFilter() {
+    this.setState(s => ({ twtFilterOpen: true, twtDraftFilter: cloneTwtFilter(s.twtFilter) }));
+  }
+  closeTwtFilter() { this.setState({ twtFilterOpen: false }); }
+  applyTwtFilter() {
+    this.stopTwtVideo();
+    this.setState(s => ({
+      twtFilterOpen: false, twtFilter: cloneTwtFilter(s.twtDraftFilter),
+      // All three describe the previous result set: the page count, the window position, and an
+      // index that now means a different item (applyArmFilter resets its strip the same way).
+      twtVisibleCount: TWT_BATCH, twtWinTop: 0, twtViewer: null
+    }));
+    const el = document.getElementById('gallery-scroll');
+    if (el) el.scrollTop = 0;
+  }
+  toggleTwtFilterChip(group, value) {
+    this.setState(s => {
+      const draft = cloneTwtFilter(s.twtDraftFilter);
+      const i = draft[group].indexOf(value);
+      if (i === -1) draft[group].push(value); else draft[group].splice(i, 1);
+      return { twtDraftFilter: draft };
+    });
   }
 
   // --- Music Room (the music tab) ------------------------------------------------------------
@@ -4486,11 +4863,7 @@ class Component extends DCLogic {
     // than raw entries — otherwise a narrow filter would page through mostly-hidden batches.
     const filter = this.state.filter;
     const roster = this.filteredRoster();
-    // `cap60` holds the strip to one batch, so its scroll width stays about one screen — the test
-    // for whether the crash tracks how wide the scroller has grown.
-    const pageCap = n => (DIAG.has('cap60') ? Math.min(n, ROSTER_BATCH) : n);
-    const diagSuffix = DIAG.size ? ' · diag:' + [...DIAG].join(',') : '';
-    const pagedRoster = roster.slice(0, pageCap(this.state.visibleCount));
+    const pagedRoster = roster.slice(0, this.state.visibleCount);
     // Every paged-in tile renders; its two images are gated twice over — on the art window (see
     // gridWindow), so only tiles near the scroll position ask for art at all, and then on the
     // loader (see artSrc), so at most ART_MAX_INFLIGHT of those are being fetched at any moment.
@@ -4518,7 +4891,7 @@ class Component extends DCLogic {
       ? this.t('loadingRoster')
       : this.state.rosterError
         ? this.t('failedToLoadRoster')
-        : pagedRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix') + diagSuffix;
+        : pagedRoster.length + ' / ' + roster.length + this.t('unitsShownSuffix');
 
     // Chip lists for the filter dialog. Each carries its own label, icon and active flag, so the
     // template stays a plain sc-for with no lookups of its own.
@@ -4558,7 +4931,7 @@ class Component extends DCLogic {
     // Weapons have a Chinese name always and an English one only where the wiki.gg sidecar
     // matched (316 of 384), so the tile label is per-weapon rather than per-language.
     const armLangEn = this.state.lang === 'en';
-    const armPaged = armWeaponsAll.slice(0, pageCap(this.state.armVisibleCount));
+    const armPaged = armWeaponsAll.slice(0, this.state.armVisibleCount);
     // Same art window as the roster strip above — this library is the other half of the iOS memory
     // peak (384 icons), and it lays out identically, so it uses the same helper.
     const armWin = this.gridWindow(armPaged.length, this.state.armWinCol);
@@ -4577,7 +4950,7 @@ class Component extends DCLogic {
       ? this.t('loadingWeapons')
       : this.state.armError
         ? this.t('weaponsErrorTitle')
-        : armPaged.length + ' / ' + armWeaponsAll.length + this.t('armShownSuffix') + diagSuffix;
+        : armPaged.length + ' / ' + armWeaponsAll.length + this.t('armShownSuffix');
     const armDraft = this.state.armDraftFilter;
     const armChip = (group, value, label, iconUrl) => ({
       label, iconUrl: iconUrl || '', hasIcon: !!iconUrl,
@@ -4934,29 +5307,64 @@ class Component extends DCLogic {
     //
     //   430 canvas - 14px padding each side = 402 inner; minus the 8px gutter, halved -> 197px.
     const galOnTab = tab === 'art';
+    const galShowStory = galOnTab && this.state.galSource === 'story';
     const galImages = this.galFiltered();
     const galViewerImage = (this.state.galViewer !== null && galImages[this.state.galViewer]) || null;
-    const galColumns = [{ h: 0, tiles: [] }, { h: 0, tiles: [] }];
-    if (galOnTab) {
-      const GAL_COL_W = 197, GAL_GAP = 8;
-      galImages.forEach((im, i) => {
-        // Exact, because the caption is an overlay rather than a block below the image — a
-        // wrapping title would turn this into an estimate and drift the two columns apart.
-        const tileH = Math.round(GAL_COL_W * im.h / im.w);
-        // Ties go left, so the reading order runs left, right, left, right.
-        const col = galColumns[0].h <= galColumns[1].h ? galColumns[0] : galColumns[1];
-        col.tiles.push({
-          thumbUrl: ASSET_BASE + '/' + (im.thumb || im.path),
-          w: im.w,
-          h: im.h,
-          alt: im.title,
-          caption: this.arcTitleFor(im),
-          isOrb: im.type === 'orb',
-          onClick: () => this.openGalViewer(i)
-        });
-        col.h += tileH + GAL_GAP;
+    let galColumns = [{ h: 0, tiles: [] }, { h: 0, tiles: [] }];
+    if (galShowStory) {
+      galColumns = this.galPack(galImages, (im, i) => ({
+        thumbUrl: ASSET_BASE + '/' + (im.thumb || im.path),
+        w: im.w,
+        h: im.h,
+        alt: im.title,
+        caption: this.arcTitleFor(im),
+        isOrb: im.type === 'orb',
+        onClick: () => this.openGalViewer(i)
+      }));
+    }
+
+    // --- Art tab: the official X media wall -----------------------------------------------------
+    // The same packer over 1429 items instead of 64, so it also needs pagination and — the part
+    // pagination alone doesn't solve — an art window. twtVisibleCount only ever grows, so without
+    // one, scrolling the wall would leave every thumbnail it ever paged in attached to its tile
+    // (36.9MB encoded, up to 575MB decoded), the way the roster's 485 portraits used to kill iOS
+    // tabs. See TWT_WIN_PX for how much of that ceiling an engine actually holds.
+    const twtShowX = galOnTab && this.state.galSource === 'x';
+    const twtItems = twtShowX ? this.twtFiltered() : [];
+    const twtViewerItem = (this.state.twtViewer !== null && twtItems[this.state.twtViewer]) || null;
+    let twtColumns = [{ h: 0, tiles: [] }, { h: 0, tiles: [] }];
+    if (twtShowX) {
+      const winTop = this.state.twtWinTop;
+      twtColumns = this.galPack(twtItems.slice(0, this.state.twtVisibleCount), (m, i, y, tileH) => {
+        // Every paged-in tile still renders in its own place; only the one expensive image inside
+        // it is gated on being near the scroll position — the strip art window's rule, vertical.
+        // artSrc then gates concurrency on top, so a flick can't burst hundreds of requests.
+        const inWin = y < winTop + TWT_WIN_PX && (y + tileH) > winTop - TWT_WIN_PX;
+        return {
+          thumbUrl: this.artSrc(inWin ? X_BASE + '/' + m.thumb : ''),
+          w: m.w,
+          h: m.h,
+          alt: twtDate(m.ts),
+          caption: twtDate(m.ts),
+          isVideo: !!m.video,
+          onClick: () => this.openTwtViewer(i)
+        };
       });
     }
+    const twtDraft = this.state.twtDraftFilter;
+    const twtChip = (group, value, label) => ({
+      label,
+      chipBg: twtDraft[group].includes(value) ? '#FFCF8F' : '#FAFAFA',
+      onToggle: () => this.toggleTwtFilterChip(group, value)
+    });
+    // Years come from the loaded data, not a table, so a re-scrape that adds a new year just works
+    // — the same rule the weapon filter's 能力 chips follow. Newest first, matching the wall's sort.
+    const twtYearChips = twtShowX
+      ? [...new Set((this.state.twtIndex || []).map(m => m.year))].sort((a, b) => b.localeCompare(a))
+          .map(y => twtChip('year', y, y))
+      : [];
+    const twtTypeChips = twtShowX ? TWT_TYPES.map(t => twtChip('type', t, this.t('twtType' + t))) : [];
+    const twtFilterCount = this.state.twtFilter.year.length + this.state.twtFilter.type.length;
 
     // --- Music Room ---------------------------------------------------------------------------
     // The list view-models only build while the tab is showing: unlike the arc block's fixed 42
@@ -5270,7 +5678,7 @@ class Component extends DCLogic {
         bg: this.state.galCategory === c.id ? '#ffcf8f' : '#FAFAFA',
         onClick: () => this.setGalCategory(c.id)
       })) : [],
-      galColumns: galOnTab ? galColumns : [],
+      galColumns: galColumns,
       galCountText: this.t('galCount').replace('{n}', String(galImages.length)),
       galOrbLabel: this.t('galOrbLabel'),
       galShowLoading: this.state.galLoading,
@@ -5292,6 +5700,62 @@ class Component extends DCLogic {
       galViewerPrev: () => this.galViewerStep(-1),
       galViewerNext: () => this.galViewerStep(1),
       galViewerDown: (e) => this.galViewerDown(e),
+
+      // --- Art tab: the source toggle and the official X media wall -----------------------------
+      // `twt`-prefixed; see X_BASE. The two walls take turns owning #gallery-scroll, the way the
+      // story tab's two views do, so only one set of columns is ever non-empty.
+      galSourceChips: galOnTab ? GAL_SOURCES.map(id => ({
+        label: this.t(id === 'story' ? 'galSourceStory' : 'galSourceX'),
+        bg: this.state.galSource === id ? (sec ? sec.color : '#F0526E') : '#FFFFFF',
+        color: this.state.galSource === id ? '#FFFFFF' : '#8A93A5',
+        onClick: () => this.setGalSource(id)
+      })) : [],
+      galShowStory: galShowStory,
+      galShowX: twtShowX,
+      handleGalScroll: (e) => this.handleGalScroll(e),
+
+      twtColumns: twtColumns,
+      twtCountText: this.t('twtCount').replace('{n}', String(twtItems.length)),
+      twtSourceText: this.t('twtSource'),
+      twtShowLoading: this.state.twtLoading,
+      twtShowError: this.state.twtIndex === false,
+      twtShowEmpty: !this.state.twtLoading && Array.isArray(this.state.twtIndex) && twtItems.length === 0,
+      twtLoadingText: this.t('twtLoading'),
+      twtErrorText: this.t('twtLoadError'),
+      twtEmptyText: this.t('twtEmpty'),
+
+      // Filter dialog (the Units/Armaments port): applied count on the button, draft chips inside.
+      twtFilterOpen: this.state.twtFilterOpen,
+      twtFilterCount: twtFilterCount,
+      hasTwtFilterCount: twtFilterCount > 0,
+      twtYearChips: twtYearChips,
+      twtTypeChips: twtTypeChips,
+      twtFilterYearTitle: this.t('twtFilterYear'),
+      twtFilterTypeTitle: this.t('twtFilterType'),
+      openTwtFilter: () => this.openTwtFilter(),
+      closeTwtFilter: () => this.closeTwtFilter(),
+      applyTwtFilter: () => this.applyTwtFilter(),
+
+      twtViewerOpen: !!twtViewerItem,
+      twtViewerIsVideo: !!(twtViewerItem && twtViewerItem.video),
+      twtViewerIsImage: !!(twtViewerItem && !twtViewerItem.video),
+      twtViewerUrl: twtViewerItem ? X_BASE + '/' + twtViewerItem.file : '',
+      twtViewerPoster: twtViewerItem ? X_BASE + '/' + twtViewerItem.thumb : '',
+      twtViewerAlt: twtViewerItem ? twtDate(twtViewerItem.ts) : '',
+      twtViewerDate: twtViewerItem ? twtDateLong(twtViewerItem.ts, this.state.lang) : '',
+      // The tweet id is the filename's first field — derived for the one open item, not stored.
+      twtViewerLink: twtViewerItem ? TWT_STATUS_URL + twtViewerItem.file.split('_')[0] : '',
+      twtViewerLinkText: this.t('twtOpenOnX'),
+      twtViewerCounter: twtViewerItem ? (this.state.twtViewer + 1) + ' / ' + twtItems.length : '',
+      // Boolean DOM attributes have to arrive as truthy *strings*: the template compiler hands a
+      // bare `controls` through as "", which React drops as falsy, and `{{ true }}` is a path
+      // lookup for a key named "true", not a literal. Hence these two.
+      twtVideoControls: 'controls',
+      twtVideoPlaysInline: 'true',
+      closeTwtViewer: () => this.closeTwtViewer(),
+      twtViewerPrev: () => this.twtViewerStep(-1),
+      twtViewerNext: () => this.twtViewerStep(1),
+      twtViewerDown: (e) => this.twtViewerDown(e),
 
       // Music Room: library view (section chips + search + the two lists)
       isMusic: roomOnTab,

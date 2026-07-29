@@ -1,6 +1,10 @@
 Character Assets/
 Weapons/
 WF OST/
+# The official @world_flipper X (Twitter) media archive plus the tool that scraped it. Never
+# commit this: X/x.com_cookies.txt is a live session cookie jar and X/gallery-dl.exe is a 24MB
+# binary. Only X/gallery-dl/twitter/world_flipper/ ships, and only to R2 (see build-x-index.mjs).
+X/
 node_modules/
 # Third-party reference only, not part of the site: worldflipper.miaowm5.com's deployed
 # bundle, kept locally to look up its CDN map and data column indices when working on the
