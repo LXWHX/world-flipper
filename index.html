@@ -77,6 +77,45 @@
       color: #F0526E; font-weight: 900; font-size: 9px; letter-spacing: 0.5px; line-height: 1;
     }
     .wf-flip-hint-card { animation: wfSwipeCard 1.6s ease-in-out infinite; display: block; }
+    /* The one loading placeholder every screen uses (see loadingWave + the .wf-loading markup at
+       each `*Loading` site): Alk's pixel walk sprite bobbing over the localized loading text,
+       whose glyphs ripple one after another. There is no partial mechanism in this template —
+       <Foo/> resolves through fetch(), which file:// blocks — so the 5-line markup is repeated at
+       each site and everything visual lives here instead.
+       The GIF is a copy of Character Assets/rarity4/alk/walk_front.gif kept in icons/ on purpose:
+       Character Assets/ is served from R2 in production, so sourcing the spinner from there would
+       make the spinner itself wait on the network round trip it exists to cover. */
+    @keyframes wfLoadBob  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    @keyframes wfLoadWave { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+    .wf-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 34px 0;
+    }
+    /* The horizontal roster strip is a flex row: without this the placeholder collapses to the
+       sprite's width and sits at the far left instead of centred in the strip. */
+    .wf-loading-wide { width: 100%; }
+    /* The flip deck's placeholder replaces an absolutely-positioned fill, not an in-flow block. */
+    .wf-loading-overlay { position: absolute; inset: 0; padding: 0; }
+    .wf-loading-gif {
+      width: 48px; height: 60px; /* 2x the sprite's native 24x30 */
+      image-rendering: pixelated; display: block;
+      animation: wfLoadBob 1.1s ease-in-out infinite;
+    }
+    .wf-loading-text {
+      /* Blocky by way of a monospace stack — there is no pixel font in the repo, and a real one
+         would mean shipping a woff2. font-family falls through per glyph, so the rounded body font
+         trailing the stack is what the hanzi land on (the mono faces have no CJK coverage) rather
+         than whatever the system would otherwise substitute. */
+      font-family: ui-monospace, 'Courier New', 'M PLUS Rounded 1c', monospace;
+      font-size: 12px; font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase;
+      color: #B7BECC; line-height: 1;
+    }
+    /* inline-block so the glyphs can be transformed at all; `pre` so the spaces between words keep
+       their width instead of collapsing once each character is its own element. */
+    .wf-loading-text span {
+      display: inline-block; white-space: pre;
+      animation: wfLoadWave 1.1s ease-in-out infinite;
+    }
     /* The magic circle turning behind the app, ported from miaowm5's ui/magicCircle.svelte —
        same art, same 25s linear spin, and both of its variants. `bottom: 0` plus a translate of
        half its own height parks the circle's centre on its container's bottom edge, so only the
@@ -112,7 +151,12 @@
       from { transform: translate(-50%, 60%) rotate(0deg); }
       to   { transform: translate(-50%, 60%) rotate(360deg); }
     }
-    @media (prefers-reduced-motion: reduce) { .wf-circle, .wf-flip-hint, .wf-flip-hint-card { animation: none !important; } }
+    /* The sprite's own frame animation is baked into the GIF and can't be stopped from CSS; this
+       only settles the bob and the ripple. */
+    @media (prefers-reduced-motion: reduce) {
+      .wf-circle, .wf-flip-hint, .wf-flip-hint-card,
+      .wf-loading-gif, .wf-loading-text span { animation: none !important; }
+    }
     /* Roster / Armaments strip tile. `content-visibility: auto` is the point of the class: it lets
        the engine skip layout, paint and — critically on iOS — rasterization for tiles scrolled out
        of view, without removing them from the DOM (so scrollWidth, scroll positions and the item→
@@ -262,7 +306,10 @@
                this is what replaced the checkerboard the grid used to sit on. -->
           <div id="units-scroll" onScroll="{{ handleRosterScroll }}" style="flex: 1; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; padding: 16px 12px; display: flex; align-items: center;">
             <sc-if value="{{ rosterLoading }}" hint-placeholder-val="{{ false }}">
-              <div style="width: 100%; display: flex; align-items: center; justify-content: center; color: #8A93A5; font-size: 12px; font-weight: 700;">{{ loadingRosterText }}</div>
+              <div class="wf-loading wf-loading-wide">
+                <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ loadingRosterText }}">
+                <div class="wf-loading-text"><sc-for list="{{ loadingRosterWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+              </div>
             </sc-if>
             <sc-if value="{{ rosterError }}" hint-placeholder-val="{{ false }}">
               <div style="width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; padding: 0 20px; color: #C0455C; font-size: 12px; font-weight: 700;">
@@ -611,7 +658,10 @@
           <div style="flex: none; position: relative; height: 540px; margin: 12px 25px 0 25px;">
 
             <sc-if value="{{ flipLoading }}" hint-placeholder-val="{{ false }}">
-              <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #8A93A5;">{{ flipLoadingText }}</div>
+              <div class="wf-loading wf-loading-overlay">
+                <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ flipLoadingText }}">
+                <div class="wf-loading-text"><sc-for list="{{ flipLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+              </div>
             </sc-if>
 
             <sc-if value="{{ flipDone }}" hint-placeholder-val="{{ false }}">
@@ -714,6 +764,14 @@
               <img src="{{ fullShotUrl }}" alt="{{ detailEnName }}" style="width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
             </div>
           </sc-if>
+          <!-- The full shot averages 0.5 MB, so on a cold open this area was simply blank until it
+               landed. It goes through heroSrc, so the placeholder holds the space until then. -->
+          <sc-if value="{{ showFullShotLoading }}" hint-placeholder-val="{{ false }}">
+            <div class="wf-loading wf-loading-overlay">
+              <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ detailArtLoadingText }}">
+              <div class="wf-loading-text"><sc-for list="{{ detailArtLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+            </div>
+          </sc-if>
 
           <!-- Bust hero: same stacked body+face layers as the expression viewer, for the
                characters with no full-shot art (see showBustHero in renderVals). -->
@@ -724,6 +782,12 @@
               </sc-if>
               <sc-if value="{{ hasBustFront }}" hint-placeholder-val="{{ true }}">
                 <img src="{{ bustFrontUrl }}" alt="{{ detailEnName }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain; object-position: center 8%;">
+              </sc-if>
+              <sc-if value="{{ showBustBaseLoading }}" hint-placeholder-val="{{ false }}">
+                <div class="wf-loading wf-loading-overlay">
+                  <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ detailArtLoadingText }}">
+                  <div class="wf-loading-text"><sc-for list="{{ detailArtLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                </div>
               </sc-if>
             </div>
           </sc-if>
@@ -861,6 +925,14 @@
                     <sc-for list="{{ emotionOverlayLayers }}" as="ol" hint-placeholder-count="0">
                       <img src="{{ ol.url }}" alt="{{ ol.name }}" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: contain;">
                     </sc-for>
+                    <!-- Only the body layer is gated (337 KB vs. the face's 22 KB); flipping faces
+                         with ‹ › keeps the same base, so this doesn't flash on every tap. -->
+                    <sc-if value="{{ showEmotionBaseLoading }}" hint-placeholder-val="{{ false }}">
+                      <div class="wf-loading wf-loading-overlay">
+                        <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ detailArtLoadingText }}">
+                        <div class="wf-loading-text"><sc-for list="{{ detailArtLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                      </div>
+                    </sc-if>
                   </div>
                   <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 8px;">
                     <button onClick="{{ emotionPrev }}" style="flex: none; border: none; cursor: pointer; font-family: inherit; font-weight: 800; font-size: 13px; color: #3E4450; background: #F0F3F7; border-radius: 999px; padding: 6px 14px; box-shadow: 0 2px 0 rgba(62,68,80,0.2);" style-active="transform: translateY(2px); box-shadow: 0 0 0 rgba(62,68,80,0.2);">‹</button>
@@ -995,7 +1067,10 @@
               <sc-if value="{{ showStoryPanel }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 16px 18px 24px;">
                   <sc-if value="{{ storyLoading }}" hint-placeholder-val="{{ false }}">
-                    <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ storyLoadingText }}</div>
+                    <div class="wf-loading">
+                      <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ storyLoadingText }}">
+                      <div class="wf-loading-text"><sc-for list="{{ storyLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                    </div>
                   </sc-if>
 
                   <sc-if value="{{ showStoryEmpty }}" hint-placeholder-val="{{ false }}">
@@ -1156,7 +1231,10 @@
 
               <div id="story-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 8px 14px 20px;">
                 <sc-if value="{{ arcIndexLoading }}" hint-placeholder-val="{{ false }}">
-                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcLoadingIndexText }}</div>
+                  <div class="wf-loading">
+                    <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ arcLoadingIndexText }}">
+                    <div class="wf-loading-text"><sc-for list="{{ arcLoadingIndexWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                  </div>
                 </sc-if>
                 <sc-if value="{{ arcIndexError }}" hint-placeholder-val="{{ false }}">
                   <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcIndexErrorText }}</div>
@@ -1217,7 +1295,10 @@
 
               <div id="story-scroll" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 24px;">
                 <sc-if value="{{ arcDetailLoading }}" hint-placeholder-val="{{ false }}">
-                  <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ arcLoadingDetailText }}</div>
+                  <div class="wf-loading">
+                    <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ arcLoadingDetailText }}">
+                    <div class="wf-loading-text"><sc-for list="{{ arcLoadingDetailWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                  </div>
                 </sc-if>
 
                 <!-- info: 情报 + 关联角色 + 关键词 -->
@@ -1312,7 +1393,10 @@
                       <div style="flex: 1; min-width: 0; font-size: 12.5px; font-weight: 900; color: #3E4450; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ arcReaderTitle }}</div>
                     </div>
                     <sc-if value="{{ arcEpisodeLoading }}" hint-placeholder-val="{{ false }}">
-                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 30px 0;">{{ arcLoadingEpisodeText }}</div>
+                      <div class="wf-loading">
+                        <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ arcLoadingEpisodeText }}">
+                        <div class="wf-loading-text"><sc-for list="{{ arcLoadingEpisodeWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                      </div>
                     </sc-if>
                     <!-- The avatar is a rounded square, not a circle: head.png carries its element
                          badge in a corner, which a circle would clip. -->
@@ -1423,7 +1507,10 @@
           <div id="gallery-scroll" onScroll="{{ handleGalScroll }}" style="flex: 1; min-height: 0; overflow-y: auto; padding: 6px 14px 20px;">
             <sc-if value="{{ galShowStory }}" hint-placeholder-val="{{ true }}">
               <sc-if value="{{ galShowLoading }}" hint-placeholder-val="{{ false }}">
-                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galLoadingText }}</div>
+                <div class="wf-loading">
+                  <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ galLoadingText }}">
+                  <div class="wf-loading-text"><sc-for list="{{ galLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                </div>
               </sc-if>
               <sc-if value="{{ galShowError }}" hint-placeholder-val="{{ false }}">
                 <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ galErrorText }}</div>
@@ -1458,7 +1545,10 @@
                  title) and only one of the two walls is ever mounted. -->
             <sc-if value="{{ galShowX }}" hint-placeholder-val="{{ false }}">
               <sc-if value="{{ twtShowLoading }}" hint-placeholder-val="{{ false }}">
-                <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ twtLoadingText }}</div>
+                <div class="wf-loading">
+                  <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ twtLoadingText }}">
+                  <div class="wf-loading-text"><sc-for list="{{ twtLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                </div>
               </sc-if>
               <sc-if value="{{ twtShowError }}" hint-placeholder-val="{{ false }}">
                 <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ twtErrorText }}</div>
@@ -1550,7 +1640,10 @@
                 <sc-if value="{{ roomShowWorld }}" hint-placeholder-val="{{ false }}">
                   <div>
                     <sc-if value="{{ roomAlbumsLoading }}" hint-placeholder-val="{{ false }}">
-                      <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ roomLoadingText }}</div>
+                      <div class="wf-loading">
+                        <img class="wf-loading-gif" src="icons/alk_walk.gif" alt="{{ roomLoadingText }}">
+                        <div class="wf-loading-text"><sc-for list="{{ roomLoadingWave }}" as="ch" hint-placeholder-count="8"><span style="animation-delay: {{ ch.d }};">{{ ch.c }}</span></sc-for></div>
+                      </div>
                     </sc-if>
                     <sc-if value="{{ roomAlbumsError }}" hint-placeholder-val="{{ false }}">
                       <div style="font-size: 12px; font-weight: 700; color: #B7BECC; text-align: center; padding: 40px 0;">{{ roomErrorText }}</div>
@@ -2306,6 +2399,15 @@ class Component extends DCLogic {
     return entry[this.state.lang] || entry.en;
   }
 
+  // One loading string, split into the per-glyph rows the .wf-loading markup ripples through
+  // <sc-for>. Every screen's placeholder calls this with its own STRINGS key, so each keeps its
+  // own wording in both languages and the ripple works the same on Latin letters and on hanzi.
+  loadingWave(key) {
+    // The ellipsis is one glyph, so it would bob as a single lump — three dots ripple.
+    const text = this.t(key).replace('…', '...');
+    return Array.from(text).map((c, i) => ({ c, d: (i * 0.07).toFixed(2) + 's' }));
+  }
+
   toggleLang() {
     const lang = this.state.lang === 'en' ? 'zh' : 'en';
     try { localStorage.setItem(LANG_STORAGE_KEY, lang); } catch (e) {}
@@ -2357,6 +2459,41 @@ class Component extends DCLogic {
   artLoaded = new Set();   // urls the browser has fetched (this session)
   artInflight = new Set(); // urls being fetched right now
   artWanted = [];          // urls this render asked for, in the order they appear on screen
+
+  // --- Detail-sheet hero loader ---------------------------------------------------------------
+  // Same trick as artSrc, deliberately *not* the same queue. The sheet's big art is one or two
+  // images at a time (the full shot averages 0.5 MB, an emotion/bust base 337 KB), so it needs no
+  // concurrency ceiling — while unitsVals keeps enqueueing the roster window's tiles even with the
+  // sheet open, so sharing artWanted would park the one image the user is actually looking at
+  // behind up to a screenful of 40px portraits. Separate set, no gate, no priority inversion.
+  heroLoaded = new Set();
+  heroInflight = new Set();
+  heroWanted = [];
+
+  heroSrc(url) {
+    if (!url) return '';
+    if (this.heroLoaded.has(url)) return url;
+    this.heroWanted.push(url);
+    return '';
+  }
+
+  pumpHeroArt() {
+    for (const url of this.heroWanted) {
+      if (this.heroLoaded.has(url) || this.heroInflight.has(url)) continue;
+      this.heroInflight.add(url);
+      const img = new Image();
+      // An error counts as done, exactly as in pumpArt: a character whose art 404s must not sit
+      // under a spinner forever. The <img> below will show its own broken state, which is honest.
+      const done = () => {
+        this.heroInflight.delete(url);
+        this.heroLoaded.add(url);
+        this.scheduleArtRender();
+      };
+      img.onload = done;
+      img.onerror = done;
+      img.src = url;
+    }
+  }
 
 
 
@@ -2527,6 +2664,7 @@ class Component extends DCLogic {
     // in renderVals so the queue reflects a committed render, and so renderVals stays side-effect
     // free apart from filling artWanted.
     this.pumpArt();
+    this.pumpHeroArt();
   }
 
 
@@ -2734,9 +2872,11 @@ class Component extends DCLogic {
     // xVals(ctx) 分段 + 这里的一行。
     const ctx = { tab, accent, sec };
 
-    // 每次 render 重建 strip 美术的申请队列（见 CLAUDE.md 的 Strip art loader）。清空只做一次，
+    // 每次 render 重建 strip 美术的申请队列（见 ARCHITECTURE.md 的 Strip art loader）。清空只做一次，
     // 必须在所有分段之前。
     this.artWanted = [];
+    // 详情页大图走自己的队列（见 heroSrc），同样每次 render 重建，同样只清一次。
+    this.heroWanted = [];
     // 下面的顺序是**求值**顺序，不是显示顺序，而且它是有意义的：调用 artSrc 的只有前三段，它们
     // 入队的先后就是 strip 美术的加载优先级，必须保持拆分前的 units -> arms -> art。
     return Object.assign({},

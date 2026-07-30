@@ -1,4 +1,4 @@
-// 弹弹（flip*）：美术投票滑牌，见 CLAUDE.md 的 Flip tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
+// 弹弹（flip*）：美术投票滑牌，见 ARCHITECTURE.md 的 Flip tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
 // 这是一个普通的 classic script：顶层 const 进全局词法环境，data-dc-script 正文（走
 // new Function，见 support.js:743）在全局作用域下求值，所以调用点不需要任何前缀。
 
@@ -295,6 +295,7 @@ const WF_FLIP = {
       flipTapHintText: this.t('flipTapHint'),
       flipVoteHint: this.t('flipVoteHint'),
       flipLoadingText: this.t('flipLoading'),
+      flipLoadingWave: this.loadingWave('flipLoading'),
       flipDoneText: this.t('flipDone'),
       flipReshuffleText: this.t('flipReshuffle'),
       // Three states, exactly one true: still waiting on the roster, out of cards, or a live card.

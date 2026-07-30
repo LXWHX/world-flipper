@@ -1,4 +1,4 @@
-// 剧情档案（arc*）：见 CLAUDE.md 的 Story tab 一节。注意与角色详情自己的剧情面板是两个功能 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
+// 剧情档案（arc*）：见 ARCHITECTURE.md 的 Story tab 一节。注意与角色详情自己的剧情面板是两个功能 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
 // 这是一个普通的 classic script：顶层 const 进全局词法环境，data-dc-script 正文（走
 // new Function，见 support.js:743）在全局作用域下求值，所以调用点不需要任何前缀。
 
@@ -272,6 +272,7 @@ const WF_STORY = {
       arcIndexLoading: this.state.arcIndexLoading,
       arcIndexError: !!this.state.arcIndexError,
       arcLoadingIndexText: this.t('arcLoadingIndex'),
+      arcLoadingIndexWave: this.loadingWave('arcLoadingIndex'),
       arcIndexErrorText: this.t('arcIndexError'),
       arcStoryItems: arcStoryItems,
       arcCategoryChips: arcCategoryChips,
@@ -300,6 +301,7 @@ const WF_STORY = {
       setArcBgmTab: () => this.setArcTab('bgm'),
       arcDetailLoading: this.state.arcDetailLoading,
       arcLoadingDetailText: this.t('arcLoadingDetail'),
+      arcLoadingDetailWave: this.loadingWave('arcLoadingDetail'),
 
       // Story archive: panels
       arcShowInfo: !!arcDetail && arcTab === 'info',
@@ -333,6 +335,7 @@ const WF_STORY = {
       videoSourceCommunityText: this.t('videoSourceCommunity'),
       arcEpisodeLoading: this.state.arcEpisodeLoading,
       arcLoadingEpisodeText: this.t('arcLoadingEpisode'),
+      arcLoadingEpisodeWave: this.loadingWave('arcLoadingEpisode'),
       arcReaderTitle: arcOpenedEpisode ? arcOpenedEpisode.title : '',
       arcDialogRows: arcDialogRows,
       arcBackToEpisodesBtn: () => this.closeArcEpisode(),

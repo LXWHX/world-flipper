@@ -263,6 +263,7 @@ const STRINGS = {
   panelRelated: { en: 'Related & Keywords', zh: '关联角色' },
   storyListTitle: { en: 'Character Story', zh: '角色剧情' },
   storyLoading: { en: 'Loading story…', zh: '剧情加载中…' },
+  detailArtLoading: { en: 'Loading art…', zh: '立绘加载中…' },
   storyEmpty: { en: 'No story available yet.', zh: '暂无剧情数据。' },
   storyBack: { en: 'Back', zh: '返回' },
   relatedCharsTitle: { en: 'Related Characters', zh: '关联角色' },

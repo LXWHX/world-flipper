@@ -1,4 +1,4 @@
-// 画廊（gal*）+ 官方推特墙（twt*）：Art 标签页的两面墙，见 CLAUDE.md 的 Art tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
+// 画廊（gal*）+ 官方推特墙（twt*）：Art 标签页的两面墙，见 ARCHITECTURE.md 的 Art tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
 // 这是一个普通的 classic script：顶层 const 进全局词法环境，data-dc-script 正文（走
 // new Function，见 support.js:743）在全局作用域下求值，所以调用点不需要任何前缀。
 
@@ -326,6 +326,7 @@ const WF_ART = {
       galShowError: this.state.galIndex === false,
       galShowEmpty: !this.state.galLoading && Array.isArray(this.state.galIndex) && galImages.length === 0,
       galLoadingText: this.t('galLoading'),
+      galLoadingWave: this.loadingWave('galLoading'),
       galErrorText: this.t('galLoadError'),
       galEmptyText: this.t('galEmpty'),
 
@@ -362,6 +363,7 @@ const WF_ART = {
       twtShowError: this.state.twtIndex === false,
       twtShowEmpty: !this.state.twtLoading && Array.isArray(this.state.twtIndex) && twtItems.length === 0,
       twtLoadingText: this.t('twtLoading'),
+      twtLoadingWave: this.loadingWave('twtLoading'),
       twtErrorText: this.t('twtLoadError'),
       twtEmptyText: this.t('twtEmpty'),
 

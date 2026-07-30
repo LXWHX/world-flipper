@@ -1,4 +1,4 @@
-// 角色详情（底部抽屉 / 面板切换 / 表情图层 / 角色剧情 / 语音）：见 CLAUDE.md 的 Character detail bottom sheet 与 Emotion layers 两节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
+// 角色详情（底部抽屉 / 面板切换 / 表情图层 / 角色剧情 / 语音）：见 ARCHITECTURE.md 的 Character detail bottom sheet 与 Emotion layers 两节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
 // 这是一个普通的 classic script：顶层 const 进全局词法环境，data-dc-script 正文（走
 // new Function，见 support.js:743）在全局作用域下求值，所以调用点不需要任何前缀。
 
@@ -430,6 +430,7 @@ const WF_DETAIL = {
         onClick: () => this.toggleEmotionOverlay(emotionOverlayKey(e.name))
       };
     });
+    // Gated on the base further down for the same reason the face is (see hasEmotionFront).
     const emotionOverlayLayers = availableOverlays
       .filter(e => this.state.emotionOverlays.includes(emotionOverlayKey(e.name)))
       .map(e => ({ url: emotionDir + e.front, name: e.name }));
@@ -547,6 +548,16 @@ const WF_DETAIL = {
         headUrl
       };
     }) : []);
+    // The sheet's three big images go through heroSrc (not artSrc — see the loader's own comment),
+    // so each opens on the shared loading placeholder instead of an empty box. Only the *base*
+    // layers are gated: the faces and overlays stacked on top average 22 KB against a base's
+    // 337 KB and they swap on every ‹ › tap, so gating those would flash a spinner on every press
+    // over art that is already on screen.
+    const fullShotSrc = selectedChar
+      ? this.heroSrc(selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png')
+      : '';
+    const bustBaseSrc = heroFace && heroFace.base ? this.heroSrc(emotionDir + heroFace.base) : '';
+    const emotionBaseSrc = emotion && emotion.base ? this.heroSrc(emotionDir + emotion.base) : '';
     return {
       detailEnName: selectedChar ? ((this.state.lang === 'zh' && selectedChar.zhName) ? selectedChar.zhName : selectedChar.enName) : '',
       // The 108 miaowm5-only characters have no jpName in the roster; the community sheet does,
@@ -558,13 +569,17 @@ const WF_DETAIL = {
       charVideoRows: charVideoRows,
       detailRarityUrl: selectedChar ? selectedChar.rarityUrl : '',
       detailRarityLabel: selectedChar ? selectedChar.rarityLabel : '',
-      fullShotUrl: selectedChar ? (selectedChar.folderUrl + '/full_shot_1440_1920_' + this.state.artIndex + '.png') : '',
-      showFullShot: !bustOnly,
+      fullShotUrl: fullShotSrc,
+      showFullShot: !bustOnly && !!fullShotSrc,
+      showFullShotLoading: !bustOnly && !!selectedChar && !fullShotSrc,
       showArtToggle: !bustOnly,
       showBustHero: !!heroFace,
-      hasBustBase: !!(heroFace && heroFace.base),
-      bustBaseUrl: heroFace && heroFace.base ? emotionDir + heroFace.base : '',
-      hasBustFront: !!(heroFace && heroFace.front),
+      hasBustBase: !!bustBaseSrc,
+      bustBaseUrl: bustBaseSrc,
+      showBustBaseLoading: !!(heroFace && heroFace.base) && !bustBaseSrc,
+      // The face rides on the body: 22 KB against 337 KB, so it lands first and would otherwise
+      // hang in mid-air over the placeholder. It waits for its base.
+      hasBustFront: !!(heroFace && heroFace.front) && !!bustBaseSrc,
       bustFrontUrl: heroFace && heroFace.front ? emotionDir + heroFace.front : '',
       // Flip vote counts for whichever illustration the hero is showing (see detailArtStat above).
       detailShowArtCounts: !!selectedChar,
@@ -658,10 +673,13 @@ const WF_DETAIL = {
       showRelatedPanelBtn: () => this.setSheetPanel('related'),
       extraActionButtons: extraActionButtons,
       hasEmotions: emotionFaces.length > 0,
-      emotionBaseUrl: emotion && emotion.base ? emotionDir + emotion.base : '',
-      hasEmotionBase: !!(emotion && emotion.base),
+      emotionBaseUrl: emotionBaseSrc,
+      hasEmotionBase: !!emotionBaseSrc,
+      showEmotionBaseLoading: !!(emotion && emotion.base) && !emotionBaseSrc,
       emotionFrontUrl: emotion && emotion.front ? emotionDir + emotion.front : '',
-      hasEmotionFront: !!(emotion && emotion.front),
+      // Same as the bust hero: the face waits for the body it sits on, or it floats alone over the
+      // placeholder for as long as the base takes.
+      hasEmotionFront: !!(emotion && emotion.front) && !!emotionBaseSrc,
       emotionName: emotion ? emotion.name : '',
       emotionCounter: emotionFaces.length ? (emotionIndex + 1) + ' / ' + emotionFaces.length : '',
       emotionRatioPadding: (EMOTION_H / EMOTION_W * 100) + '%',
@@ -670,7 +688,7 @@ const WF_DETAIL = {
       emotionNext: () => this.emotionStep(1),
       emotionOverlayChips: emotionOverlayChips,
       hasEmotionOverlays: emotionOverlayChips.length > 0,
-      emotionOverlayLayers: emotionOverlayLayers,
+      emotionOverlayLayers: emotionBaseSrc ? emotionOverlayLayers : [],
       emotionOverlaysTitleLabel: this.t('emotionOverlaysTitle'),
       wikiInfoBlocks: wikiInfoBlocks,
       hasWikiInfoBlocks: wikiInfoBlocks.length > 0,
@@ -678,6 +696,11 @@ const WF_DETAIL = {
       hasMiaowm5Data: !!(wikiData && (wikiData.info || wikiData.emotions || wikiData.related || wikiData.storyCount)),
       storyListTitleLabel: this.t('storyListTitle'),
       storyLoadingText: this.t('storyLoading'),
+      storyLoadingWave: this.loadingWave('storyLoading'),
+      // One string shared by the sheet's three big-art placeholders (full shot, bust hero,
+      // expression viewer) — only one of them is ever on screen at a time.
+      detailArtLoadingText: this.t('detailArtLoading'),
+      detailArtLoadingWave: this.loadingWave('detailArtLoading'),
       storyEmptyText: this.t('storyEmpty'),
       storyBackLabel: this.t('storyBack'),
       storyBackToListLabel: this.t('storyBackToList'),

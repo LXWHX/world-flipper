@@ -7,6 +7,10 @@
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-30', items: [
+      { en: 'Every screen that keeps you waiting now says so: Alk walks in place above a line of loading text wherever something is still on its way — the roster, the story archive, the gallery, the X wall, the Music Room, and every panel in between.', zh: '所有需要等待的地方现在都有了明确提示：凡有内容仍在加载，阿尔克便会在「加载中」字样上方原地行走——角色栏、故事档案、画廊、推特墙、音乐室，以及其间的各个面板。' },
+      { en: 'Character art no longer opens on a blank space. The full illustration is the largest image on the site, and the detail page used to sit empty until it arrived; now it shows the same indicator while it loads. The expression viewer does too.', zh: '角色立绘不再「先空一片」。立绘是全站体积最大的图片，此前详情页会一直留白至其加载完成；现在同样会显示加载提示，表情预览框亦然。' },
+  ]},
   { date: '2026-07-29', items: [
       { en: 'The Art Gallery has a second wall: every image and video the official @world_flipper account posted on X, from November 2019 to March 2024 — 1,429 pieces in all (1,343 images and 86 videos), newest first. Switch between it and the story illustrations at the top of the page.', zh: '「画廊」页新增第二面墙：官方推特 @world_flipper 自 2019 年 11 月至 2024 年 3 月发布的全部图片与视频，共 1429 条（1343 张图片、86 段视频），按时间由新到旧排列。可在页面顶部与「剧情画廊」相互切换。' },
       { en: 'That wall filters by year and by images or video. Tap any piece to see it at full size or play it, and every one links back to the original post.', zh: '该墙可按年份与「图片 / 视频」筛选；点击任意一条即可查看原图或播放视频，每条均可跳转至原推文。' },
@@ -229,6 +233,7 @@ const WF_CHROME = {
       navMusicLabel: this.t('navMusic'),
       unitsScreenTitle: this.t('unitsScreenTitle'),
       loadingRosterText: this.t('loadingRoster'),
+      loadingRosterWave: this.loadingWave('loadingRoster'),
       rosterErrorTitle: this.t('rosterErrorTitle'),
       rosterErrorHint: this.t('rosterErrorHint'),
       skillBtnLabel: this.t('skillBtn'),
