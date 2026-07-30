@@ -93,7 +93,9 @@ for; note `isArms`/`goArms`/`arms` (the section identifiers) predate this and me
   simpler. It's transparent (no own `.wf-circle` — it lets the screen area's shared circle through)
   with a big icon hero on the pedestal, then white cards for 属性 (base vs 满级 HP/ATK), 效果 +
   最大效果, 获取方式, and the 图鉴描述 flavor, each gated on the field being present (orbs have no
-  base stats). Back = `closeArmDetail()`.
+  base stats). Back = `closeArmDetail()`. Its four card headings are the `.wf-sec-title` treatment
+  (see "Section headings") — this screen is where that look was first used; 最大效果 is a
+  sub-heading and deliberately stays plain.
 - **Weapon names are per-weapon bilingual, not per-language.** The CN source gives every weapon a
   `nameZh`; `weapons_en.json` adds `nameEn` for the 316 of 384 the wiki.gg matcher resolved (see
   the wiki.gg pipeline in `PIPELINES.md`), merged onto the record by `href` in `loadWeaponsEn()`. So the tile
@@ -604,6 +606,11 @@ without joining its layout. `state.sheetPanel` (via `setSheetPanel()`) picks the
 - **related** — related-character chips (click → `goDetail` via `rosterByDev`; no roster match
   gets a placeholder tile) and keyword cards.
 
+Every block heading across those four panels is the shared `.wf-sec-title` (see "Section headings"),
+matching the weapon detail; the two headings that sit *inside* a block — Add-ons under the expression
+viewer, Quotes under the voice list — stay plain on purpose, and that difference is what keeps them
+from reading as sections of their own.
+
 **Story dialogue avatars** resolve in three tiers: (1) the viewed character speaks in their own
 expression art (keyed on exported `emotions[]`); (2) other roster speakers use their `head.png`
 via `rosterByDev` — `speakerDev` is a `storyId` but agrees with `devName` for all 485 entries;
@@ -707,6 +714,46 @@ Why it looks the way it does:
   into the GIF and can't be stopped from CSS.
 
 
+### Section headings (`.wf-sec-title`)
+
+CSS 在 `index.html` 的 `<helmet>`（紧接 `wf-loading*` 那组）；调用点在模板里，21 处。
+
+One heading treatment for every content block in the app: a **centred dark title flanked by the
+game UI's own pair of flourishes**. Markup is one line —
+
+```html
+<div class="wf-sec-title"><span>{{ someTitleLabel }}</span></div>
+```
+
+- **The two rails are `::before`/`::after`**, each `flex: 1; height: 14px` with the art anchored
+  *inward* (`background-position: right` on the left rail, `left` on the right). So the flourish
+  always hugs the title and the surplus width is left blank rather than tiling, and the centring
+  comes from the two rails rather than `text-align`. That also means a heading costs one line of
+  markup instead of the three sibling divs this used to be spelled out as.
+- **Two pre-mirrored PNGs, no `scaleX(-1)`**: `icons/title_border_{left,right}.png` (upstream's
+  sprite names are documented in `PIPELINES.md`). They stay in `icons/` for the same reason the
+  loading GIF does — `Character Assets/` is served from R2 in production, and a heading flourish
+  should not wait on a network round trip.
+- **`margin-bottom: 8px` is the class default**; the weapon detail's four cards override it inline
+  (12px on the stats card, 10px on the rest) to keep their original in-card rhythm. Inline wins over
+  the class, so an override is just a `style` attribute.
+- **A sub-heading *inside* a section deliberately gets no rails** and keeps the old small-grey style
+  (`font-size: 12px; weight 900; #8A93A5; letter-spacing: 0.5px`). Three of them: 最大效果 (inside
+  the weapon 效果 card), 叠加配件/Add-ons (inside the detail sheet's expression block) and Quotes
+  (inside its voice list). **That contrast is the only thing carrying the hierarchy** — the sections
+  have no card borders of their own to do it, so promoting one of those three to rails flattens its
+  parent section into a sibling.
+- **Consumers**: the weapon detail (4), the character detail sheet (10 — expressions, 情报, 技能,
+  故事, 评价, voice, episode list, videos, related characters, keywords) and the story archive (7 —
+  情报, 关联角色, 关键词, 剧集, 视频, 画廊, BGM). All of their labels were already `this.t(...)`
+  values in `wf-detail.js` / `wf-story.js` / `wf-arms.js`, so this is CSS-only: no `xVals` key
+  changed, none was added.
+- **13 inline copies predate the class** — the Units / Armaments / X-wall filter dialogs and the
+  News and About dialogs (`index.html` 425-566, 1986-2026, 2088-2103 territory). Same look, still
+  spelled out as three divs. Migrating them is mechanical and safe, just not something any change
+  has needed yet; if you touch one of those dialogs, collapse it on the way past.
+
+
 ## Supabase (visit counters + art votes)
 
 Two features, one project, one anon key, one set of helpers — and **nothing to do with R2**: no
@@ -750,3 +797,106 @@ page from a non-localhost origin.
 fabricated `vid`. These counts are a for-fun signal, not a poll. That's the exposure
 `record_visit` already carried; the `(visitor_id, art_key)` primary key still caps one row per
 claimed identity.
+
+
+## Routing & document head
+
+代码在 `wf-route.js`（见 `CLAUDE.md` 的文件地图），加上 `index.html` 真实 `<head>` 里的静态标签
+和 `scripts/build-social-card.mjs` 合成的两张图。
+
+站点原本没有任何身份：`<title>` 一个都没有，没有 favicon，没有 `og:`，也没有深链接——485 个角色、
+384 件武器、42 段剧情一条都发不出去，而安卓的实体返回键会直接退站。这一节记的就是补上这些之后
+的形状，以及三个必须知道的坑。
+
+### 路由表
+
+| hash | 状态 |
+| --- | --- |
+| 空 / `#home` | `tab: 'home'` |
+| `#units` `#arms` `#story` `#art` `#music` `#flip` | `tab` |
+| `#char/<devName>` | `tab: 'detail'` + `selectedChar` |
+| `#arms/<slug>` | `tab: 'arms'` + `armDetail` |
+| `#story/<slug>` / `#story/<slug>/<n>` | `tab: 'story'` + `arcStory`（+ `arcEpisodeIndex`） |
+
+id 一律取稳定键：`devName`（roster 主键）、weapon `slug`、story `slug`。刻意**不进 URL** 的是筛选
+条件、`sheetPanel`、`arcTab`，以及画廊两个 viewer 的下标——`galViewer`/`twtViewer` 存的是
+**filtered 数组的下标**，换个筛选就指向另一张图。要做单图分享，得先把它们改成按 id 反查
+（gallery 用 `slug`，X 用 `file`，两者都稳定），那是另一件事。
+
+### 三个坑
+
+1. **`file://` 下 `pushState` 抛 SecurityError。** 本地开发就是 `file://`（`ASSET_BASE` 的第一个
+   分支），而 `file://` 文档的 origin 是 `null`，Chrome 拒绝在这种文档里 `pushState`。所以整套
+   路由只用 hash：前进 `location.hash = …`（自动进历史栈，返回键白拿），首屏归一化和降级用
+   `location.replace(href.split('#')[0] + '#' + …)`（只改 fragment 是同文档导航，不会重载）。
+   `boot()` 会重新 `fetch(location.href)`（`support.js:159`），但 fragment 不参与请求，所以带
+   hash 打开页面对它没有影响。
+2. **`<helmet>` 里的 `{{ }}` 不会被插值。** helmet 认 META/LINK/SCRIPT（`support.js:1337`），但它
+   `compile()` 返回的函数**忽略 `_vals`、直接用模板里的原始 `textContent`**
+   （`support.js:1322-1358`）。所以 `<title>{{ x }}</title>` 放 helmet 里只会得到字面量。静态标签
+   因此写在真实 `<head>`（那里是安全的：`parseDcText` 只找模板块的起始标记和最后一个结束标记，
+   `support.js:38`），动态标题走 `syncDocumentTitle()` 直接改 `document.title`。
+3. **深链接打开一个屏幕 ≠ 那个屏幕会显示。** 剧情阅读器踩过：`openArcEpisode(n)` 把
+   `arcEpisodeIndex` 设对了，但渲染它的 `arcShowReader` 还要 `arcTab === 'story'`
+   （`wf-story.js:309`）——从界面点进话数必然是从话数列表来的，`arcTab` 早就对了；深链接却是
+   `openArcStory` 按 `defaultArcTab` 落在 `'info'` 上。表现是 state 全对、屏幕上还是情报页，
+   DOM 与不带话数的链接**逐字节相同**。修法是 `routeApply` 里补一句 `setArcTab('story')`。
+
+### 形状：URL 从 state 推出来
+
+`syncRoute()` 挂在 `componentDidUpdate` 上，由 `routeHashFromState()` 算出目标 hash，和地址栏不同
+才写。**十几个导航入口一个都没改**——`go` / `goDetail` / `backFromDetail` / `goArmDetail` /
+`closeArmDetail` / `openArcStory` / `closeArcStory` / `openArcEpisode` / `closeArcEpisode` 全部
+原样，URL 自己跟上，包括 related chip 那条 detail→detail 的路径（逐个改入口一定会漏掉它）。
+
+**代价是站内的返回按钮也会新增一条历史记录**：它是一次正向的 state 变化，本文件无从分辨"其实
+是后退"。于是浏览器返回会回到刚离开的详情页。这是有意接受的：URL 历史 = 浏览记录。
+
+写 URL 时 `routeLastWritten` 记下写进去的值，随之而来的 `hashchange` 靠它认出"这是自己的回声"
+——比用定时器清一个 suppress 标志确定得多。中文 slug（武器全是）在序列化时会被百分号编码，所以
+**比较一律在逐段解码后的形式上做，写入时再逐段编码**。
+
+### 延迟兑现：`pendingRoute`
+
+冷启动落在 `#char/fire_dragon` 时 `roster.json` 还在路上。应用不了的路由存进 `this.pendingRoute`，
+由 `componentDidUpdate` 里的 `drainPendingRoute()` 在数据到齐后兑现，兑现走的是现成的函数
+（`goDetail` / `goArmDetail` / `openArcStory`），所以 `hasSpecial` 探测、双立绘预载、
+`detailReturnTab` 一概照旧。三条链各自等各自的数据：`rosterByDev`（`index.html` 的 roster
+`.then` 里填）、`armWeapons`（`go('arms')` 顺带 `loadWeapons()`）、`arcIndex`（`go('story')` 顺带
+`loadArcIndex()`），话数还要再等 `arcDetail`。
+
+**判"还没到"和判"根本没有"必须分开**：前者继续挂着，后者立刻降级——否则一个拼错的 slug 会永远
+挂在那里，而 `syncRoute` 在 `pendingRoute` 非空时是 no-op（那时 URL 是目标、state 还没跟上），
+于是 URL 也永远同步不了。降级 = 静默回到该 tab 的列表页 + `replace` 掉 URL（不留一条通向死链的
+历史记录），不弹任何错误。
+
+### 返回键 / Esc / 方向键
+
+hash 里有的层（tab / 详情 / 武器详情 / 剧情 / 话数）由历史栈天然处理。hash 里**没有**的浮层由
+`routeOverlays()` 那张自上而下的优先级表兜住：大图 viewer → 动作 GIF 叠层 → 三个筛选弹窗 →
+播放队列 / 音量 → 菜单 / 资讯 / 关于。`hashchange` 先问这张表，有浮层就关掉最上面那层并把 hash
+写回原值（于是"再按一次返回"才真的离开这一屏）；Esc 用同一张表，没有浮层可关时按屏幕自己的返回
+语义退一层。注意 `closeTwtViewer()` 里有 `stopTwtVideo()`，绕过它会留下一个在别的屏幕后面继续
+出声的 `<video>`。
+
+方向键是顺手的桌面收益：画廊两面墙的大图（`galViewerStep`/`twtViewerStep`）和详情页表情
+（`emotionStep`）——触摸端本来就能滑，键盘接上而已。输入框（筛选、音乐室搜索）里的按键一概不劫。
+
+### 社交卡片与 favicon
+
+`scripts/build-social-card.mjs`（`npm run build:social-card`）本地合成 `icons/social-card.png`
+（1200x630，og:image）和 `icons/favicon.png`（180x180，同时作 apple-touch-icon）。两张都在
+`icons/` 下，由站点自身提供，**不走 R2**——和 `alk_walk.gif` 必须留在 `icons/` 同理，所以
+`upload-to-r2.mjs` 无需改动。
+
+存在的理由是一个陷阱：**`icons/Site-logo.png` 是一个改名成 `.png` 的 WebP**（魔数
+`RIFF....WEBP`）。浏览器 `<img>` 会嗅探格式所以站内一直正常，但 og:image 必须是真 PNG/JPEG，X 的
+抓取器不收 WebP。favicon 取的是 logo 里"WORLD"那个 O 中的世界球（`SPHERE` 那几个坐标是照着图量
+的，换 logo 就得重量），因为整幅字标在 16px 下是一团糊。卡片上的文字由 librsvg 走系统字体栅格
+化，CJK 副标题因此依赖本机装了中文字体；输出是提交进 git 的，所以这对一个 dev-only 脚本可以
+接受——但副标题要是变成豆腐块，原因就在这里。合成图片遵守管线铁律：存在即跳过，**改合成逻辑要
+先删旧文件**（或 `--force`），写入走 `writeIfChanged`，空跑零 diff。
+
+og 里的地址必须是**绝对 URL**（`https://wf.joeli.site/…`）：抓取器不执行 JS，也不认相对路径，所以
+这里不能复用 `ASSET_BASE` 那套 `file://` 分支判断。**每个角色各自的 og 卡片做不到**——静态托管
+没有服务端渲染，要么预生成 485 个 HTML，要么放弃；现在是一张站点级的卡片。

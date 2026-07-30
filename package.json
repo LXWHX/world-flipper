@@ -14,6 +14,7 @@
     "build:music-index": "node scripts/build-music-index.mjs",
     "build:gallery-index": "node scripts/build-gallery-index.mjs",
     "build:x-index": "node scripts/build-x-index.mjs",
+    "build:social-card": "node scripts/build-social-card.mjs",
     "scrape:stories-en": "node scripts/scrape-wiki-gg-stories.mjs",
     "fetch:community-en": "node scripts/fetch-community-en.mjs",
     "fetch:eliya-gl": "node scripts/fetch-eliya-gl.mjs",

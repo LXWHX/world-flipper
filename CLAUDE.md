@@ -89,6 +89,7 @@ keep, plus the shared shell:
 | `wf-music.js` | Music Room + the floating mini-player (`room*`), and the shared audio engine |
 | `wf-flip.js` | 弹弹 art voting (`flip*`) |
 | `wf-chrome.js` | changelog, News/About, visit counters, home/menu, the bottom tab bar |
+| `wf-route.js` | hash 深链接、`document.title`、返回键 / Esc / 方向键（`route*`；没有屏幕，所以没有 `xVals`） |
 
 How it holds together, and why it has to be this shape:
 
@@ -120,7 +121,13 @@ How it holds together, and why it has to be this shape:
   not know about comments — a stray one swallows the `<head>` scripts into the template. This was a
   live bug during the split.
 - **Adding a page** = a new `wf-*.js` + its `xVals(ctx)` + one line in `renderVals` + one
-  `<script>` tag + one name in the `Object.assign`.
+  `<script>` tag + one name in the `Object.assign`. **A new page also means a new hash route** —
+  `wf-route.js` derives the URL from `state`, so a tab it doesn't know about still gets `#<tab>`,
+  but anything selectable inside it (an id worth linking to) needs a line in `routeHashFromState`
+  and a branch in `routeApply`. See "Routing & document head" in `ARCHITECTURE.md`.
+- **`wf-route.js` is the one file with no screen**: no `xVals`, no `renderVals` line. It hangs off
+  `componentDidMount` (`routeInstall`) and `componentDidUpdate` (`drainPendingRoute` → `syncRoute`
+  → `syncDocumentTitle`) instead.
 - **Cost accepted:** code outside the `data-dc-script` block is invisible to the omelette design
   tool. The tool's source isn't in this repo and the site is hand-maintained, so this is fine — but
   it does mean the split is one-way as far as that tool is concerned.
@@ -167,7 +174,9 @@ button and its menu entry, which is the only reason repointing it strands nothin
 | Character detail bottom sheet（面板切换、剧情头像、hero 图） | `wf-detail.js` |
 | Emotion layers（脸 vs. 叠加层） | `wf-detail.js` |
 | Loading placeholder（`.wf-loading`：Alk 行走 GIF + 逐字波浪文案，全站十二处；含详情页大图的 `heroSrc`） | CSS、`loadingWave()`、`heroSrc()` 在 `index.html`，调用点在各 `wf-*.js` |
+| Section headings（`.wf-sec-title`：居中标题 + 左右花纹 rail，全站二十一处） | `index.html` `<helmet>` 的 `.wf-sec-title` CSS，调用点在模板里 |
 | Supabase（访问计数 + 投票，与 R2 无关） | 配置在 `wf-core.js`，helpers 在 `wf-chrome.js`，投票在 `wf-flip.js`；`supabase-*.sql` |
+| Routing & document head（hash 深链接、标题、返回键 / Esc / 方向键、og 卡片） | `wf-route.js` + `index.html` 真实 `<head>` + `scripts/build-social-card.mjs` |
 
 跨屏铁律（出处和细节都在 `ARCHITECTURE.md` 对应小节）：
 
@@ -190,9 +199,22 @@ button and its menu entry, which is the only reason repointing it strands nothin
   `<helmet>` 里的 `wf-loading*` CSS 类 + `icons/alk_walk.gif`。新屏别再自己写一行灰字；
   模板没有 partial 机制，那 5 行标记本来就是逐处重复的，视觉细节一律留在 CSS 类里。
   **GIF 必须留在 `icons/`**（详见 `ARCHITECTURE.md` 的 "Loading placeholder"）。
+- **板块标题统一走 `.wf-sec-title`**（`<div class="wf-sec-title"><span>{{ label }}</span></div>`，
+  两条花纹 rail 是伪元素）；别再内联那三行 div。**区块内部的子标题一律不加花纹**，保持原来的
+  小灰字（最大效果 / 叠加配件 / Quotes）—— 这些板块没有自己的边框，层级全靠这个差别撑着。
+  两张 PNG 同样必须留在 `icons/`（详见 `ARCHITECTURE.md` 的 "Section headings"）。
 - **等图片而不是等 fetch 的占位走 `heroSrc`，不要走 `artSrc`。** `artSrc` 那条队列有 16 并发
   上限，而 `unitsVals` 即使在详情页打开时也照常给条带的图入队 —— 大图挤进去就会排在一屏
   40px 头像后面。`heroSrc` 是同样的机制但独立队列、不设闸门，只适合同时一两张的大图。
+- **URL 由 state 推出来，导航函数一概不碰 URL。** `syncRoute` 挂在 `componentDidUpdate` 上，从
+  `routeHashFromState()` 算出 hash 再写；`go`/`goDetail`/`goArmDetail`/`openArcStory` 等十几个
+  入口全部保持原样。**新增一处可深链接的选中态，改的是 `routeHashFromState` 和 `routeApply`，
+  不是那些导航函数。** 只用 hash、不用 `pushState`：本地开发是 `file://`，那里 `pushState` 抛
+  SecurityError。
+- **深链接打开一个屏幕，不等于那个屏幕会显示。** 屏幕内的次级状态（`arcTab` 之流）是从界面路径
+  里顺带设好的，深链接没走那条路径。剧情阅读器就踩过：`arcEpisodeIndex` 设对了，但
+  `arcShowReader` 还要 `arcTab === 'story'`，于是 state 全对、屏幕上还是情报页（`wf-route.js`
+  里 `setArcTab('story')` 那几行）。新增深链接目标时，先确认渲染它的那个 val 还依赖什么。
 
 ### UI localization (`STRINGS` table)
 

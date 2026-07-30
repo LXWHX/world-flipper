@@ -8,8 +8,12 @@
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
   { date: '2026-07-30', items: [
+      { en: 'Links now point at things. Every character, weapon and story has its own address — open one and you land straight on that page, so a link you send someone opens what you were looking at rather than the front door.', zh: '现在可以把链接指向具体内容了。每名角色、每件武器、每段剧情都有了各自的地址，打开即直达该页面——发给别人的链接会停在你当时看的地方，而不是首页。' },
+      { en: 'The back button goes back. On phones it now steps back through where you have been — closing an open image, a filter or a character page — instead of leaving the site. On a computer, Esc does the same and the arrow keys page through the gallery and through a character’s expressions.', zh: '返回键现在真的是「返回」。在手机上它会沿着浏览路径逐层后退——关掉打开的大图、筛选面板或角色页——而不是直接退出站点。电脑上 Esc 同理，方向键还可翻阅画廊与角色表情。' },
+      { en: 'The browser tab now shows where you are, the site has an icon of its own, and a shared link finally unfurls with a proper title, description and picture instead of a blank card.', zh: '浏览器标签页现在会显示当前所在的位置，站点也有了自己的图标；分享出去的链接终于会展开为带标题、说明与配图的卡片，而不再是一张白卡。' },
       { en: 'Every screen that keeps you waiting now says so: Alk walks in place above a line of loading text wherever something is still on its way — the roster, the story archive, the gallery, the X wall, the Music Room, and every panel in between.', zh: '所有需要等待的地方现在都有了明确提示：凡有内容仍在加载，阿尔克便会在「加载中」字样上方原地行走——角色栏、故事档案、画廊、推特墙、音乐室，以及其间的各个面板。' },
       { en: 'Character art no longer opens on a blank space. The full illustration is the largest image on the site, and the detail page used to sit empty until it arrived; now it shows the same indicator while it loads. The expression viewer does too.', zh: '角色立绘不再「先空一片」。立绘是全站体积最大的图片，此前详情页会一直留白至其加载完成；现在同样会显示加载提示，表情预览框亦然。' },
+      { en: 'Section titles on the character and story pages now read the way the weapon pages do: centred, framed left and right by the game’s own ornamental rule. Every part of the site now heads its sections the same way.', zh: '角色页与剧情页的板块标题改为与武器页一致的样式：居中排布，左右以游戏原生的花纹横饰相衬。全站各处的板块标题至此统一。' },
   ]},
   { date: '2026-07-29', items: [
       { en: 'The Art Gallery has a second wall: every image and video the official @world_flipper account posted on X, from November 2019 to March 2024 — 1,429 pieces in all (1,343 images and 86 videos), newest first. Switch between it and the story illustrations at the top of the page.', zh: '「画廊」页新增第二面墙：官方推特 @world_flipper 自 2019 年 11 月至 2024 年 3 月发布的全部图片与视频，共 1429 条（1343 张图片、86 段视频），按时间由新到旧排列。可在页面顶部与「剧情画廊」相互切换。' },

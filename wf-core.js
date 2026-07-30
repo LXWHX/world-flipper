@@ -106,6 +106,9 @@ const STRINGS = {
   counterFlips: { en: 'Total flips', zh: '总弹弹数' },
   volume: { en: 'Volume', zh: '音量' },
   heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
+  // 浏览器标签页的站名（syncDocumentTitle 在 wf-route.js 里用它拼标题）。index.html 的 <title>
+  // 是双语合写的兜底，抓取器看到的是那一份；这里跟随界面语言。
+  routeBrand: { en: 'World Flipper Museum & Archive', zh: '世界弹射物语博物馆与档案馆' },
   navNews: { en: 'News', zh: '资讯' },
   navAbout: { en: 'About', zh: '关于' },
   // News (changelog) + About dialogs, opened from the two home-screen tags. The changelog copy
