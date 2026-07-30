@@ -1,4 +1,4 @@
-// 武器库 / 武器详情（arm*）：见 CLAUDE.md 的 Armaments tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
+// 武器库 / 武器详情（arm*）：见 ARCHITECTURE.md 的 Armaments tab 一节 —— 从 index.html 拆出，见 CLAUDE.md 的文件地图。
 // 这是一个普通的 classic script：顶层 const 进全局词法环境，data-dc-script 正文（走
 // new Function，见 support.js:743）在全局作用域下求值，所以调用点不需要任何前缀。
 

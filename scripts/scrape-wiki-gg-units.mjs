@@ -1,7 +1,7 @@
 // Pulls the English character data from worldflipper.wiki.gg into
 // Character Assets/rarityN/<devName>/wiki_en.json + story_en.json.
 //
-// Three page families feed this (see CLAUDE.md's wiki.gg section):
+// Three page families feed this (see PIPELINES.md's wiki.gg section):
 //   Category:Units             -> {{Unit}}            profile, stats, skill, leader talent, abilities
 //   Category:Unit story pages  -> {{Unit story page}}  episode names/summaries + {{SL}} dialogue
 //   Category:Unit Quote Pages  -> {{Unit Quotes}}      English voice-line text (no audio)

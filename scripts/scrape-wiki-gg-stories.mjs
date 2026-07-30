@@ -8,7 +8,7 @@
 // to find every one of them is `list=embeddedin` on the template itself, which is what this does:
 // 131 pages, 60 main-quest episodes across Worlds 1-5 plus 71 event episodes across 10 events.
 //
-// Same rules as the other wiki.gg scripts (see CLAUDE.md): the Action API only, never HTML; raw
+// Same rules as the other wiki.gg scripts (see PIPELINES.md): the Action API only, never HTML; raw
 // wikitext 50 titles per request; responses cached in the shared `scripts/.wikigg-cache/`;
 // byte-stable writes; R2 invalidation per rewritten key. Output lives in its own directory
 // (`Character Assets/story/en/`) and is owned exclusively by this script — nothing here touches

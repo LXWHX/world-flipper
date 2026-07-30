@@ -1,7 +1,7 @@
 // Scrapes the bilibili biligame World Flipper wiki equipment (装备) pages into the top-level
 // Weapons/ folder: Weapons/weapons.json (the index the site reads) + Weapons/icons/<hash>.png
 // (self-hosted icons). Same source, HTTP-manners, resume-cache and byte-stability rules as the
-// character wiki pipeline (scripts/scrape-wiki-zh.mjs) — see CLAUDE.md.
+// character wiki pipeline (scripts/scrape-wiki-zh.mjs) — see PIPELINES.md.
 //
 // Usage:
 //   node scripts/scrape-weapons.mjs                scrape everything not already cached

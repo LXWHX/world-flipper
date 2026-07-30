@@ -1,7 +1,7 @@
 # PIPELINES.md
 
 `scripts/*.mjs` 的抓取/生成管线细节。改任何 `scripts/` 下的脚本、或改动
-`Character Assets/` / `Weapons/` 的产物格式前，先读这份文件。前端与架构说明在 `CLAUDE.md`。
+`Character Assets/` / `Weapons/` 的产物格式前，先读这份文件。前端核心约定在 `CLAUDE.md`，各屏/子系统细节在 `ARCHITECTURE.md`。
 
 ## 通用规则
 

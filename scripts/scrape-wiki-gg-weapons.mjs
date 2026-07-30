@@ -63,7 +63,7 @@ function text(params, key) {
 const statKey = (rarity, element, baseHp, baseAtk, maxHp, maxAtk) =>
   [num(rarity), normElement(element), num(baseHp), num(baseAtk), num(maxHp), num(maxAtk)].join('|');
 
-// Orbs (宝珠) ship with max stats only — no base row on either wiki (CLAUDE.md records this for the
+// Orbs (宝珠) ship with max stats only — no base row on either wiki (PIPELINES.md records this for the
 // Chinese side). They get a second, shorter key so they can still be matched.
 const maxOnlyKey = (rarity, element, maxHp, maxAtk) =>
   [num(rarity), normElement(element), num(maxHp), num(maxAtk)].join('|');
