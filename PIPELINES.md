@@ -33,6 +33,47 @@ pages to `roster.json` by `jpName`, downloads voice mp3s, writes `wiki_zh.json`,
 `wiki_en.json` — see the wiki.gg pipeline below. It does **not** match by `enName` the way this
 note once assumed it would; that only works for 166 of 377.
 
+Five rules the matcher's join has to keep (all five cost real data before they were written down —
+current state: **448 of 485** roster entries matched, 0 wiki pages with no roster entry, 1 skipped):
+
+- **`wiki_zh.json` is co-owned, so the write merges instead of replacing.** Seven keys are this
+  pipeline's (`sourceUrl`/`basicInfo`/`stats`/`skills`/`story`/`review`/`voice`); `fetch-miaowm5.mjs`
+  adds `info`/`related`/`emotions`/`pixelActions`/`storyCount`/`miaowm5Meta` to the same file, and
+  stamps `textJp` **onto this pipeline's `voice[]` entries** in place. Rebuilding `voice` from the
+  cache therefore carries `textJp` across per entry (keyed on `context` + `text`). Clobbering the
+  file drops the emotion/pixel manifests the detail page renders from; clobbering just `voice` drops
+  ~3,600 Japanese battle lines, which only a full `fetch:miaowm5` re-run puts back.
+- **`normalizeJpName` strips a trailing `（流星祭）`, so a costume page can land on the base
+  character.** When that base is the *only* candidate the variant heuristic never runs (it needs
+  ≥2), and the costume page used to overwrite the base character's file — 29 characters were showing
+  a costume's data. Base pages are now sorted first and the second write onto a taken `devName` is
+  refused (report section "already claimed"). Those 29 costumes do have roster entries — the
+  `bustOnly` ones, which carry no `jpName`, so nothing can join them by name today.
+- **`MANUAL_MATCHES` (page 中文名 → `devName`) covers what the join structurally can't**: the wiki's
+  jpName column disagreeing with the game's kana (テルナ vs. テレナ), holding Chinese instead of
+  Japanese (星川莉莉), or an `enName` whose parenthetical isn't a costume ("Lav / Love (The
+  Skyscraper)"), which makes the heuristic file every candidate as a variant. Verify a row against
+  the page's element/rarity before adding it.
+- **`zhName` is the second join, and the only one that can see the `bustOnly` characters.** They
+  come from miaowm5 (a Chinese source): `zhName` but **no `jpName`**, so the primary join is blind
+  to them even though the bilibili wiki documents most of them. The Chinese name alone is not
+  enough — costume variants share their base character's `zhName` — so `matchByZhName` accepts a
+  candidate only when the page's own **rarity and element both agree** and exactly one candidate
+  survives. That gate is doing real work: it is what refuses 蒂妮(沙漠) → the Valentine 蒂妮. The
+  fallback runs both when the jpName join finds nothing and when it lands on an already-claimed
+  entry (the displaced-costume case above), and it is restricted to `bustOnly` entries so it can
+  never re-claim a character the primary join placed deliberately. It took the match from 374 to
+  448 of 485.
+- **Index the zhName join on the name with the qualifier stripped, on both sides.** A match stamps
+  the wiki's own spelling back onto the roster entry — including a `(泳装)` the roster's own name
+  never had — so indexing the raw `zhName` makes the *second* run miss what the first one matched
+  (observed: 447 matched, then 418). Re-running has to be a no-op; verify with a hash snapshot of
+  all `wiki_zh.json` + `roster.json` across two runs, not with the console counters alone.
+- **The character folder is not always reachable via `thumb`.** A few entries have no `neutral.gif`
+  and so no `thumb`; the folder is still `rarityN/<devName>/` and their data belongs in it. Skipping
+  on a falsy `thumb` cost three characters their Chinese data. (The Units grid guards the same
+  null — see `thumbUrl` in `index.html`.)
+
 ## weapons pipeline (wiki.biligame.com/worldflipper/装备)
 
 `npm run scrape:weapons` (`scripts/scrape-weapons.mjs`, flags `--force`/`--limit=N`) scrapes the

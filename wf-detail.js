@@ -89,7 +89,7 @@ const WF_DETAIL = {
       // Flip deck goes back to the Units grid, which is what this screen has always done.
       detailReturnTab: s.tab === 'detail' ? s.detailReturnTab : (s.tab === 'flip' ? 'flip' : 'units'),
       // rarity/attribute drive the info block's two icons; race/gender are its roster fallback —
-      // the 114 characters whose wiki_zh.json has an empty basicInfo have no other source for them.
+      // the 37 characters whose wiki_zh.json has an empty basicInfo have no other source for them.
       selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, rarity: c.rarity, attribute: c.attribute, race: c.race || [], gender: c.gender, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
@@ -351,7 +351,7 @@ const WF_DETAIL = {
       ? { role: enInfo.class, gender: enInfo.gender, race: enInfo.race, cv: enInfo.va, acquisition: enInfo.obtain }
       : {};
     // roster.json knows race/gender for (nearly) every character, and it's the only source for the
-    // 114 whose wiki_zh.json is a miaowm5 shell with an empty basicInfo — without this their info
+    // 37 whose wiki_zh.json is a miaowm5 shell with an empty basicInfo — without this their info
     // panel is nothing but the two icons. The filter chips' STRINGS keys are reused verbatim so the
     // wording matches the dialog, including the four race labels that deliberately differ from the
     // data values (Element -> Elf, Mystery -> Fairy; see wf-core.js).

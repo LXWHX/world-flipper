@@ -2639,7 +2639,9 @@ class Component extends DCLogic {
             jpName: c.jpName || '',
             rarity: c.rarity,
             bustOnly: !!c.bustOnly,
-            thumbUrl: ASSET_BASE + '/' + c.thumb,
+            // Three roster entries have no neutral.gif and so no `thumb` — without the guard the
+            // tile requests "<ASSET_BASE>/null" and shows a broken image.
+            thumbUrl: c.thumb ? ASSET_BASE + '/' + c.thumb : '',
             // The framed square portrait sits next to neutral.gif, so it's derivable from
             // `thumb` — but only `hasHead` says whether the miaowm5 pipeline actually exported
             // it, and a partial run can leave it unset. Callers fall back to the pixel sprite.
