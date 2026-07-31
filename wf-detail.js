@@ -88,7 +88,9 @@ const WF_DETAIL = {
       // has to keep the original origin rather than answer 'detail'. Everything that isn't the
       // Flip deck goes back to the Units grid, which is what this screen has always done.
       detailReturnTab: s.tab === 'detail' ? s.detailReturnTab : (s.tab === 'flip' ? 'flip' : 'units'),
-      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
+      // rarity/attribute drive the info block's two icons; race/gender are its roster fallback —
+      // the 114 characters whose wiki_zh.json has an empty basicInfo have no other source for them.
+      selectedChar: { devName: c.devName, enName: c.enName, zhName: c.zhName || '', jpName: c.jpName, rarityUrl: c.rarityUrl, rarityLabel: c.rarityLabel, rarity: c.rarity, attribute: c.attribute, race: c.race || [], gender: c.gender, folderUrl: folderUrl, music: c.music || [], bustOnly: !!c.bustOnly },
       artIndex: 0, hasSpecial: false, overlayOpen: false, overlayGif: null, sheetY: SHEET_MID_Y,
       musicIndex: 0, musicPlaying: false,
       wikiData: null, wikiEnData: null, voiceIndex: 0, voicePlaying: false, sheetPanel: 'profile',
@@ -120,15 +122,15 @@ const WF_DETAIL = {
       });
     this.loadWikiEn();
   },
-  // The English half of the character sheet (scripts/scrape-wiki-gg-units.mjs). Only fetched in
-  // English, so a zh-only session never pays for it — which is also why it can't just ride the
-  // wiki_zh.json fetch above. Idempotent, and called again from toggleLang() so flipping to
-  // English with a sheet already open pulls the file it didn't need a moment ago.
-  // 369 of 485 characters have one; the rest (the CN-only bustOnly roster, mainly) 404 and fall
-  // back to Chinese, so a null result is cached as a normal outcome rather than retried.
+  // The English half of the character sheet (scripts/scrape-wiki-gg-units.mjs). Fetched in both
+  // languages, not just English: its `stats` are numbers (max HP/ATK, skill power, hit count) and
+  // the Chinese wiki has no record of the last two at all, so the stats card reads it either way.
+  // At ~2.2 KB against the 14.4 KB wiki_zh.json alongside it, that's noise. Idempotent, and still
+  // called from toggleLang() as a backstop. 429 of 485 characters have a file (wiki.gg, or the
+  // Eliya sidecar below); the rest 404, so a null result is cached rather than retried.
   loadWikiEn() {
     const c = this.state.selectedChar;
-    if (!c || this.state.lang !== 'en' || this.state.wikiEnData !== null || this.wikiEnPending === c.devName) return;
+    if (!c || this.state.wikiEnData !== null || this.wikiEnPending === c.devName) return;
     this.wikiEnPending = c.devName;
     fetch(c.folderUrl + '/wiki_en.json')
       .then(r => r.ok ? r.json() : null)
@@ -333,6 +335,8 @@ const WF_DETAIL = {
     const en = (enValue, zhValue) => (enValue == null || enValue === '' ? zhValue : enValue);
     const WIKI_FIELD_LABELS = {
       nickname: this.t('wikiFieldNickname'),
+      // Rarity and element are deliberately not rows: they render as art above this grid
+      // (detailElementIconUrl + detailRarityUrl), the same way the weapon detail hero shows them.
       type: this.t('wikiFieldType'),
       role: this.t('wikiFieldRole'),
       gender: this.t('wikiFieldGender'),
@@ -346,14 +350,82 @@ const WF_DETAIL = {
     const EN_FIELD_MAP = enInfo
       ? { role: enInfo.class, gender: enInfo.gender, race: enInfo.race, cv: enInfo.va, acquisition: enInfo.obtain }
       : {};
-    const wikiInfoRows = (wikiData || enInfo)
-      ? Object.keys(WIKI_FIELD_LABELS)
-        .map(key => ({
-          label: WIKI_FIELD_LABELS[key],
-          value: en(EN_FIELD_MAP[key], wikiData ? wikiData.basicInfo[key] : '')
-        }))
-        .filter(row => row.value)
-      : [];
+    // roster.json knows race/gender for (nearly) every character, and it's the only source for the
+    // 114 whose wiki_zh.json is a miaowm5 shell with an empty basicInfo — without this their info
+    // panel is nothing but the two icons. The filter chips' STRINGS keys are reused verbatim so the
+    // wording matches the dialog, including the four race labels that deliberately differ from the
+    // data values (Element -> Elf, Mystery -> Fairy; see wf-core.js).
+    const ROSTER_FIELD_VALUES = selectedChar
+      ? {
+        race: (selectedChar.race || []).map(r => this.t('filterRace' + r)).join(' / '),
+        gender: selectedChar.gender ? this.t('filterGender' + selectedChar.gender) : ''
+      }
+      : {};
+    // The wiki's own wording wins where it has one (职责: 进攻, 种族: 龙); roster only fills gaps.
+    const wikiInfoRows = Object.keys(WIKI_FIELD_LABELS)
+      .map(key => ({
+        label: WIKI_FIELD_LABELS[key],
+        value: en(EN_FIELD_MAP[key], wikiData ? wikiData.basicInfo[key] : '') || ROSTER_FIELD_VALUES[key] || ''
+      }))
+      .filter(row => row.value);
+    // The two art rows of the info block. The element icon is indexed by ELEMENT_ORDER, exactly as
+    // the filter chips and the weapon detail hero index it.
+    const detailElementIndex = selectedChar ? ELEMENT_ORDER.indexOf(selectedChar.attribute) : -1;
+
+    // ---- Stats card. Deliberately identical in both languages: these are numbers, so the English
+    // file is read through `this.state.wikiEnData` rather than the language-gated `wikiEn` above.
+    // The two halves are complementary — bilibili has base+max HP/ATK and the 能力/体系 tag lists,
+    // wiki.gg has max HP/ATK plus the skill's power multiplier and hit count — so the card is the
+    // union of both, and 434 of 485 characters have at least one side of it.
+    const zhStats = (wikiData && wikiData.stats) || {};
+    const enStats = (this.state.wikiEnData && this.state.wikiEnData.stats) || null;
+    // One character (Wagner) carries the awakened value as a second line in the max cell:
+    // "888\n觉醒(1012)". Split rather than special-cased, so a future one renders the same.
+    const statCell = (arr, i) => {
+      const raw = (arr && arr[i] != null) ? String(arr[i]) : '';
+      const nl = raw.indexOf('\n');
+      return nl < 0 ? { value: raw.trim(), note: '' } : { value: raw.slice(0, nl).trim(), note: raw.slice(nl + 1).trim() };
+    };
+    const statRow = (labelKey, zhKey, enValue) => {
+      const arr = zhStats[zhKey];
+      const base = statCell(arr, 0);
+      const max = statCell(arr, 1);
+      const maxValue = max.value || (enValue ? String(enValue) : '');
+      if (!base.value && !maxValue) return null;
+      return {
+        label: this.t(labelKey),
+        base: base.value || '—',
+        max: maxValue || '—',
+        hasNote: !!max.note,
+        note: max.note
+      };
+    };
+    const detailStatRows = [
+      statRow('armStatHp', '生命值', enStats && enStats.maxHP),
+      statRow('armStatAtk', '攻击力', enStats && enStats.maxAttack)
+    ].filter(Boolean);
+    // Power and hit have no base/max axis and no Chinese counterpart, so they get their own plain
+    // label/value list below the grid. 87 of the wiki.gg records leave them at 0, i.e. unfilled.
+    const detailStatPlainRows = [
+      (enStats && enStats.power) ? { label: this.t('wikiStatPower'), value: enStats.power + 'x' } : null,
+      (enStats && enStats.hit) ? { label: this.t('wikiStatHit'), value: String(enStats.hit) } : null
+    ].filter(Boolean);
+    // 能力/体系 are single comma-joined strings ("开局充能,独立乘区,减C【80盘子】"). They stay in
+    // Chinese in English mode — there is no English equivalent to fall back to, and that's the same
+    // field-by-field fallback `en()` does everywhere else on this sheet.
+    const statTagGroup = (labelKey, zhKey) => {
+      const tags = String((zhStats[zhKey] || [])[0] || '').split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      return tags.length ? { label: this.t(labelKey), tags: tags } : null;
+    };
+    const detailStatTagGroups = [
+      statTagGroup('wikiStatTraits', '能力'),
+      statTagGroup('wikiStatArchetypes', '体系')
+    ].filter(Boolean);
+    // Whether any cell on the card came from the English side, which is what makes it need its own
+    // attribution line — but only in Chinese, where the wiki text block below isn't showing one.
+    const statsUsedEn = !!(enStats && (detailStatPlainRows.length
+      || (!zhStats['生命值'] && enStats.maxHP) || (!zhStats['攻击力'] && enStats.maxAttack)));
+
     // In English the {{Unit}} template's skill / leader talent / passive abilities stand in for
     // the Chinese skill tables, laid out as the same caption+entries groups the template expects.
     const enSkillGroups = wikiEn
@@ -569,6 +641,11 @@ const WF_DETAIL = {
       charVideoRows: charVideoRows,
       detailRarityUrl: selectedChar ? selectedChar.rarityUrl : '',
       detailRarityLabel: selectedChar ? selectedChar.rarityLabel : '',
+      // Element art + its filter-chip label as alt text; -1 means an attribute ELEMENT_ORDER
+      // doesn't know, which is a data bug rather than a state the panel should invent an icon for.
+      detailHasElementIcon: detailElementIndex >= 0,
+      detailElementIconUrl: detailElementIndex >= 0 ? 'icons/element_' + detailElementIndex + '.png' : '',
+      detailElementLabel: detailElementIndex >= 0 ? this.t('filterElement' + selectedChar.attribute) : '',
       fullShotUrl: fullShotSrc,
       showFullShot: !bustOnly && !!fullShotSrc,
       showFullShotLoading: !bustOnly && !!selectedChar && !fullShotSrc,
@@ -611,7 +688,10 @@ const WF_DETAIL = {
         });
       })(),
       wikiSource: this.t('wikiSource'),
-      hasWikiData: !!(wikiData && (wikiData.skills.length || wikiData.story.stories.length || wikiData.review || wikiData.voice.length || Object.keys(wikiData.basicInfo).length || wikiInfoBlocks.length || emotions.length)),
+      // The switch for the wiki text block — skills/story/review/quotes only. The info rows moved
+      // out to their own block above (they no longer need wiki data at all), so basicInfo dropped
+      // out of this chain with them.
+      hasWikiData: !!(wikiData && (wikiData.skills.length || wikiData.story.stories.length || wikiData.review || wikiData.voice.length || wikiInfoBlocks.length || emotions.length)),
       wikiSectionInfoLabel: this.t('wikiSectionInfo'),
       wikiSectionSkillsLabel: this.t('wikiSectionSkills'),
       wikiSectionStoryLabel: this.t('wikiSectionStory'),
@@ -627,6 +707,22 @@ const WF_DETAIL = {
       showWikiSourceGg: !!wikiEn || useStoryEn,
       wikiInfoRows: wikiInfoRows,
       hasWikiInfoRows: wikiInfoRows.length > 0,
+      // The info block as a whole: the two icons alone are worth showing, which is all the 3
+      // characters with no wiki_zh.json at all have.
+      detailHasInfoBlock: !!(selectedChar && (wikiInfoRows.length || detailElementIndex >= 0 || selectedChar.rarityUrl)),
+      detailHasStats: detailStatRows.length > 0 || detailStatPlainRows.length > 0 || detailStatTagGroups.length > 0,
+      detailStatsTitleText: this.t('wikiSectionStats'),
+      detailStatBaseText: this.t('armStatBase'),
+      detailStatMaxText: this.t('armStatMax'),
+      detailStatRows: detailStatRows,
+      hasDetailStatRows: detailStatRows.length > 0,
+      detailStatPlainRows: detailStatPlainRows,
+      hasDetailStatPlainRows: detailStatPlainRows.length > 0,
+      detailStatTagGroups: detailStatTagGroups,
+      // The card's own credit, shown only when it used English numbers and the wiki text block's
+      // credit line (showWikiSourceGg, below) isn't already saying the same thing.
+      showDetailStatsSource: statsUsedEn && !(!!wikiEn || useStoryEn),
+      detailStatsSourceText: (this.state.wikiEnData && this.state.wikiEnData.source === 'eliya') ? this.t('wikiSourceEliya') : this.t('wikiSourceGg'),
       wikiSkillGroups: wikiSkillGroups,
       hasWikiSkills: wikiSkillGroups.length > 0,
       // In English the profile blurb stands in for the bilibili story intro, and the wiki.gg

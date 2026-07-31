@@ -224,6 +224,9 @@ const STRINGS = {
   armFilterNameHint: { en: 'Search by weapon name', zh: '通过武器名搜索' },
   armFilterRole: { en: 'Role', zh: '能力' },
   armElementNone: { en: 'None', zh: '无' },
+  // These four are plain words, so the character sheet's stats card reads them too rather than
+  // duplicating the table (same reasoning as FILTER_RARITIES being shared) — armStatsTitle is the
+  // one that isn't shared, since its 属性 would collide with the element icons above that card.
   armStatHp: { en: 'HP', zh: '生命值' },
   armStatAtk: { en: 'ATK', zh: '攻击力' },
   armStatsTitle: { en: 'Stats', zh: '属性' },
@@ -258,6 +261,14 @@ const STRINGS = {
   wikiFieldRace: { en: 'Race', zh: '种族' },
   wikiFieldCv: { en: 'CV', zh: 'CV' },
   wikiFieldAcquisition: { en: 'Acquisition', zh: '获取方式' },
+  // The stats card. Its title is 数值 rather than 属性 because the info block right above it
+  // already spends 属性 on the element icon. Power/Hit are the wiki.gg {{Unit}} params of those
+  // names (Power renders as a multiplier, 15.6x); 能力/体系 are the bilibili tag lists.
+  wikiSectionStats: { en: 'Stats', zh: '数值' },
+  wikiStatPower: { en: 'Power', zh: '倍率' },
+  wikiStatHit: { en: 'Hit', zh: '击中数' },
+  wikiStatTraits: { en: 'Traits', zh: '能力' },
+  wikiStatArchetypes: { en: 'Archetypes', zh: '体系' },
   wikiSource: { en: 'Source: bilibili biligame Wiki (Chinese)', zh: '资料来源：哔哩哔哩百科（中文 wiki）' },
   wikiNoVoice: { en: 'No voice lines available yet.', zh: '暂无语音数据。' },
   panelProfile: { en: 'Profile', zh: '主界面' },

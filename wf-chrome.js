@@ -7,6 +7,11 @@
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-07-31', items: [
+      { en: 'A character page now opens with their card: rarity and element shown as the game’s own icons, then class, role, gender, race, voice actor and how to obtain them — moved up to sit directly beneath the animations instead of at the foot of the page.', zh: '角色页现在一开始便是这名角色的资料卡：稀有度与属性以游戏原生图标呈现，其下依次为类型、职责、性别、种族、声优与获取方式——整块前移至动画正下方，不再置于页面末尾。' },
+      { en: 'That card no longer comes up empty for 114 characters. The Chinese wiki has no entry for them — most are the recent additions no wiki documents — so the page simply showed nothing; their rarity, element, race and gender were on file all along and now appear.', zh: '此前有 114 名角色的这块资料是空的：中文 wiki 未收录他们（多为各大 wiki 均无记载的新增角色），页面便索性什么都不显示。其稀有度、属性、种族与性别本就在册，现已一并呈现。' },
+      { en: 'New: each character’s numbers. Starting and max HP and ATK, their skill’s power and hit count, and the tags describing what they do and which teams they suit. The two wikis each hold half of this, so both are read and merged — 434 characters have some of it, and the card reads identically in English and Chinese.', zh: '新增角色数值：生命值与攻击力的初始及满级数值、技能倍率与击中数，以及描述其能力与体系的标签。两个 wiki 各持一半资料，现已合并读取——434 名角色至少有其中一部分，且中英文显示完全一致。' },
+  ]},
   { date: '2026-07-30', items: [
       { en: 'Links now point at things. Every character, weapon and story has its own address — open one and you land straight on that page, so a link you send someone opens what you were looking at rather than the front door.', zh: '现在可以把链接指向具体内容了。每名角色、每件武器、每段剧情都有了各自的地址，打开即直达该页面——发给别人的链接会停在你当时看的地方，而不是首页。' },
       { en: 'The back button goes back. On phones it now steps back through where you have been — closing an open image, a filter or a character page — instead of leaving the site. On a computer, Esc does the same and the arrow keys page through the gallery and through a character’s expressions.', zh: '返回键现在真的是「返回」。在手机上它会沿着浏览路径逐层后退——关掉打开的大图、筛选面板或角色页——而不是直接退出站点。电脑上 Esc 同理，方向键还可翻阅画廊与角色表情。' },

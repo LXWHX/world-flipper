@@ -961,6 +961,76 @@
                 </div>
               </sc-if>
 
+              <!-- Basic info, directly below the GIFs. Rarity and element are art rather than rows
+                   (see detailElementIconUrl); the text rows below them come from the wiki where it
+                   has a record and from roster.json where it doesn't. -->
+              <sc-if value="{{ detailHasInfoBlock }}" hint-placeholder-val="{{ true }}">
+                <div style="padding: 14px 18px 0;">
+                  <div class="wf-sec-title"><span>{{ wikiSectionInfoLabel }}</span></div>
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding-bottom: 10px;">
+                    <sc-if value="{{ detailHasElementIcon }}" hint-placeholder-val="{{ true }}">
+                      <img src="{{ detailElementIconUrl }}" alt="{{ detailElementLabel }}" style="width: 24px; height: 24px; object-fit: contain;">
+                    </sc-if>
+                    <img src="{{ detailRarityUrl }}" alt="{{ detailRarityLabel }}" style="height: 15px; width: auto;">
+                  </div>
+                  <sc-if value="{{ hasWikiInfoRows }}" hint-placeholder-val="{{ false }}">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;">
+                      <sc-for list="{{ wikiInfoRows }}" as="row" hint-placeholder-count="4">
+                        <div style="font-size: 12px; font-weight: 700; color: #8A93A5;">{{ row.label }}</div>
+                        <div style="font-size: 12.5px; font-weight: 700; color: #3E4450;">{{ row.value }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <!-- Stats: the union of both wikis, so it reads the same in either language —
+                   bilibili's base/max HP and ATK plus its 能力/体系 tags, wiki.gg's skill power
+                   and hit count. See detailStatRows. -->
+              <sc-if value="{{ detailHasStats }}" hint-placeholder-val="{{ true }}">
+                <div style="padding: 14px 18px 0;">
+                  <div class="wf-sec-title"><span>{{ detailStatsTitleText }}</span></div>
+                  <sc-if value="{{ hasDetailStatRows }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px 4px; align-items: center; font-weight: 800;">
+                      <div></div>
+                      <div style="text-align: center; font-size: 10px; color: #8A93A5;">{{ detailStatBaseText }}</div>
+                      <div style="text-align: center; font-size: 10px; color: #8A93A5;">{{ detailStatMaxText }}</div>
+                      <sc-for list="{{ detailStatRows }}" as="st" hint-placeholder-count="2">
+                        <div style="font-size: 12px; color: #3E4450;">{{ st.label }}</div>
+                        <div style="text-align: center; font-size: 14px; color: #5FA8D6;">{{ st.base }}</div>
+                        <div style="text-align: center;">
+                          <div style="font-size: 14px; color: #E58B5F;">{{ st.max }}</div>
+                          <sc-if value="{{ st.hasNote }}" hint-placeholder-val="{{ false }}">
+                            <div style="font-size: 10px; font-weight: 700; color: #8A93A5;">{{ st.note }}</div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ hasDetailStatPlainRows }}" hint-placeholder-val="{{ true }}">
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding-top: 8px;">
+                      <sc-for list="{{ detailStatPlainRows }}" as="pr" hint-placeholder-count="2">
+                        <div style="font-size: 12px; font-weight: 700; color: #8A93A5;">{{ pr.label }}</div>
+                        <div style="font-size: 12.5px; font-weight: 700; color: #3E4450;">{{ pr.value }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-for list="{{ detailStatTagGroups }}" as="tg" hint-placeholder-count="2">
+                    <div style="padding-top: 8px;">
+                      <div style="font-size: 12px; font-weight: 900; color: #8A93A5; letter-spacing: 0.5px; margin-bottom: 6px;">{{ tg.label }}</div>
+                      <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        <sc-for list="{{ tg.tags }}" as="tag" hint-placeholder-count="3">
+                          <div style="flex: none; font-weight: 700; font-size: 11px; color: #3E4450; background: #F0F3F7; border-radius: 999px; padding: 6px 14px;">{{ tag }}</div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ showDetailStatsSource }}" hint-placeholder-val="{{ false }}">
+                    <div style="font-size: 10px; font-weight: 700; color: #B7BECC; text-align: center; padding-top: 8px;">{{ detailStatsSourceText }}</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
               <!-- Expression viewer: two stacked layers (body + face) on a fixed-ratio box -->
               <sc-if value="{{ hasEmotions }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 14px 18px 0;">
@@ -1010,18 +1080,6 @@
               <!-- Wiki text data (bilibili biligame wiki, Chinese-only for now), inline below the GIF previews -->
               <sc-if value="{{ hasWikiData }}" hint-placeholder-val="{{ false }}">
                 <div style="padding: 16px 18px 24px; display: flex; flex-direction: column; gap: 18px;">
-                  <sc-if value="{{ hasWikiInfoRows }}" hint-placeholder-val="{{ false }}">
-                    <div>
-                      <div class="wf-sec-title"><span>{{ wikiSectionInfoLabel }}</span></div>
-                      <div style="display: grid; grid-template-columns: auto 1fr; gap: 4px 12px;">
-                        <sc-for list="{{ wikiInfoRows }}" as="row" hint-placeholder-count="4">
-                          <div style="font-size: 12px; font-weight: 700; color: #8A93A5;">{{ row.label }}</div>
-                          <div style="font-size: 12.5px; font-weight: 700; color: #3E4450;">{{ row.value }}</div>
-                        </sc-for>
-                      </div>
-                    </div>
-                  </sc-if>
-
                   <sc-if value="{{ hasWikiSkills }}" hint-placeholder-val="{{ false }}">
                     <div>
                       <div class="wf-sec-title"><span>{{ wikiSectionSkillsLabel }}</span></div>
@@ -2594,6 +2652,9 @@ class Component extends DCLogic {
             // Filter axes, all stamped from character.json by fetch-miaowm5.mjs. `elementIndex`
             // doubles as the in-game attribute order, so it's what the grid sorts on.
             elementIndex: ELEMENT_ORDER.indexOf(c.attribute),
+            // The raw attribute string too: the detail sheet's info block needs it for the
+            // filterElement* STRINGS key (the icon's alt text), which elementIndex can't give back.
+            attribute: c.attribute,
             race: c.race || [],
             // Upstream folds every gender that isn't Male/Female into one 'Other' bucket
             // (filterCharacter's `sex` branch); the raw values include 'Unknown' and one 'Ririi'.
