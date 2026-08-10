@@ -7,6 +7,9 @@
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-08-10', items: [
+      { en: 'Top-bar counters are now interactive: tap Total Flips, Total Visits or Unique Visitors to see what each number means. The explanation stays visible for five seconds.', zh: '顶部数据栏现在可以点击：点击“总弹弹数”“总访问量”或“独立访客”，即可查看对应数据的含义；说明会显示 5 秒后自动消失。' },
+  ]},
   { date: '2026-07-31', items: [
       { en: 'Chinese profiles, skills, stories and reviews arrived for 80 more characters — among them Megumin, Aqua, Darkness and Kazuma, Special Week, Gold Ship and Silence Suzuka, Asta and Noelle. Their pages had been blank because the roster held only their Chinese name, and the entry was being looked up by Japanese name. 448 of 485 characters now read in Chinese, up from 368.', zh: '另有 80 名角色补上中文简介、技能、故事与评价，其中包括惠惠、阿库娅、达克妮丝、和真，特别周、黄金船、无声铃鹿，以及阿斯塔与诺艾尔。此前这些页面是空的：资料库只存了他们的中文名，而检索却按日文名进行。现全站 485 名角色中已有 448 名可读中文资料（此前为 368 名）。' },
       { en: 'Fixed 29 characters that were showing another outfit’s data — a costume page (Streamer Festival, Swimsuit, New Year) was being filed under the base character. Each now shows its own.', zh: '修复 29 名角色显示错误资料的问题：换装页（流星祭、泳装、新年等）此前被归到了基础角色名下，现各自归位。' },
@@ -156,6 +159,15 @@ const WF_CHROME = {
     });
   },
 
+  toggleCounterHelp(kind) {
+    clearTimeout(this.counterHelpTimer);
+    this.setState({ counterHelp: kind });
+    this.counterHelpTimer = setTimeout(() => {
+      this.counterHelpTimer = null;
+      this.setState({ counterHelp: null });
+    }, 5000);
+  },
+
   // renderVals 的外壳分段：画布缩放、顶栏计数器、区块标题、导航与菜单、News/About 弹窗，
   // 以及底部 tab 栏。它在原来的 vals 字面量里是分开的两段（中间夹着角色/武器/详情的键），
   // 这里合并成一段 —— 整个 vals 没有重复键，所以键序不影响结果。
@@ -190,6 +202,15 @@ const WF_CHROME = {
       uvCount: this.state.uv == null ? '—' : this.state.uv.toLocaleString('en-US'),
       pvTitle: this.t('counterPv'),
       uvTitle: this.t('counterUv'),
+      pvHelp: this.t('counterPvHelp'),
+      uvHelp: this.t('counterUvHelp'),
+      flipTotalHelp: this.t('counterFlipsHelp'),
+      counterHelpPv: this.state.counterHelp === 'pv',
+      counterHelpUv: this.state.counterHelp === 'uv',
+      counterHelpFlips: this.state.counterHelp === 'flips',
+      toggleCounterPv: () => this.toggleCounterHelp('pv'),
+      toggleCounterUv: () => this.toggleCounterHelp('uv'),
+      toggleCounterFlips: () => this.toggleCounterHelp('flips'),
       // Community total votes cast across every illustration (likes + dislikes + skips), summed from
       // the flipStats map Flip already loads — no extra DB call, and it ticks up live as votes land.
       flipTotal: (() => {

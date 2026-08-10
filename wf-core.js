@@ -104,6 +104,9 @@ const STRINGS = {
   counterPv: { en: 'Total visits', zh: '总访问量' },
   counterUv: { en: 'Unique visitors', zh: '独立访客' },
   counterFlips: { en: 'Total flips', zh: '总弹弹数' },
+  counterPvHelp: { en: 'Total page loads since visit counting began.', zh: '自启用访问统计以来，页面被打开的总次数。' },
+  counterUvHelp: { en: 'The number of distinct browsers that have visited the site.', zh: '访问过本站的不同浏览器数量。' },
+  counterFlipsHelp: { en: 'All likes, dislikes and skips cast in the Flip art vote.', zh: '“弹弹”立绘投票中点赞、不喜欢与跳过的累计次数。' },
   volume: { en: 'Volume', zh: '音量' },
   heroSubtitle: { en: 'MUSEUM & ARCHIVE', zh: '博物馆与档案馆' },
   // 浏览器标签页的站名（syncDocumentTitle 在 wf-route.js 里用它拼标题）。index.html 的 <title>
@@ -431,4 +434,3 @@ function computeLayout() {
   if (vw <= FILL_MAX_W && vh / fillScale >= DESIGN_H) return { scale: fillScale, fill: true };
   return { scale: Math.min(fillScale, vh / DESIGN_H, 1), fill: false };
 }
-

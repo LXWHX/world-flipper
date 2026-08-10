@@ -232,24 +232,27 @@
   <div style="width: 430px; {{ cardHeightCss }} flex: none; transform: {{ cardScaleTransform }}; transform-origin: center center; display: flex; flex-direction: column; background: #EAEAEA; box-shadow: {{ cardShadow }}; position: relative; z-index: 1; overflow: hidden;">
 
     <!-- ===== Top status bar ===== -->
-    <div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 5px 14px; background: #FFFFFF; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.12); z-index: 30;">
+    <div style="position: relative; flex: none; display: flex; align-items: center; gap: 10px; padding: 5px 14px; background: #FFFFFF; border-bottom-left-radius: 14px; border-bottom-right-radius: 14px; box-shadow: 0 3px 6px rgba(0,0,0,0.12); z-index: 30;">
       <div style="display: flex; align-items: center;">
         <img src="icons/Site-logo.png" alt="WORLD FLIPPER" style="height: 58px; width: auto; display: block; margin: -8px 0;">
       </div>
       <div style="flex: 1;"></div>
       <sc-if value="{{ showCounters }}" hint-placeholder-val="{{ true }}">
         <div style="display: flex; gap: 8px;">
-          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
+          <div onClick="{{ toggleCounterFlips }}" style="position: relative; display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08); cursor: pointer;">
             <img src="icons/Exp_point.png" alt="" width="17" height="17" style="image-rendering: pixelated; display: block;">
             <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ flipTotalTitle }}">{{ flipTotal }}</span>
+            <sc-if value="{{ counterHelpFlips }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 156px; padding: 8px 10px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D8E0EA; border-radius: 9px; box-shadow: 0 3px 10px rgba(62,68,80,0.2); color: #596273; font-size: 10px; line-height: 1.35; font-weight: 600;">{{ flipTotalHelp }}</div></sc-if>
           </div>
-          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
+          <div onClick="{{ toggleCounterPv }}" style="position: relative; display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08); cursor: pointer;">
             <img src="icons/Mana.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
             <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ pvTitle }}">{{ pvCount }}</span>
+            <sc-if value="{{ counterHelpPv }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 156px; padding: 8px 10px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D8E0EA; border-radius: 9px; box-shadow: 0 3px 10px rgba(62,68,80,0.2); color: #596273; font-size: 10px; line-height: 1.35; font-weight: 600;">{{ pvHelp }}</div></sc-if>
           </div>
-          <div style="display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08);">
+          <div onClick="{{ toggleCounterUv }}" style="position: relative; display: flex; align-items: center; gap: 5px; background: #EEF2F7; border-radius: 999px; padding: 3px 10px 3px 6px; box-shadow: inset 0 0 0 1px rgba(62,68,80,0.08); cursor: pointer;">
             <img src="icons/Lodestar_Bead.png" alt="" width="24" height="24" style="image-rendering: pixelated; display: block;">
             <span style="color: #3E4450; font-size: 11px; font-weight: 700;" title="{{ uvTitle }}">{{ uvCount }}</span>
+            <sc-if value="{{ counterHelpUv }}" hint-placeholder-val="{{ false }}"><div style="position: absolute; top: calc(100% + 8px); right: 0; z-index: 40; width: 156px; padding: 8px 10px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #D8E0EA; border-radius: 9px; box-shadow: 0 3px 10px rgba(62,68,80,0.2); color: #596273; font-size: 10px; line-height: 1.35; font-weight: 600;">{{ uvHelp }}</div></sc-if>
           </div>
         </div>
       </sc-if>
@@ -2366,7 +2369,7 @@ class Component extends DCLogic {
     roomMiniPos: null, roomMiniCollapsed: false, roomMiniSide: 'right', roomMiniDragging: false,
     // Top-bar visit counters; null until the Supabase RPC resolves (and stays null on local dev,
     // where we deliberately don't count) — renderVals shows a dash in that case.
-    pv: null, uv: null,
+    pv: null, uv: null, counterHelp: null,
     // Flip (弹弹) — the art-voting deck. The `flip` prefix runs through every key, handler and
     // renderVals binding for the same reason the story archive's `arc` does: artIndex, isArt,
     // goArt, toggleArt, showArtToggle and artToggleLabel all already exist and mean either the Art
