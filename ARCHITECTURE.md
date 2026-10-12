@@ -759,7 +759,21 @@ game UI's own pair of flourishes**. Markup is one line —
 Two features, one project, one anon key, one set of helpers — and **nothing to do with R2**: no
 Supabase path ever touches `Character Assets/` or the upload pipeline. Config lives in
 `SUPABASE_URL`/`SUPABASE_ANON_KEY` next to `ASSET_BASE`. There is no supabase-js dependency; every
-call is a raw `fetch` POST to `/rest/v1/rpc/<name>` through `supabaseRpc()`.
+call is a raw `fetch` POST through `supabaseRpc()`.
+
+**On the deployed site that POST targets the site's own origin, not Supabase.** `supabase.co` is
+blocked at the network level in mainland China, so `SUPABASE_VIA_PROXY` (wf-core.js — the same
+`file://`-or-localhost test the three asset bases use) routes `supabaseRpc()` through
+`/api/counter`: `api/counter.mjs`, a Vercel serverless function deployed alongside the static site
+(zero config — any file under `api/` becomes a function at `/api/<name>`). It takes
+`{ rpc, args }`, forwards an **allowlisted** one of the three RPCs below to Supabase's REST
+endpoint with the same anon key, and passes the response body through verbatim; the allowlist is
+what keeps the endpoint from being a generic proxy, and relaying the anon key adds no privilege —
+it's the same key the page already ships. If the call fails for any reason (the deployment
+predates the function, or it 502'd on a Supabase error), `supabaseRpc()` retries that one call
+directly and memoizes the breakage in `this.rpcProxyBroken` — a missing function degrades to the
+pre-proxy behaviour everywhere instead of dead counters. Local dev never touches the proxy:
+nothing serves `/api/counter` behind `file://` or a static dev server.
 
 Each feature has its own run-once setup file, and both take the **same security posture**: tables
 with RLS enabled and **zero policies** (so nothing is directly readable or writable), and the anon

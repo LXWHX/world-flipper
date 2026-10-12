@@ -7,6 +7,9 @@
 // bullet lines curated to user-facing milestones (dev-pipeline commits are intentionally omitted).
 // Add a new group at the top when you ship something worth announcing.
 const CHANGELOG = [
+  { date: '2026-10-12', items: [
+      { en: 'The three numbers at the top of the page now reach mainland China. They were read from a database host blocked there — visits showed a dash and the flip total read zero — so the site now reads them through its own address instead, and flips cast from the mainland are counted too.', zh: '页面顶部的三个数据现在能到达中国大陆访客了。此前它们读自一台在当地被阻断的数据库主机——访问量显示为「—」、弹弹数显示为 0；现在改由本站自己的地址代为读取，大陆访客投出的弹弹也会被计入。' },
+  ]},
   { date: '2026-08-10', items: [
       { en: 'Top-bar counters are now interactive: tap Total Flips, Total Visits or Unique Visitors to see what each number means. The explanation stays visible for five seconds.', zh: '顶部数据栏现在可以点击：点击“总弹弹数”“总访问量”或“独立访客”，即可查看对应数据的含义；说明会显示 5 秒后自动消失。' },
   ]},
@@ -136,7 +139,8 @@ const WF_CHROME = {
       && location.protocol !== 'file:' && location.hostname !== 'localhost';
   },
   supabaseRpc(name, body) {
-    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
+    // The direct Supabase REST call, factored out because the proxy path below falls back to it.
+    const direct = () => fetch(SUPABASE_URL + '/rest/v1/rpc/' + name, {
       method: 'POST',
       headers: {
         'apikey': SUPABASE_ANON_KEY,
@@ -147,6 +151,25 @@ const WF_CHROME = {
     })
       .then(r => (r.ok ? r.json() : null))
       .catch(() => null);
+    // Local dev calls Supabase directly — nothing serves /api/counter there (see
+    // SUPABASE_VIA_PROXY in wf-core.js).
+    if (!SUPABASE_VIA_PROXY || this.rpcProxyBroken) return direct();
+    // Live, the browser POSTs its own origin instead: the /api/counter Vercel function relays to
+    // Supabase, because supabase.co is unreachable in mainland China. Any failure here — the
+    // function missing from the deployment, or it 502'd — retries this one call directly and
+    // remembers (this.rpcProxyBroken), so a broken proxy degrades to the pre-proxy behaviour
+    // rather than killing the counters for visitors whose networks can still reach Supabase.
+    return fetch('/api/counter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rpc: name, args: body })
+    })
+      .then(r => {
+        if (r.ok) return r.json();
+        this.rpcProxyBroken = true;
+        return direct();
+      })
+      .catch(() => { this.rpcProxyBroken = true; return direct(); });
   },
   // Bump the total page-view count and register this browser as a visitor (deduped via the
   // visitorId uuid), then show both numbers in the top bar. Fires once per page load.

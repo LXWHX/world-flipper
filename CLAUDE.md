@@ -175,7 +175,7 @@ button and its menu entry, which is the only reason repointing it strands nothin
 | Emotion layers（脸 vs. 叠加层） | `wf-detail.js` |
 | Loading placeholder（`.wf-loading`：Alk 行走 GIF + 逐字波浪文案，全站十二处；含详情页大图的 `heroSrc`） | CSS、`loadingWave()`、`heroSrc()` 在 `index.html`，调用点在各 `wf-*.js` |
 | Section headings（`.wf-sec-title`：居中标题 + 左右花纹 rail，全站二十一处） | `index.html` `<helmet>` 的 `.wf-sec-title` CSS，调用点在模板里 |
-| Supabase（访问计数 + 投票，与 R2 无关） | 配置在 `wf-core.js`，helpers 在 `wf-chrome.js`，投票在 `wf-flip.js`；`supabase-*.sql` |
+| Supabase（访问计数 + 投票，与 R2 无关；supabase.co 国内被墙，线上经 `api/counter.mjs` 同源代理，见 ARCHITECTURE.md） | 配置在 `wf-core.js`，helpers 在 `wf-chrome.js`，投票在 `wf-flip.js`；`supabase-*.sql` |
 | Routing & document head（hash 深链接、标题、返回键 / Esc / 方向键、og 卡片） | `wf-route.js` + `index.html` 真实 `<head>` + `scripts/build-social-card.mjs` |
 
 跨屏铁律（出处和细节都在 `ARCHITECTURE.md` 对应小节）：

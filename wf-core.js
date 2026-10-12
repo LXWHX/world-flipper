@@ -18,6 +18,13 @@ const ASSET_BASE = location.protocol === 'file:' || location.hostname === 'local
 const SUPABASE_URL = 'https://lgxnpzdzhnfvxmrzgevg.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxneG5wemR6aG5mdnhtcnpnZXZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODczNjUsImV4cCI6MjA5OTc2MzM2NX0.FvC9ttc5rri71_URT-hRk4xG6gG-bTDyJK5g4-HP9k4';
 const VISITOR_STORAGE_KEY = 'wf_visitor_id';
+// supabase.co is blocked at the network level in mainland China, so the deployed site never
+// calls it from the browser: supabaseRpc() POSTs the site's own /api/counter instead — a Vercel
+// function (api/counter.mjs) relaying to the same REST endpoint with this same anon key — so only
+// the site's own domain is ever fetched and CN visitors get the counters too. Local dev keeps the
+// direct call, because nothing serves /api/counter behind file:// or a plain static server (the
+// same test ASSET_BASE / WEAPON_BASE / X_BASE use).
+const SUPABASE_VIA_PROXY = location.protocol !== 'file:' && location.hostname !== 'localhost';
 // --- Art window for the two horizontal 5-row strips (Units roster, Armaments library) ---------
 // Pagination alone was not enough on iOS. `visibleCount`/`armVisibleCount` only grow, and neither
 // resets on a tab change, so a user who has scrolled the roster keeps 485 tiles alive — each
